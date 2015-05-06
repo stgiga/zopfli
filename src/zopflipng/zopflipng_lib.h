@@ -80,6 +80,8 @@ typedef struct CZopfliPNGOptions {
   int verbosezopflimore;
 
   int lazymatching;
+
+  int optimizehuffmanheader;
 } CZopfliPNGOptions;
 
 // Sets the default options
@@ -148,6 +150,12 @@ struct ZopfliPNGOptions {
 
   // Enable lazy matching in LZ77 Greedy may provide various results for different files when enabled.
   int lazymatching;
+
+  /*
+  Work by Frédéric Kayser in his Zopfli fork: https://github.com/frkay/zopfli
+  Commit: 9501b29d0dacc8b8efb18ae01733b2768dd40b62
+  */
+  int optimizehuffmanheader;
 };
 
 // Returns 0 on success, error code otherwise.

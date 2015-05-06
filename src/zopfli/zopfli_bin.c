@@ -135,7 +135,7 @@ int main(int argc, char* argv[]) {
 
   fprintf(stderr,
     "Zopfli, a Compression Algorithm to produce Deflate/Zlib streams.\n"
-    "Commit: a29e46ba9f268ab273903558dcb7ac13b9fe8e29 + KrzYmod v3\n"
+    "Commit: a29e46ba9f268ab273903558dcb7ac13b9fe8e29 + KrzYmod v4\n"
     "Adds more command line switches, should be faster, uses more memory\n\n");
 
   ZopfliInitOptions(&options);
@@ -152,6 +152,7 @@ int main(int argc, char* argv[]) {
     else if (StringsEqual(arg, "--gzip")) output_type = ZOPFLI_FORMAT_GZIP;
     else if (StringsEqual(arg, "--splitlast")) options.blocksplittinglast = 1;
     else if (StringsEqual(arg, "--lazy")) options.lazymatching = 1;
+    else if (StringsEqual(arg, "--ohh")) options.optimizehuffmanheader = 1;
     else if (arg[0] == '-' && arg[1] == '-' && arg[2] == 'i'
         && arg[3] >= '0' && arg[3] <= '9') {
       options.numiterations = atoi(arg + 3);
@@ -177,6 +178,8 @@ int main(int argc, char* argv[]) {
       fprintf(stderr,
           "  --lazy  lazy matching in Greedy LZ77 (d: NO)\n"
           "          this option has an impack on block splitting model\n"
+          "  --ohh   optymize huffman header (d: NO) [partial implementation]\n"
+          "          from: https://github.com/frkay/zopfli\n"
           "\n"
           "  --gzip        output to gzip format (default)\n"
           "  --zlib        output to zlib format instead of gzip\n"

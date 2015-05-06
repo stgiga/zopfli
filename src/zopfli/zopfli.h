@@ -81,6 +81,12 @@ typedef struct ZopfliOptions {
   During my tests one file got reduced by 1 byte using this method.
   */
   int lazymatching;
+
+  /*
+  Work by Frédéric Kayser in his Zopfli fork: https://github.com/frkay/zopfli
+  Commit: 9501b29d0dacc8b8efb18ae01733b2768dd40b62
+  */
+  int optimizehuffmanheader;
 } ZopfliOptions;
 
 /* Initializes options with default values. */

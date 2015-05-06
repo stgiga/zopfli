@@ -45,7 +45,8 @@ ZopfliPNGOptions::ZopfliPNGOptions()
   , lengthscoremax(1024)
   , verbosezopfli(0)
   , verbosezopflimore(0)
-  , lazymatching(0) {
+  , lazymatching(0)
+  , optimizehuffmanheader(0) {
 }
 
 // Deflate compressor passed as fuction pointer to LodePNG to have it use Zopfli
@@ -59,14 +60,16 @@ unsigned CustomPNGDeflate(unsigned char** out, size_t* outsize,
   ZopfliOptions options;
   ZopfliInitOptions(&options);
 
-  options.numiterations     = insize < 200000
-                            ? png_options->num_iterations
-                            : png_options->num_iterations_large;
-  options.blocksplittingmax = png_options->blocksplittingmax;
-  options.lengthscoremax    = png_options->lengthscoremax;
-  options.verbose           = png_options->verbosezopfli;
-  options.verbose_more      = png_options->verbosezopflimore;
-  options.lazymatching      = png_options->lazymatching;
+  options.numiterations         = insize < 200000
+                                ? png_options->num_iterations
+                                : png_options->num_iterations_large;
+  options.blocksplittingmax     = png_options->blocksplittingmax;
+  options.lengthscoremax        = png_options->lengthscoremax;
+  options.verbose               = png_options->verbosezopfli;
+  options.verbose_more          = png_options->verbosezopflimore;
+  options.lazymatching          = png_options->lazymatching;
+  options.optimizehuffmanheader = png_options->optimizehuffmanheader;
+
 
   if (png_options->block_split_strategy == 3) {
     // Try both block splitting first and last.
@@ -447,18 +450,19 @@ extern "C" void CZopfliPNGSetDefaults(CZopfliPNGOptions* png_options) {
   // Constructor sets the defaults
   ZopfliPNGOptions opts;
 
-  png_options->lossy_transparent    = opts.lossy_transparent;
-  png_options->lossy_8bit           = opts.lossy_8bit;
-  png_options->auto_filter_strategy = opts.auto_filter_strategy;
-  png_options->use_zopfli           = opts.use_zopfli;
-  png_options->num_iterations       = opts.num_iterations;
-  png_options->num_iterations_large = opts.num_iterations_large;
-  png_options->block_split_strategy = opts.block_split_strategy;
-  png_options->blocksplittingmax    = opts.blocksplittingmax;
-  png_options->lengthscoremax       = opts.lengthscoremax;
-  png_options->verbosezopfli        = opts.verbosezopfli;
-  png_options->verbosezopflimore    = opts.verbosezopflimore;
-  png_options->lazymatching         = opts.lazymatching;
+  png_options->lossy_transparent     = opts.lossy_transparent;
+  png_options->lossy_8bit            = opts.lossy_8bit;
+  png_options->auto_filter_strategy  = opts.auto_filter_strategy;
+  png_options->use_zopfli            = opts.use_zopfli;
+  png_options->num_iterations        = opts.num_iterations;
+  png_options->num_iterations_large  = opts.num_iterations_large;
+  png_options->block_split_strategy  = opts.block_split_strategy;
+  png_options->blocksplittingmax     = opts.blocksplittingmax;
+  png_options->lengthscoremax        = opts.lengthscoremax;
+  png_options->verbosezopfli         = opts.verbosezopfli;
+  png_options->verbosezopflimore     = opts.verbosezopflimore;
+  png_options->lazymatching          = opts.lazymatching;
+  png_options->optimizehuffmanheader = opts.optimizehuffmanheader;
 }
 
 extern "C" int CZopfliPNGOptimize(const unsigned char* origpng,
@@ -470,18 +474,19 @@ extern "C" int CZopfliPNGOptimize(const unsigned char* origpng,
   ZopfliPNGOptions opts;
 
   // Copy over to the C++-style struct
-  opts.lossy_transparent    = !!png_options->lossy_transparent;
-  opts.lossy_8bit           = !!png_options->lossy_8bit;
-  opts.auto_filter_strategy = !!png_options->auto_filter_strategy;
-  opts.use_zopfli           = !!png_options->use_zopfli;
-  opts.num_iterations       = png_options->num_iterations;
-  opts.num_iterations_large = png_options->num_iterations_large;
-  opts.block_split_strategy = png_options->block_split_strategy;
-  opts.block_split_strategy = png_options->block_split_strategy;
-  opts.blocksplittingmax    = png_options->blocksplittingmax;
-  opts.verbosezopfli        = png_options->verbosezopfli;
-  opts.verbosezopflimore    = png_options->verbosezopflimore;
-  opts.lazymatching         = png_options->lazymatching;
+  opts.lossy_transparent     = !!png_options->lossy_transparent;
+  opts.lossy_8bit            = !!png_options->lossy_8bit;
+  opts.auto_filter_strategy  = !!png_options->auto_filter_strategy;
+  opts.use_zopfli            = !!png_options->use_zopfli;
+  opts.num_iterations        = png_options->num_iterations;
+  opts.num_iterations_large  = png_options->num_iterations_large;
+  opts.block_split_strategy  = png_options->block_split_strategy;
+  opts.blocksplittingmax     = png_options->blocksplittingmax;
+  opts.lengthscoremax        = png_options->lengthscoremax;
+  opts.verbosezopfli         = png_options->verbosezopfli;
+  opts.verbosezopflimore     = png_options->verbosezopflimore;
+  opts.lazymatching          = png_options->lazymatching;
+  opts.optimizehuffmanheader = png_options->optimizehuffmanheader;
 
   for (int i = 0; i < png_options->num_filter_strategies; i++) {
     opts.filter_strategies.push_back(png_options->filter_strategies[i]);

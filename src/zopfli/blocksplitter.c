@@ -107,7 +107,8 @@ lend: end of block (not inclusive)
 static double EstimateCost(const unsigned short* litlens,
                            const unsigned short* dists,
                            size_t lstart, size_t lend) {
-  return ZopfliCalculateBlockSize(litlens, dists, lstart, lend, 2);
+  /* Don't yet know how to pass options->optimizehuffmanheader here yet ...*/
+  return ZopfliCalculateBlockSize(litlens, dists, lstart, lend, 2, 0);
 }
 
 typedef struct SplitCostContext {
@@ -170,7 +171,7 @@ static void PrintBlockSplitPoints(const unsigned short* litlens,
   }
   assert(npoints == nlz77points);
 
-  fprintf(stderr, "block split points: ");
+  fprintf(stderr, "Block split points: ");
   for (i = 0; i < npoints; i++) {
     fprintf(stderr, "%d ", (int)splitpoints[i]);
   }
@@ -179,6 +180,8 @@ static void PrintBlockSplitPoints(const unsigned short* litlens,
     fprintf(stderr, " %x", (int)splitpoints[i]);
   }
   fprintf(stderr, ")\n");
+
+  fprintf(stderr, "Total blocks: %d\n",(int)++npoints);
 
   free(splitpoints);
 }
