@@ -34,13 +34,13 @@ images are still 26 % smaller than images recompressed with ZopfliPNG.
 
 2013-05-07, Lode Vandevenne and Jyrki Alakuijala
 
-Mr_KrzYch00's KrzYmod v5:
+Mr_KrzYch00's KrzYmod v6:
 - adds 7 command line switches for zopflipng:
 * --msb=[number]: maximum block splits, 0 = unlimited (default 15),
 * --mls=[number]: maximum length for score (default 1024),
 * --mui=[number]: maximum unsuccessful iterations after best, 0 = unlimited/--iterations limited (default 0),
 * --lazy: enable lazy matching in LZ77 Greedy (default OFF),
-* --ohh: optymize huffman header (default OFF) [by Frédéric Kayser] - partial implementation,
+* --ohh: optymize huffman header (default OFF) [by Frédéric Kayser],
 * -v: verbose zopfli output during zopflipng optimization.
 * -w: displays current processed zopfli iteration (same line).
 - faster compression but very increased memory usage by altering few preprocessor directives,
