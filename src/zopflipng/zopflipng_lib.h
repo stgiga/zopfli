@@ -1,23 +1,26 @@
-// Copyright 2013 Google Inc. All Rights Reserved.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//    http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
-// Author: lode.vandevenne@gmail.com (Lode Vandevenne)
-// Author: jyrki.alakuijala@gmail.com (Jyrki Alakuijala)
+/*
+Copyright 2013 Google Inc. All Rights Reserved.
+Copyright 2015 Mr_KrzYch00. All Rights Reserved.
 
-// Library to recompress and optimize PNG images. Uses Zopfli as the compression
-// backend, chooses optimal PNG color model, and tries out several PNG filter
-// strategies.
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+
+Author: lode.vandevenne@gmail.com (Lode Vandevenne)
+Author: jyrki.alakuijala@gmail.com (Jyrki Alakuijala)
+
+Library to recompress and optimize PNG images. Uses Zopfli as the compression
+backend, chooses optimal PNG color model, and tries out several PNG filter
+strategies.
+*/
 
 #ifndef ZOPFLIPNG_LIB_H_
 #define ZOPFLIPNG_LIB_H_
@@ -67,6 +70,10 @@ typedef struct CZopfliPNGOptions {
   int num_iterations_large;
 
   int block_split_strategy;
+
+  int blocksplittingmax;
+
+  int lengthscoremax;
 } CZopfliPNGOptions;
 
 // Sets the default options
@@ -118,6 +125,14 @@ struct ZopfliPNGOptions {
 
   // 0=none, 1=first, 2=last, 3=both
   int block_split_strategy;
+
+  // Maximum amount of blocks to split into (0 for unlimited, but this can give
+  // extreme results that hurt compression on some files). Default value: 15.
+  int blocksplittingmax;
+
+  // Used to alter GetLengthScore max distance, this affects block splitting
+  // model and the chance for first run being closer to the optimal output.
+  int lengthscoremax;
 };
 
 // Returns 0 on success, error code otherwise.

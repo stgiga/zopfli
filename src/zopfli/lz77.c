@@ -1,5 +1,6 @@
 /*
 Copyright 2011 Google Inc. All Rights Reserved.
+Copyright 2015 Mr_KrzYch00. All Rights Reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -84,12 +85,12 @@ Indirectly, this affects:
 -the first zopfli run, so it affects the chance of the first run being closer
  to the optimal output
 */
-static int GetLengthScore(int length, int distance) {
+static int GetLengthScore(int length, int distance, int max) {
   /*
   At 1024, the distance uses 9+ extra bits and this seems to be the sweet spot
-  on tested files.
+  on tested files. However it's possible to alter this value by --mls switch.
   */
-  return distance > 1024 ? length - 1 : length;
+  return distance > max ? length - 1 : length;
 }
 
 void ZopfliVerifyLenDist(const unsigned char* data, size_t datasize, size_t pos,
@@ -365,7 +366,7 @@ void ZopfliFindLongestMatch(ZopfliBlockState* s, const ZopfliHash* h,
 
 void ZopfliLZ77Greedy(ZopfliBlockState* s, const unsigned char* in,
                       size_t instart, size_t inend,
-                      ZopfliLZ77Store* store) {
+                      ZopfliLZ77Store* store, const ZopfliOptions* options) {
   size_t i = 0, j;
   unsigned short leng;
   unsigned short dist;
@@ -398,11 +399,11 @@ void ZopfliLZ77Greedy(ZopfliBlockState* s, const unsigned char* in,
 
     ZopfliFindLongestMatch(s, h, in, i, inend, ZOPFLI_MAX_MATCH, dummysublen,
                            &dist, &leng);
-    lengthscore = GetLengthScore(leng, dist);
+    lengthscore = GetLengthScore(leng, dist, options->lengthscoremax);
 
 #ifdef ZOPFLI_LAZY_MATCHING
     /* Lazy matching. */
-    prevlengthscore = GetLengthScore(prev_length, prev_match);
+    prevlengthscore = GetLengthScore(prev_length, prev_match, options->lengthscoremax);
     if (match_available) {
       match_available = 0;
       if (lengthscore > prevlengthscore + 1) {

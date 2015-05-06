@@ -1,5 +1,6 @@
 /*
 Copyright 2011 Google Inc. All Rights Reserved.
+Copyright 2015 Mr_KrzYch00. All Rights Reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -446,7 +447,7 @@ static double LZ77OptimalRun(ZopfliBlockState* s,
 
 void ZopfliLZ77Optimal(ZopfliBlockState *s,
                        const unsigned char* in, size_t instart, size_t inend,
-                       ZopfliLZ77Store* store) {
+                       ZopfliLZ77Store* store, const ZopfliOptions* options) {
   /* Dist to get to here with smallest cost. */
   size_t blocksize = inend - instart;
   unsigned short* length_array =
@@ -473,7 +474,7 @@ void ZopfliLZ77Optimal(ZopfliBlockState *s,
   the statistics of the previous run. */
 
   /* Initial run. */
-  ZopfliLZ77Greedy(s, in, instart, inend, &currentstore);
+  ZopfliLZ77Greedy(s, in, instart, inend, &currentstore, options);
   GetStatistics(&currentstore, &stats);
 
   /* Repeat statistics with each time the cost model from the previous stat

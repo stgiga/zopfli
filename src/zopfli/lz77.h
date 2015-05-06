@@ -1,5 +1,6 @@
 /*
 Copyright 2011 Google Inc. All Rights Reserved.
+Copyright 2015 Mr_KrzYch00. All Rights Reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -124,6 +125,6 @@ dictionary.
 */
 void ZopfliLZ77Greedy(ZopfliBlockState* s, const unsigned char* in,
                       size_t instart, size_t inend,
-                      ZopfliLZ77Store* store);
+                      ZopfliLZ77Store* store, const ZopfliOptions* options);
 
 #endif  /* ZOPFLI_LZ77_H_ */

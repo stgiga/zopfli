@@ -1,5 +1,6 @@
 /*
 Copyright 2011 Google Inc. All Rights Reserved.
+Copyright 2015 Mr_KrzYch00. All Rights Reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -64,6 +65,12 @@ typedef struct ZopfliOptions {
   extreme results that hurt compression on some files). Default value: 15.
   */
   int blocksplittingmax;
+
+  /*
+  Used to alter GetLengthScore max distance, this affects block splitting
+  model and the chance for first run being closer to the optimal output.
+  */
+  int lengthscoremax;
 } ZopfliOptions;
 
 /* Initializes options with default values. */

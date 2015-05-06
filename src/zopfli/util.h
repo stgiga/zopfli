@@ -67,7 +67,7 @@ This is so because longest match finding has to find the exact distance
 that belongs to each length for the best lz77 strategy.
 Good values: e.g. 5, 8.
 */
-#define ZOPFLI_CACHE_LENGTH 8
+#define ZOPFLI_CACHE_LENGTH 256
 
 /*
 limit the max hash chain hits for this hash value. This has an effect only
@@ -77,13 +77,13 @@ ZOPFLI_WINDOW_SIZE, while zlib uses 4096 even for best level), but makes it
 faster on some specific files.
 Good value: e.g. 8192.
 */
-#define ZOPFLI_MAX_CHAIN_HITS 8192
+#define ZOPFLI_MAX_CHAIN_HITS 32768
 
 /*
 Whether to use the longest match cache for ZopfliFindLongestMatch. This cache
 consumes a lot of memory but speeds it up. No effect on compression size.
 */
-#define ZOPFLI_LONGEST_MATCH_CACHE
+#define ZOPFLI_LONGEST_MATCH_CACHE 1
 
 /*
 Enable to remember amount of successive identical bytes in the hash chain for
@@ -91,7 +91,7 @@ finding longest match
 required for ZOPFLI_HASH_SAME_HASH and ZOPFLI_SHORTCUT_LONG_REPETITIONS
 This has no effect on the compression result, and enabling it increases speed.
 */
-#define ZOPFLI_HASH_SAME
+#define ZOPFLI_HASH_SAME 1
 
 /*
 Switch to a faster hash based on the info from ZOPFLI_HASH_SAME once the
@@ -100,7 +100,7 @@ identical bytes, on which the compressor is otherwise too slow. Regular files
 are unaffected or maybe a tiny bit slower.
 This has no effect on the compression result, only on speed.
 */
-#define ZOPFLI_HASH_SAME_HASH
+#define ZOPFLI_HASH_SAME_HASH 1
 
 /*
 Enable this, to avoid slowness for files which are a repetition of the same

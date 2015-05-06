@@ -1,21 +1,24 @@
-// Copyright 2013 Google Inc. All Rights Reserved.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//    http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
-// Author: lode.vandevenne@gmail.com (Lode Vandevenne)
-// Author: jyrki.alakuijala@gmail.com (Jyrki Alakuijala)
+/*
+Copyright 2013 Google Inc. All Rights Reserved.
+Copyright 2015 Mr_KrzYch00. All Rights Reserved.
 
-// See zopflipng_lib.h
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+
+Author: lode.vandevenne@gmail.com (Lode Vandevenne)
+Author: jyrki.alakuijala@gmail.com (Jyrki Alakuijala)
+
+See zopflipng_lib.h
+*/
 
 #include "zopflipng_lib.h"
 
@@ -37,7 +40,9 @@ ZopfliPNGOptions::ZopfliPNGOptions()
   , use_zopfli(true)
   , num_iterations(15)
   , num_iterations_large(5)
-  , block_split_strategy(1) {
+  , block_split_strategy(1)
+  , blocksplittingmax(15)
+  , lengthscoremax(1024) {
 }
 
 // Deflate compressor passed as fuction pointer to LodePNG to have it use Zopfli
@@ -53,6 +58,8 @@ unsigned CustomPNGDeflate(unsigned char** out, size_t* outsize,
 
   options.numiterations = insize < 200000
       ? png_options->num_iterations : png_options->num_iterations_large;
+  options.blocksplittingmax = png_options->blocksplittingmax;
+  options.lengthscoremax = png_options->lengthscoremax;
 
   if (png_options->block_split_strategy == 3) {
     // Try both block splitting first and last.
@@ -440,6 +447,8 @@ extern "C" void CZopfliPNGSetDefaults(CZopfliPNGOptions* png_options) {
   png_options->num_iterations       = opts.num_iterations;
   png_options->num_iterations_large = opts.num_iterations_large;
   png_options->block_split_strategy = opts.block_split_strategy;
+  png_options->blocksplittingmax    = opts.blocksplittingmax;
+  png_options->lengthscoremax       = opts.lengthscoremax;
 }
 
 extern "C" int CZopfliPNGOptimize(const unsigned char* origpng,
@@ -458,6 +467,8 @@ extern "C" int CZopfliPNGOptimize(const unsigned char* origpng,
   opts.num_iterations       = png_options->num_iterations;
   opts.num_iterations_large = png_options->num_iterations_large;
   opts.block_split_strategy = png_options->block_split_strategy;
+  opts.block_split_strategy = png_options->block_split_strategy;
+  opts.blocksplittingmax    = png_options->blocksplittingmax;
 
   for (int i = 0; i < png_options->num_filter_strategies; i++) {
     opts.filter_strategies.push_back(png_options->filter_strategies[i]);

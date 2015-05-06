@@ -1,5 +1,6 @@
 /*
 Copyright 2011 Google Inc. All Rights Reserved.
+Copyright 2015 Mr_KrzYch00. All Rights Reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -305,7 +306,7 @@ void ZopfliBlockSplit(const ZopfliOptions* options,
 
   /* Unintuitively, Using a simple LZ77 method here instead of ZopfliLZ77Optimal
   results in better blocks. */
-  ZopfliLZ77Greedy(&s, in, instart, inend, &store);
+  ZopfliLZ77Greedy(&s, in, instart, inend, &store, options);
 
   ZopfliBlockSplitLZ77(options,
                        store.litlens, store.dists, store.size, maxblocks,

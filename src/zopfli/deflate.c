@@ -1,5 +1,6 @@
 /*
 Copyright 2011 Google Inc. All Rights Reserved.
+Copyright 2015 Mr_KrzYch00. All Rights Reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -603,7 +604,7 @@ static void DeflateDynamicBlock(const ZopfliOptions* options, int final,
   ZopfliInitCache(blocksize, s.lmc);
 #endif
 
-  ZopfliLZ77Optimal(&s, in, instart, inend, &store);
+  ZopfliLZ77Optimal(&s, in, instart, inend, &store, options);
 
   /* For small block, encoding with fixed tree can be smaller. For large block,
   don't bother doing this expensive test, dynamic tree will be better.*/
@@ -784,7 +785,7 @@ static void DeflateSplittingLast(const ZopfliOptions* options,
 #endif
 
   if (btype == 2) {
-    ZopfliLZ77Optimal(&s, in, instart, inend, &store);
+    ZopfliLZ77Optimal(&s, in, instart, inend, &store, options);
   } else {
     assert (btype == 1);
     ZopfliLZ77OptimalFixed(&s, in, instart, inend, &store);

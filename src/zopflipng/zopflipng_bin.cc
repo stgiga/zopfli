@@ -1,21 +1,24 @@
-// Copyright 2013 Google Inc. All Rights Reserved.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//    http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
-// Author: lode.vandevenne@gmail.com (Lode Vandevenne)
-// Author: jyrki.alakuijala@gmail.com (Jyrki Alakuijala)
+/*
+Copyright 2013 Google Inc. All Rights Reserved.
+Copyright 2015 Mr_KrzYch00. All Rights Reserved.
 
-// Command line tool to recompress and optimize PNG images, using zopflipng_lib.
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+
+Author: lode.vandevenne@gmail.com (Lode Vandevenne)
+Author: jyrki.alakuijala@gmail.com (Jyrki Alakuijala)
+
+Command line tool to recompress and optimize PNG images, using zopflipng_lib.
+*/
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -113,6 +116,8 @@ void ShowHelp() {
          " Due to adding extra data, this increases the result size. By default"
          " ZopfliPNG only keeps the following chunks because they are"
          " essential: IHDR, PLTE, tRNS, IDAT and IEND.\n"
+         "--mbs=[number]: maximum block splits, 0 = unlimited (d: 15)\n"
+         "--mls=[number]: maximum length for score (d: 1024)\n"
          "\n"
          "Usage examples:\n"
          "Optimize a file and overwrite if smaller: zopflipng infile.png"
@@ -190,6 +195,12 @@ int main(int argc, char *argv[]) {
         if (num < 1) num = 1;
         png_options.num_iterations = num;
         png_options.num_iterations_large = num;
+      } else if (name == "--mbs") {
+        if (num < 0) num = 15;
+        png_options.blocksplittingmax = num;
+      } else if (name == "--mls") {
+        if (num < 1) num = 1024;
+        png_options.lengthscoremax = num;
       } else if (name == "--splitting") {
         if (num < 0 || num > 3) num = 1;
         png_options.block_split_strategy = num;

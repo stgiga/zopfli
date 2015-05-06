@@ -1,5 +1,6 @@
 /*
 Copyright 2011 Google Inc. All Rights Reserved.
+Copyright 2015 Mr_KrzYch00. All Rights Reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -132,6 +133,11 @@ int main(int argc, char* argv[]) {
   int output_to_stdout = 0;
   int i;
 
+  fprintf(stderr,
+    "Zopfli, a Compression Algorithm to produce Deflate/Zlib streams.\n"
+    "Commit: a29e46ba9f268ab273903558dcb7ac13b9fe8e29 + KrzYmod v1\n"
+    "Adds more command line switches, should be faster, uses more memory\n\n");
+
   ZopfliInitOptions(&options);
 
   for (i = 1; i < argc; i++) {
@@ -147,17 +153,25 @@ int main(int argc, char* argv[]) {
     else if (arg[0] == '-' && arg[1] == '-' && arg[2] == 'i'
         && arg[3] >= '0' && arg[3] <= '9') {
       options.numiterations = atoi(arg + 3);
+    }  else if (arg[0] == '-' && arg[1] == '-' && arg[2] == 'm' && arg[3] == 'b' && arg[4] == 's'
+        && arg[5] >= '0' && arg[5] <= '9') {
+      options.blocksplittingmax = atoi(arg + 5);
+    }  else if (arg[0] == '-' && arg[1] == '-' && arg[2] == 'm' && arg[3] == 'l' && arg[4] == 's'
+        && arg[5] >= '0' && arg[5] <= '9') {
+      options.lengthscoremax = atoi(arg + 5);
     }
     else if (StringsEqual(arg, "-h")) {
       fprintf(stderr,
-          "Usage: zopfli [OPTION]... FILE\n"
-          "  -h    gives this help\n"
-          "  -c    write the result on standard output, instead of disk"
-          " filename + '.gz'\n"
-          "  -v    verbose mode\n"
-          "  --i#  perform # iterations (default 15). More gives"
-          " more compression but is slower."
-          " Examples: --i10, --i50, --i1000\n");
+          "Usage: zopfli [OPTIONS] FILE\n"
+          "  -h      gives this help\n"
+          "  -c      write the resulting output to stdout\n"
+          "  -v      verbose mode\n"
+          "  --i#    perform # iterations (d: 15).\n"
+          "          Higher number may provide better compression ratio but is slower\n"
+          "  --mbs#  maximum block splits, 0 = unlimited (d: 15)\n"
+          "          0 is usually a good choice and provides betters compression\n"
+          "  --mls#  maximum length for score (d: 1024)\n"
+          "          this option has an impact on block splitting model\n");
       fprintf(stderr,
           "  --gzip        output to gzip format (default)\n"
           "  --zlib        output to zlib format instead of gzip\n"
@@ -168,7 +182,17 @@ int main(int argc, char* argv[]) {
   }
 
   if (options.numiterations < 1) {
-    fprintf(stderr, "Error: must have 1 or more iterations");
+    fprintf(stderr, "Error: --i parameter must be at least 1.");
+    return 0;
+  }
+
+  if (options.blocksplittingmax < 0) {
+    fprintf(stderr, "Error: --mbs parameter must be at least 0.");
+    return 0;
+  }
+
+  if (options.lengthscoremax < 1) {
+    fprintf(stderr, "Error: --mls parameter must be at least 1.");
     return 0;
   }
 
@@ -196,7 +220,7 @@ int main(int argc, char* argv[]) {
 
   if (!filename) {
     fprintf(stderr,
-            "Please provide filename\nFor help, type: %s -h\n", argv[0]);
+            "Please provide filename to compress.\nFor help, type: %s -h\n", argv[0]);
   }
 
   return 0;

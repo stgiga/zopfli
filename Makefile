@@ -1,8 +1,10 @@
 CC = gcc
 CXX = g++
 
-CFLAGS = -W -Wall -Wextra -ansi -pedantic -lm -O2
-CXXFLAGS = -W -Wall -Wextra -ansi -pedantic -O2
+CFLAGS = -W -Wall -Wextra -ansi -pedantic -lm -O3
+CXXFLAGS = -W -Wall -Wextra -ansi -pedantic -O3
+CAVXFLAGS = -mavx -mtune=corei7-avx -march=corei7-avx
+CNEONFLAGS = -march=armv7-a -mcpu=cortex-a9 -mfpu=neon -mfloat-abi=hard
 
 ZOPFLILIB_SRC = src/zopfli/blocksplitter.c src/zopfli/cache.c\
                 src/zopfli/deflate.c src/zopfli/gzip_container.c\
@@ -21,6 +23,12 @@ ZOPFLIPNGBIN_SRC := src/zopflipng/zopflipng_bin.cc
 # Zopfli binary
 zopfli:
 	$(CC) $(ZOPFLILIB_SRC) $(ZOPFLIBIN_SRC) $(CFLAGS) -o zopfli
+	
+zopfliavx:
+	$(CC) -static $(ZOPFLILIB_SRC) $(ZOPFLIBIN_SRC) $(CFLAGS) $(CAVXFLAGS) -o zopfli
+
+zopflineon:
+	$(CC) -static $(ZOPFLILIB_SRC) $(ZOPFLIBIN_SRC) $(CFLAGS) $(CNEONFLAGS) -o zopfli
 
 # Zopfli shared library
 libzopfli:
@@ -31,6 +39,14 @@ libzopfli:
 zopflipng:
 	$(CC) $(ZOPFLILIB_SRC) $(CFLAGS) -c
 	$(CXX) $(ZOPFLILIB_OBJ) $(LODEPNG_SRC) $(ZOPFLIPNGLIB_SRC) $(ZOPFLIPNGBIN_SRC) $(CFLAGS) -o zopflipng
+	
+zopflipngavx:
+	$(CC) $(ZOPFLILIB_SRC) $(CFLAGS) $(CAVXFLAGS) -c
+	$(CXX) -static -static-libgcc $(ZOPFLILIB_OBJ) $(LODEPNG_SRC) $(ZOPFLIPNGLIB_SRC) $(ZOPFLIPNGBIN_SRC) $(CFLAGS) $(CAVXFLAGS) -o zopflipng
+
+zopflipngneon:
+	$(CC) $(ZOPFLILIB_SRC) $(CFLAGS) $(CNEONFLAGS) -c
+	$(CXX) -static -static-libgcc $(ZOPFLILIB_OBJ) $(LODEPNG_SRC) $(ZOPFLIPNGLIB_SRC) $(ZOPFLIPNGBIN_SRC) $(CFLAGS) $(CNEONFLAGS) -o zopflipng
 
 # ZopfliPNG shared library
 libzopflipng:
