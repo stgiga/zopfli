@@ -214,4 +214,5 @@ void ZopfliInitOptions(ZopfliOptions* options) {
   options->lengthscoremax = 1024;
   options->lazymatching = 0;
   options->optimizehuffmanheader = 0;
+  options->maxfailiterations = 0;
 }

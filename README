@@ -31,10 +31,11 @@ use "make libzopfli". The source code of Zopfli is under src/zopfli.
 Zopfli Compression Algorithm was created by Lode Vandevenne and Jyrki
 Alakuijala, based on an algorithm by Jyrki Alakuijala.
 
-Mr_KrzYch00's KrzYmod v4:
-- adds 5 command line switches for zopfli:
+Mr_KrzYch00's KrzYmod v5:
+- adds 6 command line switches for zopfli:
 * --msb#: maximum block splits, 0 = unlimited (default 15),
 * --mls#: maximum length for score (default 1024),
+* --mui#: maximum unsuccessful iterations after best, 0 = unlimited/--i limited (default 0),
 * --lazy: enable lazy matching in LZ77 Greedy (default OFF),
 * --ohh: optymize huffman header (default OFF) [by Frédéric Kayser] - partial implementation,
 * -w: displays current processed iteration (same line).

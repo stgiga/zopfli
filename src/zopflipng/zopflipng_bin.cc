@@ -116,8 +116,9 @@ void ShowHelp() {
          " essential: IHDR, PLTE, tRNS, IDAT and IEND.\n"
          "--mbs=[number]: maximum block splits, 0 = unlimited (d: 15)\n"
          "--mls=[number]: maximum length for score (d: 1024)\n"
-         "--lazy: lazy matching in Greedy LZ77 (d: NO)\n"
-         "--ohh: optymize huffman header (d: NO)\n"
+         "--mui=[number]: maximum unsuccessful iterations after best (d: 0)\n"
+         "--lazy: lazy matching in Greedy LZ77 (d: OFF)\n"
+         "--ohh: optymize huffman header (d: OFF)\n"
          "-v: verbose zopfli output\n"
          "-w: show current processed zopfli iteration (same line)\n"
          "\n"
@@ -142,7 +143,7 @@ void PrintResultSize(const char* label, size_t oldsize, size_t newsize) {
 
 int main(int argc, char *argv[]) {
 printf("ZopfliPNG, a Portable Network Graphics (PNG) image optimizer.\n"
-         "Commit: a29e46ba9f268ab273903558dcb7ac13b9fe8e29 + KrzYmod v4\n"
+         "Commit: a29e46ba9f268ab273903558dcb7ac13b9fe8e29 + KrzYmod v5\n"
          "Adds more command line switches, should be faster, uses more memory\n"
          "\n");
   if (argc < 2) {
@@ -215,6 +216,9 @@ printf("ZopfliPNG, a Portable Network Graphics (PNG) image optimizer.\n"
       } else if (name == "--mls") {
         if (num < 1) num = 1024;
         png_options.lengthscoremax = num;
+      } else if (name == "--mui") {
+        if (num < 0) num = 0;
+        png_options.maxfailiterations = num;
       } else if (name == "--splitting") {
         if (num < 0 || num > 3) num = 1;
         png_options.block_split_strategy = num;

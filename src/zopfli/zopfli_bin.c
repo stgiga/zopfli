@@ -135,7 +135,7 @@ int main(int argc, char* argv[]) {
 
   fprintf(stderr,
     "Zopfli, a Compression Algorithm to produce Deflate/Zlib streams.\n"
-    "Commit: a29e46ba9f268ab273903558dcb7ac13b9fe8e29 + KrzYmod v4\n"
+    "Commit: a29e46ba9f268ab273903558dcb7ac13b9fe8e29 + KrzYmod v5\n"
     "Adds more command line switches, should be faster, uses more memory\n\n");
 
   ZopfliInitOptions(&options);
@@ -162,6 +162,9 @@ int main(int argc, char* argv[]) {
     }  else if (arg[0] == '-' && arg[1] == '-' && arg[2] == 'm' && arg[3] == 'l' && arg[4] == 's'
         && arg[5] >= '0' && arg[5] <= '9') {
       options.lengthscoremax = atoi(arg + 5);
+    }  else if (arg[0] == '-' && arg[1] == '-' && arg[2] == 'm' && arg[3] == 'u' && arg[4] == 'i'
+        && arg[5] >= '0' && arg[5] <= '9') {
+      options.maxfailiterations = atoi(arg + 5);
     }
     else if (StringsEqual(arg, "-h")) {
       fprintf(stderr,
@@ -176,11 +179,14 @@ int main(int argc, char* argv[]) {
           "  --mls#  maximum length for score (d: 1024)\n"
           "          this option has an impact on block splitting model\n");
       fprintf(stderr,
-          "  --lazy  lazy matching in Greedy LZ77 (d: NO)\n"
+          "  --mui#  maximum unsucessful iterations after best (d: 0)\n"
+          "          should be lower than --i, 0 = --i limited\n"
+          "  --lazy  lazy matching in Greedy LZ77 (d: OFF)\n"
           "          this option has an impack on block splitting model\n"
-          "  --ohh   optymize huffman header (d: NO) [partial implementation]\n"
+          "  --ohh   optymize huffman header (d: OFF) [partial implementation]\n"
           "          from: https://github.com/frkay/zopfli\n"
-          "\n"
+          "\n");
+      fprintf(stderr,
           "  --gzip        output to gzip format (default)\n"
           "  --zlib        output to zlib format instead of gzip\n"
           "  --deflate     output to deflate format instead of gzip\n"
@@ -201,6 +207,11 @@ int main(int argc, char* argv[]) {
 
   if (options.lengthscoremax < 1) {
     fprintf(stderr, "Error: --mls parameter must be at least 1.");
+    return 0;
+  }
+
+  if (options.maxfailiterations < 0) {
+    fprintf(stderr, "Error: --mui parameter must be at least 0.");
     return 0;
   }
 

@@ -457,6 +457,7 @@ void ZopfliLZ77Optimal(ZopfliBlockState *s,
   ZopfliLZ77Store currentstore;
   SymbolStats stats, beststats, laststats;
   int i;
+  int fails=0;
   double cost;
   double bestcost = ZOPFLI_LARGE_FLOAT;
   double lastcost = 0;
@@ -491,7 +492,7 @@ void ZopfliLZ77Optimal(ZopfliBlockState *s,
       fprintf(stderr, "Iteration %d: %d bit      \r", i, (int) cost);
     }
     if (cost < bestcost) {
-      /* Copy to the output store. */
+      /* Start: Copy to the output store. */
       ZopfliCopyLZ77Store(&currentstore, store);
       CopyStats(&stats, &beststats);
       bestcost = cost;
@@ -499,6 +500,9 @@ void ZopfliLZ77Optimal(ZopfliBlockState *s,
       if(s->options->verbose) {
         fprintf(stderr, "\n");
       }
+      fails=0;
+    } else {
+      ++fails;
     }
     CopyStats(&stats, &laststats);
     ClearStatFreqs(&stats);
@@ -517,6 +521,10 @@ void ZopfliLZ77Optimal(ZopfliBlockState *s,
       lastrandomstep = i;
     }
     lastcost = cost;
+    if(s->options->maxfailiterations>0 && fails==s->options->maxfailiterations) {
+      if(s->options->verbose) fprintf(stderr, "Iteration %d: No further reduction in the last %d tries.\n", i,fails);
+      break;
+    }
   }
 
   free(length_array);

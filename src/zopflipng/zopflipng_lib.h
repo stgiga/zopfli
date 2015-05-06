@@ -82,6 +82,8 @@ typedef struct CZopfliPNGOptions {
   int lazymatching;
 
   int optimizehuffmanheader;
+
+  int maxfailiterations;
 } CZopfliPNGOptions;
 
 // Sets the default options
@@ -156,6 +158,13 @@ struct ZopfliPNGOptions {
   Commit: 9501b29d0dacc8b8efb18ae01733b2768dd40b62
   */
   int optimizehuffmanheader;
+
+  /*
+  Used to stop working on a block if there is specified amount of iterations
+  without further bit reductions. Number of iterations should be greater
+  than this value, otherwise it will have no effect.
+  */
+  int maxfailiterations;
 };
 
 // Returns 0 on success, error code otherwise.
