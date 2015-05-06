@@ -36,7 +36,7 @@ images are still 26 % smaller than images recompressed with ZopfliPNG.
 
 Mr_KrzYch00's KrzYmod v6:
 - adds 7 command line switches for zopflipng:
-* --msb=[number]: maximum block splits, 0 = unlimited (default 15),
+* --mbs=[number]: maximum block splits, 0 = unlimited (default 15),
 * --mls=[number]: maximum length for score (default 1024),
 * --mui=[number]: maximum unsuccessful iterations after best, 0 = unlimited/--iterations limited (default 0),
 * --lazy: enable lazy matching in LZ77 Greedy (default OFF),
@@ -46,7 +46,7 @@ Mr_KrzYch00's KrzYmod v6:
 - faster compression but very increased memory usage by altering few preprocessor directives,
 - added zopfliavx, zopflipngavx, zopflineon and zopflipngneon to makefile for AVX and NEON builds.
 
-msb and mls switches are used for finetuning and it's clear they provide
+mbs and mls switches are used for finetuning and it's clear they provide
 better result sometimes... sometime worse.
 
 If You enjoy these changes You may give me a small reward in Bitcoins to:
