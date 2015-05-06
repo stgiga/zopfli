@@ -31,7 +31,7 @@ use "make libzopfli". The source code of Zopfli is under src/zopfli.
 Zopfli Compression Algorithm was created by Lode Vandevenne and Jyrki
 Alakuijala, based on an algorithm by Jyrki Alakuijala.
 
-Mr_KrzYch00's KrzYmod v1:
+Mr_KrzYch00's KrzYmod v2:
 - adds 2 command line switches for zopfli:
 * --msb#: maximum block splits, 0 = unlimited (default 15),
 * --mls#: maximum length for score (default 1024),

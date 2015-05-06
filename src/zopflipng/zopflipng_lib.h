@@ -74,6 +74,8 @@ typedef struct CZopfliPNGOptions {
   int blocksplittingmax;
 
   int lengthscoremax;
+
+  int verbosezopfli;
 } CZopfliPNGOptions;
 
 // Sets the default options
@@ -133,6 +135,9 @@ struct ZopfliPNGOptions {
   // Used to alter GetLengthScore max distance, this affects block splitting
   // model and the chance for first run being closer to the optimal output.
   int lengthscoremax;
+
+  // Verbose zopfli output during zopflipng optimization.
+  int verbosezopfli;
 };
 
 // Returns 0 on success, error code otherwise.
