@@ -116,7 +116,9 @@ void ShowHelp() {
          " essential: IHDR, PLTE, tRNS, IDAT and IEND.\n"
          "--mbs=[number]: maximum block splits, 0 = unlimited (d: 15)\n"
          "--mls=[number]: maximum length for score (d: 1024)\n"
+         "--lazy: lazy matching in Greedy LZ77 (d: NO).\n"
          "-v: verbose zopfli output.\n"
+         "-w: show current processed zopfli iteration (same line)\n"
          "\n"
          "Usage examples:\n"
          "Optimize a file and overwrite if smaller: zopflipng infile.png"
@@ -139,7 +141,7 @@ void PrintResultSize(const char* label, size_t oldsize, size_t newsize) {
 
 int main(int argc, char *argv[]) {
 printf("ZopfliPNG, a Portable Network Graphics (PNG) image optimizer.\n"
-         "Commit: a29e46ba9f268ab273903558dcb7ac13b9fe8e29 + KrzYmod v2\n"
+         "Commit: a29e46ba9f268ab273903558dcb7ac13b9fe8e29 + KrzYmod v3\n"
          "Adds more command line switches, should be faster, uses more memory\n"
          "\n");
   if (argc < 2) {
@@ -177,6 +179,8 @@ printf("ZopfliPNG, a Portable Network Graphics (PNG) image optimizer.\n"
           png_options.use_zopfli = false;
         } else if (c == 'v') {
           png_options.verbosezopfli = 1;
+        } else if (c == 'w') {
+          png_options.verbosezopflimore = 1;
         } else if (c == 'h') {
           ShowHelp();
           return 0;
@@ -196,6 +200,8 @@ printf("ZopfliPNG, a Portable Network Graphics (PNG) image optimizer.\n"
         png_options.lossy_transparent = true;
       } else if (name == "--lossy_8bit") {
         png_options.lossy_8bit = true;
+      } else if (name == "--lazy") {
+        png_options.lazymatching = 1;
       } else if (name == "--iterations") {
         if (num < 1) num = 1;
         png_options.num_iterations = num;

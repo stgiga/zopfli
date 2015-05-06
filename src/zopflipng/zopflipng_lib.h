@@ -76,6 +76,10 @@ typedef struct CZopfliPNGOptions {
   int lengthscoremax;
 
   int verbosezopfli;
+
+  int verbosezopflimore;
+
+  int lazymatching;
 } CZopfliPNGOptions;
 
 // Sets the default options
@@ -138,6 +142,12 @@ struct ZopfliPNGOptions {
 
   // Verbose zopfli output during zopflipng optimization.
   int verbosezopfli;
+
+  // Show current zopfli iteration being processed, using same line.
+  int verbosezopflimore;
+
+  // Enable lazy matching in LZ77 Greedy may provide various results for different files when enabled.
+  int lazymatching;
 };
 
 // Returns 0 on success, error code otherwise.

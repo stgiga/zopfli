@@ -378,13 +378,11 @@ void ZopfliLZ77Greedy(ZopfliBlockState* s, const unsigned char* in,
   ZopfliHash hash;
   ZopfliHash* h = &hash;
 
-#ifdef ZOPFLI_LAZY_MATCHING
   /* Lazy matching. */
   unsigned prev_length = 0;
   unsigned prev_match = 0;
   int prevlengthscore;
   int match_available = 0;
-#endif
 
   if (instart == inend) return;
 
@@ -401,43 +399,42 @@ void ZopfliLZ77Greedy(ZopfliBlockState* s, const unsigned char* in,
                            &dist, &leng);
     lengthscore = GetLengthScore(leng, dist, options->lengthscoremax);
 
-#ifdef ZOPFLI_LAZY_MATCHING
-    /* Lazy matching. */
-    prevlengthscore = GetLengthScore(prev_length, prev_match, options->lengthscoremax);
-    if (match_available) {
-      match_available = 0;
-      if (lengthscore > prevlengthscore + 1) {
-        ZopfliStoreLitLenDist(in[i - 1], 0, store);
-        if (lengthscore >= ZOPFLI_MIN_MATCH && leng < ZOPFLI_MAX_MATCH) {
-          match_available = 1;
-          prev_length = leng;
-          prev_match = dist;
+    if (options->lazymatching == 1) {
+      /* Lazy matching. */
+      prevlengthscore = GetLengthScore(prev_length, prev_match, options->lengthscoremax);
+      if (match_available) {
+        match_available = 0;
+        if (lengthscore > prevlengthscore + 1) {
+          ZopfliStoreLitLenDist(in[i - 1], 0, store);
+          if (lengthscore >= ZOPFLI_MIN_MATCH && leng < ZOPFLI_MAX_MATCH) {
+            match_available = 1;
+            prev_length = leng;
+            prev_match = dist;
+            continue;
+          }
+        } else {
+          /* Add previous to output. */
+          leng = prev_length;
+          dist = prev_match;
+          lengthscore = prevlengthscore;
+          /* Add to output. */
+          ZopfliVerifyLenDist(in, inend, i - 1, dist, leng);
+          ZopfliStoreLitLenDist(leng, dist, store);
+          for (j = 2; j < leng; j++) {
+            assert(i < inend);
+            i++;
+            ZopfliUpdateHash(in, i, inend, h);
+          }
           continue;
         }
-      } else {
-        /* Add previous to output. */
-        leng = prev_length;
-        dist = prev_match;
-        lengthscore = prevlengthscore;
-        /* Add to output. */
-        ZopfliVerifyLenDist(in, inend, i - 1, dist, leng);
-        ZopfliStoreLitLenDist(leng, dist, store);
-        for (j = 2; j < leng; j++) {
-          assert(i < inend);
-          i++;
-          ZopfliUpdateHash(in, i, inend, h);
-        }
+      } else if (lengthscore >= ZOPFLI_MIN_MATCH && leng < ZOPFLI_MAX_MATCH) {
+        match_available = 1;
+        prev_length = leng;
+        prev_match = dist;
         continue;
       }
+      /* End of lazy matching. */
     }
-    else if (lengthscore >= ZOPFLI_MIN_MATCH && leng < ZOPFLI_MAX_MATCH) {
-      match_available = 1;
-      prev_length = leng;
-      prev_match = dist;
-      continue;
-    }
-    /* End of lazy matching. */
-#endif
 
     /* Add to output. */
     if (lengthscore >= ZOPFLI_MIN_MATCH) {

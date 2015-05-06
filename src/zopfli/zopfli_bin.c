@@ -135,7 +135,7 @@ int main(int argc, char* argv[]) {
 
   fprintf(stderr,
     "Zopfli, a Compression Algorithm to produce Deflate/Zlib streams.\n"
-    "Commit: a29e46ba9f268ab273903558dcb7ac13b9fe8e29 + KrzYmod v2\n"
+    "Commit: a29e46ba9f268ab273903558dcb7ac13b9fe8e29 + KrzYmod v3\n"
     "Adds more command line switches, should be faster, uses more memory\n\n");
 
   ZopfliInitOptions(&options);
@@ -143,6 +143,7 @@ int main(int argc, char* argv[]) {
   for (i = 1; i < argc; i++) {
     const char* arg = argv[i];
     if (StringsEqual(arg, "-v")) options.verbose = 1;
+    else if (StringsEqual(arg, "-w")) options.verbose_more = 1;
     else if (StringsEqual(arg, "-c")) output_to_stdout = 1;
     else if (StringsEqual(arg, "--deflate")) {
       output_type = ZOPFLI_FORMAT_DEFLATE;
@@ -150,6 +151,7 @@ int main(int argc, char* argv[]) {
     else if (StringsEqual(arg, "--zlib")) output_type = ZOPFLI_FORMAT_ZLIB;
     else if (StringsEqual(arg, "--gzip")) output_type = ZOPFLI_FORMAT_GZIP;
     else if (StringsEqual(arg, "--splitlast")) options.blocksplittinglast = 1;
+    else if (StringsEqual(arg, "--lazy")) options.lazymatching = 1;
     else if (arg[0] == '-' && arg[1] == '-' && arg[2] == 'i'
         && arg[3] >= '0' && arg[3] <= '9') {
       options.numiterations = atoi(arg + 3);
@@ -173,6 +175,9 @@ int main(int argc, char* argv[]) {
           "  --mls#  maximum length for score (d: 1024)\n"
           "          this option has an impact on block splitting model\n");
       fprintf(stderr,
+          "  --lazy  lazy matching in Greedy LZ77 (d: NO)\n"
+          "          this option has an impack on block splitting model\n"
+          "\n"
           "  --gzip        output to gzip format (default)\n"
           "  --zlib        output to zlib format instead of gzip\n"
           "  --deflate     output to deflate format instead of gzip\n"

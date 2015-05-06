@@ -1,5 +1,6 @@
 /*
 Copyright 2011 Google Inc. All Rights Reserved.
+Copyright 2015 Mr_KrzYch00. All Rights Reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -112,9 +113,8 @@ the compression result.
 /*
 Whether to use lazy matching in the greedy LZ77 implementation. This gives a
 better result of ZopfliLZ77Greedy, but the effect this has on the optimal LZ77
-varies from file to file.
+varies from file to file. Moved, to be used as command line option.
 */
-#define ZOPFLI_LAZY_MATCHING
 
 /*
 Gets the symbol for the given length, cfr. the DEFLATE spec.

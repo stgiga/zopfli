@@ -35,7 +35,11 @@ typedef struct ZopfliOptions {
   /* Whether to print output */
   int verbose;
 
-  /* Whether to print more detailed output */
+  /*
+  Whether to print all iterations using same line, best ones are displayed
+  as usual, using separate lines. Good for keeping a track of currently
+  processed iterations.
+  */
   int verbose_more;
 
   /*
@@ -71,6 +75,12 @@ typedef struct ZopfliOptions {
   model and the chance for first run being closer to the optimal output.
   */
   int lengthscoremax;
+
+  /*
+  Enable Lazy matching in LZ77Greedy, may provide different result.
+  During my tests one file got reduced by 1 byte using this method.
+  */
+  int lazymatching;
 } ZopfliOptions;
 
 /* Initializes options with default values. */

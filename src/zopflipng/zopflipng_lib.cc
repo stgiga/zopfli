@@ -43,7 +43,9 @@ ZopfliPNGOptions::ZopfliPNGOptions()
   , block_split_strategy(1)
   , blocksplittingmax(15)
   , lengthscoremax(1024)
-  , verbosezopfli(0) {
+  , verbosezopfli(0)
+  , verbosezopflimore(0)
+  , lazymatching(0) {
 }
 
 // Deflate compressor passed as fuction pointer to LodePNG to have it use Zopfli
@@ -57,11 +59,14 @@ unsigned CustomPNGDeflate(unsigned char** out, size_t* outsize,
   ZopfliOptions options;
   ZopfliInitOptions(&options);
 
-  options.numiterations = insize < 200000
-      ? png_options->num_iterations : png_options->num_iterations_large;
+  options.numiterations     = insize < 200000
+                            ? png_options->num_iterations
+                            : png_options->num_iterations_large;
   options.blocksplittingmax = png_options->blocksplittingmax;
-  options.lengthscoremax = png_options->lengthscoremax;
-  options.verbose = png_options->verbosezopfli;
+  options.lengthscoremax    = png_options->lengthscoremax;
+  options.verbose           = png_options->verbosezopfli;
+  options.verbose_more      = png_options->verbosezopflimore;
+  options.lazymatching      = png_options->lazymatching;
 
   if (png_options->block_split_strategy == 3) {
     // Try both block splitting first and last.
@@ -452,6 +457,8 @@ extern "C" void CZopfliPNGSetDefaults(CZopfliPNGOptions* png_options) {
   png_options->blocksplittingmax    = opts.blocksplittingmax;
   png_options->lengthscoremax       = opts.lengthscoremax;
   png_options->verbosezopfli        = opts.verbosezopfli;
+  png_options->verbosezopflimore    = opts.verbosezopflimore;
+  png_options->lazymatching         = opts.lazymatching;
 }
 
 extern "C" int CZopfliPNGOptimize(const unsigned char* origpng,
@@ -473,6 +480,8 @@ extern "C" int CZopfliPNGOptimize(const unsigned char* origpng,
   opts.block_split_strategy = png_options->block_split_strategy;
   opts.blocksplittingmax    = png_options->blocksplittingmax;
   opts.verbosezopfli        = png_options->verbosezopfli;
+  opts.verbosezopflimore    = png_options->verbosezopflimore;
+  opts.lazymatching         = png_options->lazymatching;
 
   for (int i = 0; i < png_options->num_filter_strategies; i++) {
     opts.filter_strategies.push_back(png_options->filter_strategies[i]);

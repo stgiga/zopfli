@@ -34,11 +34,13 @@ images are still 26 % smaller than images recompressed with ZopfliPNG.
 
 2013-05-07, Lode Vandevenne and Jyrki Alakuijala
 
-Mr_KrzYch00's KrzYmod v2:
-- adds 3 command line switches for zopflipng:
+Mr_KrzYch00's KrzYmod v3:
+- adds 5 command line switches for zopflipng:
 * --msb=[number]: maximum block splits, 0 = unlimited (default 15),
 * --mls=[number]: maximum length for score (default 1024),
+* --lazy: enable lazy matching in LZ77 Greedy,
 * -v: verbose zopfli output during zopflipng optimization.
+* -w: displays current processed zopfli iteration (same line).
 - faster compression but very increased memory usage by altering few preprocessor directives,
 - added zopfliavx, zopflipngavx, zopflineon and zopflipngneon to makefile for AVX and NEON builds.
 
