@@ -94,7 +94,7 @@ static void CompressFile(const ZopfliOptions* options,
     return;
   }
 
-  ZopfliCompress(options, output_type, in, insize, &out, &outsize);
+  ZopfliCompress(options, output_type, in, insize, &out, &outsize, infilename);
 
   if (outfilename) {
     SaveFile(outfilename, out, outsize);
@@ -135,7 +135,7 @@ int main(int argc, char* argv[]) {
 
   fprintf(stderr,
     "Zopfli, a Compression Algorithm to produce Deflate/Zlib streams.\n"
-    "Commit: a29e46ba9f268ab273903558dcb7ac13b9fe8e29 + KrzYmod v6\n"
+    "Commit: a29e46ba9f268ab273903558dcb7ac13b9fe8e29 + KrzYmod v7\n"
     "Adds more command line switches, should be faster, uses more memory\n\n");
 
   ZopfliInitOptions(&options);
@@ -150,6 +150,7 @@ int main(int argc, char* argv[]) {
     }
     else if (StringsEqual(arg, "--zlib")) output_type = ZOPFLI_FORMAT_ZLIB;
     else if (StringsEqual(arg, "--gzip")) output_type = ZOPFLI_FORMAT_GZIP;
+    else if (StringsEqual(arg, "--gzipname")) output_type = ZOPFLI_FORMAT_GZIP_NAME;
     else if (StringsEqual(arg, "--splitlast")) options.blocksplittinglast = 1;
     else if (StringsEqual(arg, "--lazy")) options.lazymatching = 1;
     else if (StringsEqual(arg, "--ohh")) options.optimizehuffmanheader = 1;
@@ -188,6 +189,7 @@ int main(int argc, char* argv[]) {
           "\n");
       fprintf(stderr,
           "  --gzip        output to gzip format (default)\n"
+          "  --gzipname    output to gzip format with filename\n"
           "  --zlib        output to zlib format instead of gzip\n"
           "  --deflate     output to deflate format instead of gzip\n"
           "  --splitlast   do block splitting last instead of first\n");
@@ -221,7 +223,7 @@ int main(int argc, char* argv[]) {
       filename = argv[i];
       if (output_to_stdout) {
         outfilename = 0;
-      } else if (output_type == ZOPFLI_FORMAT_GZIP) {
+      } else if (output_type == ZOPFLI_FORMAT_GZIP || output_type == ZOPFLI_FORMAT_GZIP_NAME) {
         outfilename = AddStrings(filename, ".gz");
       } else if (output_type == ZOPFLI_FORMAT_ZLIB) {
         outfilename = AddStrings(filename, ".zlib");

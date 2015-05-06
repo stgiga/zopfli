@@ -22,7 +22,7 @@ ZOPFLIPNGBIN_SRC := src/zopflipng/zopflipng_bin.cc
 
 # Zopfli binary
 zopfli:
-	$(CC) $(ZOPFLILIB_SRC) $(ZOPFLIBIN_SRC) $(CFLAGS) -o zopfli
+	$(CC) -static $(ZOPFLILIB_SRC) $(ZOPFLIBIN_SRC) $(CFLAGS) -o zopfli
 	
 zopfliavx:
 	$(CC) -static $(ZOPFLILIB_SRC) $(ZOPFLIBIN_SRC) $(CFLAGS) $(CAVXFLAGS) -o zopfli
@@ -38,7 +38,7 @@ libzopfli:
 # ZopfliPNG binary
 zopflipng:
 	$(CC) $(ZOPFLILIB_SRC) $(CFLAGS) -c
-	$(CXX) $(ZOPFLILIB_OBJ) $(LODEPNG_SRC) $(ZOPFLIPNGLIB_SRC) $(ZOPFLIPNGBIN_SRC) $(CFLAGS) -o zopflipng
+	$(CXX) -static -static-libgcc $(ZOPFLILIB_OBJ) $(LODEPNG_SRC) $(ZOPFLIPNGLIB_SRC) $(ZOPFLIPNGBIN_SRC) $(CFLAGS) -o zopflipng
 	
 zopflipngavx:
 	$(CC) $(ZOPFLILIB_SRC) $(CFLAGS) $(CAVXFLAGS) -c

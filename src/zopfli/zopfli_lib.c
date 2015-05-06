@@ -27,9 +27,11 @@ Author: jyrki.alakuijala@gmail.com (Jyrki Alakuijala)
 
 void ZopfliCompress(const ZopfliOptions* options, ZopfliFormat output_type,
                     const unsigned char* in, size_t insize,
-                    unsigned char** out, size_t* outsize) {
+                    unsigned char** out, size_t* outsize, const char* infilename) {
   if (output_type == ZOPFLI_FORMAT_GZIP) {
-    ZopfliGzipCompress(options, in, insize, out, outsize);
+    ZopfliGzipCompress(options, in, insize, out, outsize, infilename, 0);
+  } else if (output_type == ZOPFLI_FORMAT_GZIP_NAME) {
+    ZopfliGzipCompress(options, in, insize, out, outsize, infilename, 1);
   } else if (output_type == ZOPFLI_FORMAT_ZLIB) {
     ZopfliZlibCompress(options, in, insize, out, outsize);
   } else if (output_type == ZOPFLI_FORMAT_DEFLATE) {

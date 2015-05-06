@@ -21,6 +21,9 @@ Author: jyrki.alakuijala@gmail.com (Jyrki Alakuijala)
 #include "util.h"
 
 #include <stdio.h>
+#include <sys/stat.h>
+#include <time.h>
+#include <string.h>
 
 #include "deflate.h"
 
@@ -76,22 +79,47 @@ Compresses the data according to the gzip specification.
 */
 void ZopfliGzipCompress(const ZopfliOptions* options,
                         const unsigned char* in, size_t insize,
-                        unsigned char** out, size_t* outsize) {
+                        unsigned char** out, size_t* outsize, const char *infilename, int keepname) {
   unsigned long crcvalue = CRC(in, insize);
+  unsigned long unixtimestamp = 0;
   unsigned char bp = 0;
-
+  int i;
+  int max = strlen(infilename);
+  struct tm* tt;
+  struct stat attrib;
+  stat(infilename, &attrib);
+  tt = gmtime(&(attrib.st_mtime));
+  if(tt->tm_year<70) {
+    tt->tm_year=70;
+    mktime(tt);
+  }
+  unixtimestamp = tt->tm_sec + tt->tm_min*60 + tt->tm_hour*3600 + tt->tm_yday*86400 +
+  (tt->tm_year-70)*31536000 + ((tt->tm_year-69)/4)*86400 -
+  ((tt->tm_year-1)/100)*86400 + ((tt->tm_year+299)/400)*86400;
+  
   ZOPFLI_APPEND_DATA(31, out, outsize);  /* ID1 */
   ZOPFLI_APPEND_DATA(139, out, outsize);  /* ID2 */
   ZOPFLI_APPEND_DATA(8, out, outsize);  /* CM */
-  ZOPFLI_APPEND_DATA(0, out, outsize);  /* FLG */
+  if(keepname==0) {
+    ZOPFLI_APPEND_DATA(0, out, outsize);  /* FLG */
+  } else {
+    ZOPFLI_APPEND_DATA(8, out, outsize);  /* FLG */
+  }
   /* MTIME */
-  ZOPFLI_APPEND_DATA(0, out, outsize);
-  ZOPFLI_APPEND_DATA(0, out, outsize);
-  ZOPFLI_APPEND_DATA(0, out, outsize);
-  ZOPFLI_APPEND_DATA(0, out, outsize);
+  ZOPFLI_APPEND_DATA(unixtimestamp % 256, out, outsize);
+  ZOPFLI_APPEND_DATA((unixtimestamp >> 8) % 256, out, outsize);
+  ZOPFLI_APPEND_DATA((unixtimestamp >> 16) % 256, out, outsize);
+  ZOPFLI_APPEND_DATA((unixtimestamp >> 24) % 256, out, outsize);
 
   ZOPFLI_APPEND_DATA(2, out, outsize);  /* XFL, 2 indicates best compression. */
   ZOPFLI_APPEND_DATA(3, out, outsize);  /* OS follows Unix conventions. */
+
+  if(keepname==1) {
+    for(i=0;i<max;++i) {
+      ZOPFLI_APPEND_DATA(infilename[i], out, outsize);
+    }
+    ZOPFLI_APPEND_DATA(0, out, outsize);
+  }
 
   ZopfliDeflate(options, 2 /* Dynamic block */, 1,
                 in, insize, &bp, out, outsize);
