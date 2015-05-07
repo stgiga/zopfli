@@ -104,7 +104,8 @@ typedef enum {
   ZOPFLI_FORMAT_GZIP,
   ZOPFLI_FORMAT_GZIP_NAME,
   ZOPFLI_FORMAT_ZLIB,
-  ZOPFLI_FORMAT_DEFLATE
+  ZOPFLI_FORMAT_DEFLATE,
+  ZOPFLI_FORMAT_ZIP
 } ZopfliFormat;
 
 /*
@@ -119,7 +120,7 @@ outsize: pointer to the dynamic output array size
 */
 void ZopfliCompress(const ZopfliOptions* options, ZopfliFormat output_type,
                     const unsigned char* in, size_t insize,
-                    unsigned char** out, size_t* outsize, const char* infilename);
+                    unsigned char** out, size_t* outsize, size_t* outsizeraw, const char* infilename);
 
 #ifdef __cplusplus
 }  // extern "C"

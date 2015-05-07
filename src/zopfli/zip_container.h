@@ -18,8 +18,8 @@ Author: lode.vandevenne@gmail.com (Lode Vandevenne)
 Author: jyrki.alakuijala@gmail.com (Jyrki Alakuijala)
 */
 
-#ifndef ZOPFLI_GZIP_H_
-#define ZOPFLI_GZIP_H_
+#ifndef ZOPFLI_ZIP_H_
+#define ZOPFLI_ZIP_H_
 
 /*
 Functions to compress according to the Gzip specification.
@@ -40,9 +40,10 @@ out: pointer to the dynamic output array to which the result is appended. Must
   be freed after use.
 outsize: pointer to the dynamic output array size.
 */
-void ZopfliGzipCompress(const ZopfliOptions* options,
+
+void ZopfliZipCompress(const ZopfliOptions* options,
                         const unsigned char* in, size_t insize,
-                        unsigned char** out, size_t* outsize, const char *infilename, int keepname);
+                        unsigned char** out, size_t* outsize, size_t* outsizeraw, const char *infilename);
 
 #ifdef __cplusplus
 }  // extern "C"

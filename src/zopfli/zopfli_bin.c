@@ -32,6 +32,7 @@ decompressor.
 
 #include "deflate.h"
 #include "gzip_container.h"
+#include "zip_container.h"
 #include "zlib_container.h"
 
 /*
@@ -88,13 +89,14 @@ static void CompressFile(const ZopfliOptions* options,
   size_t insize;
   unsigned char* out = 0;
   size_t outsize = 0;
+  size_t outsizeraw = 0;
   LoadFile(infilename, &in, &insize);
   if (insize == 0) {
     fprintf(stderr, "Invalid filename: %s\n", infilename);
     return;
   }
 
-  ZopfliCompress(options, output_type, in, insize, &out, &outsize, infilename);
+  ZopfliCompress(options, output_type, in, insize, &out, &outsize, &outsizeraw, infilename);
 
   if (outfilename) {
     SaveFile(outfilename, out, outsize);
@@ -135,7 +137,7 @@ int main(int argc, char* argv[]) {
 
   fprintf(stderr,
     "Zopfli, a Compression Algorithm to produce Deflate/Zlib streams.\n"
-    "Commit: a29e46ba9f268ab273903558dcb7ac13b9fe8e29 + KrzYmod v7\n"
+    "Commit: a29e46ba9f268ab273903558dcb7ac13b9fe8e29 + KrzYmod pre-v8\n"
     "Adds more command line switches, should be faster, uses more memory\n\n");
 
   ZopfliInitOptions(&options);
@@ -145,12 +147,11 @@ int main(int argc, char* argv[]) {
     if (StringsEqual(arg, "-v")) options.verbose = 1;
     else if (StringsEqual(arg, "-w")) options.verbose_more = 1;
     else if (StringsEqual(arg, "-c")) output_to_stdout = 1;
-    else if (StringsEqual(arg, "--deflate")) {
-      output_type = ZOPFLI_FORMAT_DEFLATE;
-    }
+    else if (StringsEqual(arg, "--deflate")) output_type = ZOPFLI_FORMAT_DEFLATE;
     else if (StringsEqual(arg, "--zlib")) output_type = ZOPFLI_FORMAT_ZLIB;
     else if (StringsEqual(arg, "--gzip")) output_type = ZOPFLI_FORMAT_GZIP;
     else if (StringsEqual(arg, "--gzipname")) output_type = ZOPFLI_FORMAT_GZIP_NAME;
+    else if (StringsEqual(arg, "--zip")) output_type = ZOPFLI_FORMAT_ZIP;
     else if (StringsEqual(arg, "--splitlast")) options.blocksplittinglast = 1;
     else if (StringsEqual(arg, "--lazy")) options.lazymatching = 1;
     else if (StringsEqual(arg, "--ohh")) options.optimizehuffmanheader = 1;
@@ -190,6 +191,7 @@ int main(int argc, char* argv[]) {
       fprintf(stderr,
           "  --gzip        output to gzip format (default)\n"
           "  --gzipname    output to gzip format with filename\n"
+          "  --zip         output to zip format\n"
           "  --zlib        output to zlib format instead of gzip\n"
           "  --deflate     output to deflate format instead of gzip\n"
           "  --splitlast   do block splitting last instead of first\n");
@@ -227,6 +229,8 @@ int main(int argc, char* argv[]) {
         outfilename = AddStrings(filename, ".gz");
       } else if (output_type == ZOPFLI_FORMAT_ZLIB) {
         outfilename = AddStrings(filename, ".zlib");
+      } else if (output_type == ZOPFLI_FORMAT_ZIP) {
+        outfilename = AddStrings(filename, ".zip");
       } else {
         assert(output_type == ZOPFLI_FORMAT_DEFLATE);
         outfilename = AddStrings(filename, ".deflate");

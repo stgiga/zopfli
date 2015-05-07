@@ -8,6 +8,7 @@ CNEONFLAGS = -march=armv7-a -mcpu=cortex-a9 -mfpu=neon -mfloat-abi=hard
 
 ZOPFLILIB_SRC = src/zopfli/blocksplitter.c src/zopfli/cache.c\
                 src/zopfli/deflate.c src/zopfli/gzip_container.c\
+                src/zopfli/zip_container.c\
                 src/zopfli/hash.c src/zopfli/katajainen.c\
                 src/zopfli/lz77.c src/zopfli/squeeze.c\
                 src/zopfli/tree.c src/zopfli/util.c\

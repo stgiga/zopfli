@@ -1,5 +1,6 @@
 /*
 Copyright 2011 Google Inc. All Rights Reserved.
+Copyright 2015 Mr_KrzYch00. All Rights Reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -21,19 +22,22 @@ Author: jyrki.alakuijala@gmail.com (Jyrki Alakuijala)
 
 #include "deflate.h"
 #include "gzip_container.h"
+#include "zip_container.h"
 #include "zlib_container.h"
 
 #include <assert.h>
 
 void ZopfliCompress(const ZopfliOptions* options, ZopfliFormat output_type,
                     const unsigned char* in, size_t insize,
-                    unsigned char** out, size_t* outsize, const char* infilename) {
+                    unsigned char** out, size_t* outsize, size_t* outsizeraw, const char* infilename) {
   if (output_type == ZOPFLI_FORMAT_GZIP) {
     ZopfliGzipCompress(options, in, insize, out, outsize, infilename, 0);
   } else if (output_type == ZOPFLI_FORMAT_GZIP_NAME) {
     ZopfliGzipCompress(options, in, insize, out, outsize, infilename, 1);
   } else if (output_type == ZOPFLI_FORMAT_ZLIB) {
     ZopfliZlibCompress(options, in, insize, out, outsize);
+  } else if (output_type == ZOPFLI_FORMAT_ZIP) {
+    ZopfliZipCompress(options, in, insize, out, outsize, outsizeraw, infilename);
   } else if (output_type == ZOPFLI_FORMAT_DEFLATE) {
     unsigned char bp = 0;
     ZopfliDeflate(options, 2 /* Dynamic block */, 1,
