@@ -42,6 +42,7 @@ outsize: pointer to the dynamic output array size.
 */
 
 typedef struct ZipCDIR {
+  char* rootdir;
   unsigned char* data;
   unsigned char* enddata;
   unsigned long size;

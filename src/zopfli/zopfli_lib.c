@@ -41,6 +41,8 @@ void ZopfliCompress(const ZopfliOptions* options, ZopfliFormat output_type,
     ZopfliZlibCompress(options, in, insize, out, outsize);
   } else if (output_type == ZOPFLI_FORMAT_ZIP) {
     InitCDIR(&zipcdir);
+    zipcdir.rootdir=realloc(zipcdir.rootdir,3*sizeof(char *));
+    memcpy(zipcdir.rootdir,"./\0",3*sizeof(char *));
     ZopfliZipCompress(options, in, insize, out, outsize, outsizeraw, infilename, &zipcdir);
   } else if (output_type == ZOPFLI_FORMAT_DEFLATE) {
     unsigned char bp = 0;

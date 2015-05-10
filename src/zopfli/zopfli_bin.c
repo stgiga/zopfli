@@ -167,8 +167,10 @@ static void CompressMultiFile(const ZopfliOptions* options,
     fprintf(stderr, "Directory %s seems empty.\n", infilename);
     return;
   }
-  dirname=AddStrings(infilename, "/");
   InitCDIR(&zipcdir);
+  dirname=AddStrings(infilename, "/");
+  zipcdir.rootdir=realloc(zipcdir.rootdir,strlen(dirname)*sizeof(char *));
+  memcpy(zipcdir.rootdir,dirname,strlen(dirname)*sizeof(char *));
   for(i = 0; i < j; ++i) {
     outsize=0;
     outsizeraw=0;

@@ -34,6 +34,7 @@ static unsigned long crc_table[256];
 static int crc_table_computed = 0;
 
 void InitCDIR(ZipCDIR *zipcdir) {
+  zipcdir->rootdir = NULL;
   zipcdir->data = NULL;
   zipcdir->enddata = malloc(22);
   zipcdir->size = 0;
@@ -96,6 +97,7 @@ void ZopfliZipCompress(const ZopfliOptions* options,
   unsigned char bp = 0;
   unsigned long i;
   unsigned long max = strlen(infilename);
+  char* statfile = malloc((strlen(zipcdir->rootdir)+strlen(infilename))*sizeof(char*)+1);
   struct tm* tt;
   struct stat attrib;
 
@@ -103,7 +105,10 @@ void ZopfliZipCompress(const ZopfliOptions* options,
   zipcdir->size+=max+46;
   zipcdir->data=realloc(zipcdir->data,zipcdir->size*sizeof(unsigned char*));
 
-  stat(infilename, &attrib);
+  strcpy(statfile,zipcdir->rootdir);
+  strcat(statfile,infilename);
+
+  stat(statfile, &attrib);
   tt = localtime(&(attrib.st_mtime));
   if(tt->tm_year<80) {
     tt->tm_year=80;
