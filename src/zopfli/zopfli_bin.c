@@ -25,6 +25,10 @@ decompress. Decompression can be done by any standard gzip, zlib or deflate
 decompressor.
 */
 
+#define _XOPEN_SOURCE 500
+
+#include <dirent.h>
+#include <sys/stat.h>
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -38,6 +42,7 @@ decompressor.
 /*
 Loads a file into a memory array.
 */
+
 static void LoadFile(const char* filename,
                      unsigned char** out, size_t* outsize) {
   FILE* file;
@@ -71,45 +76,21 @@ static void LoadFile(const char* filename,
 Saves a file from a memory array, overwriting the file if it existed.
 */
 static void SaveFile(const char* filename,
-                     const unsigned char* in, size_t insize) {
-  FILE* file = fopen(filename, "wb" );
+                     const unsigned char* in, size_t insize, size_t fseekdata) {
+  FILE* file = fopen(filename, "r+b" );
+  if(file == NULL) {
+   file = fopen(filename, "wb" );
+   fclose(file);
+   file = fopen(filename, "r+b" );
+  }
   assert(file);
+  fseek(file,fseekdata,SEEK_SET);
   fwrite((char*)in, 1, insize, file);
   fclose(file);
 }
 
-/*
-outfilename: filename to write output to, or 0 to write to stdout instead
-*/
-static void CompressFile(const ZopfliOptions* options,
-                         ZopfliFormat output_type,
-                         const char* infilename,
-                         const char* outfilename) {
-  unsigned char* in;
-  size_t insize;
-  unsigned char* out = 0;
-  size_t outsize = 0;
-  size_t outsizeraw = 0;
-  LoadFile(infilename, &in, &insize);
-  if (insize == 0) {
-    fprintf(stderr, "Invalid filename: %s\n", infilename);
-    return;
-  }
-
-  ZopfliCompress(options, output_type, in, insize, &out, &outsize, &outsizeraw, infilename);
-
-  if (outfilename) {
-    SaveFile(outfilename, out, outsize);
-  } else {
-    size_t i;
-    for (i = 0; i < outsize; i++) {
-      /* Works only if terminal does not convert newlines. */
-      printf("%c", out[i]);
-    }
-  }
-
-  free(out);
-  free(in);
+static char StringsEqual(const char* str1, const char* str2) {
+  return strcmp(str1, str2) == 0;
 }
 
 /*
@@ -124,8 +105,121 @@ static char* AddStrings(const char* str1, const char* str2) {
   return result;
 }
 
-static char StringsEqual(const char* str1, const char* str2) {
-  return strcmp(str1, str2) == 0;
+static int ListDir(const char* filename, char ***filesindir, unsigned int *j, int isroot) {
+  DIR *dir;
+  struct dirent *ent;
+  struct stat attrib;
+  char* initdir=AddStrings(filename,"/");
+  unsigned int i;
+  dir = opendir(filename);
+  if(! dir) {
+    return 0;
+  } else {
+    while(1) {
+      ent = readdir(dir);
+      if(! ent) break;
+      if(!StringsEqual(ent->d_name,".") && !StringsEqual(ent->d_name,"..")) {
+        stat(AddStrings(initdir,ent->d_name), &attrib);
+        if((attrib.st_mode & S_IFDIR)==0) {
+          *filesindir = realloc(*filesindir,((unsigned int)*j+1)*(sizeof(char*)));
+          if(isroot==1) {
+            (*filesindir)[*j] = malloc(strlen(ent->d_name) * sizeof(char*) +1);
+            strcpy((*filesindir)[*j], ent->d_name);
+          } else {
+            for(i=0;i<strlen(initdir);++i) {
+              if(initdir[i]=='/') break;
+            }
+            ++i;
+            (*filesindir)[*j] = malloc(strlen(initdir+i)+strlen(ent->d_name) * sizeof(char*) +1);
+            strcpy((*filesindir)[*j], AddStrings(initdir+i,ent->d_name));
+          }
+          ++*j;
+        } else {
+          ListDir(AddStrings(initdir,ent->d_name), filesindir, j,0);
+        }
+      }
+    }
+    closedir(dir);
+  }
+  return 1;
+}
+
+static void CompressMultiFile(const ZopfliOptions* options,
+                         const char* infilename,
+                         const char* outfilename) {
+  ZipCDIR zipcdir;
+  char** filesindir = NULL;
+  char* dirname = 0;
+  char* fileindir = 0;
+  unsigned char* in;
+  size_t insize;
+  unsigned char* out = 0;
+  size_t outsize;
+  size_t outsizeraw;
+  size_t fseekdata = 0;
+  unsigned int i;
+  unsigned int j = 0;
+
+  if(ListDir(infilename, &filesindir, &j, 1)==0) {
+    fprintf(stderr, "Error: %s is not a directory or doesn't exist.\n",infilename); 
+    return;
+  } else if(j==0) {
+    fprintf(stderr, "Directory %s seems empty.\n", infilename);
+    return;
+  }
+  dirname=AddStrings(infilename, "/");
+  InitCDIR(&zipcdir);
+  for(i = 0; i < j; ++i) {
+    outsize=0;
+    outsizeraw=0;
+    fileindir=AddStrings(dirname,filesindir[i]);
+  
+    LoadFile(fileindir, &in, &insize);
+    if (insize == 0) {
+      fprintf(stderr, "Invalid filename: %s - trying next\n", fileindir);
+    } else {
+      fprintf(stderr, "Adding to ZIP archive: %s\n", filesindir[i]);
+      ZopfliZipCompress(options, in, insize, &out, &outsize, &outsizeraw, filesindir[i], &zipcdir);
+      SaveFile(outfilename, out, outsize,fseekdata);
+      fseekdata=zipcdir.offset;
+      free(out);
+      free(in);
+    }
+  }
+}
+
+/*
+outfilename: filename to write output to, or 0 to write to stdout instead
+*/
+static void CompressFile(const ZopfliOptions* options,
+                         ZopfliFormat output_type,
+                         const char* infilename,
+                         const char* outfilename) {
+  unsigned char* in;
+  size_t insize;
+  unsigned char* out = 0;
+  size_t outsize = 0;
+  size_t outsizeraw = 0;
+  
+  LoadFile(infilename, &in, &insize);
+  if (insize == 0) {
+    fprintf(stderr, "Invalid filename: %s\n", infilename);
+    return;
+  }
+
+  ZopfliCompress(options, output_type, in, insize, &out, &outsize, &outsizeraw, infilename);
+  if (outfilename) {
+    SaveFile(outfilename, out, outsize,0);
+  } else {
+    size_t i;
+    for (i = 0; i < outsize; i++) {
+      /* Works only if terminal does not convert newlines. */
+      printf("%c", out[i]);
+    }
+  }
+
+  free(out);
+  free(in);
 }
 
 int main(int argc, char* argv[]) {
@@ -137,7 +231,7 @@ int main(int argc, char* argv[]) {
 
   fprintf(stderr,
     "Zopfli, a Compression Algorithm to produce Deflate/Zlib streams.\n"
-    "Commit: a29e46ba9f268ab273903558dcb7ac13b9fe8e29 + KrzYmod pre-v8\n"
+    "Commit: a29e46ba9f268ab273903558dcb7ac13b9fe8e29 + KrzYmod v8\n"
     "Adds more command line switches, should be faster, uses more memory\n\n");
 
   ZopfliInitOptions(&options);
@@ -155,6 +249,7 @@ int main(int argc, char* argv[]) {
     else if (StringsEqual(arg, "--splitlast")) options.blocksplittinglast = 1;
     else if (StringsEqual(arg, "--lazy")) options.lazymatching = 1;
     else if (StringsEqual(arg, "--ohh")) options.optimizehuffmanheader = 1;
+    else if (StringsEqual(arg, "--dir")) options.usescandir = 1;
     else if (arg[0] == '-' && arg[1] == '-' && arg[2] == 'i'
         && arg[3] >= '0' && arg[3] <= '9') {
       options.numiterations = atoi(arg + 3);
@@ -194,7 +289,8 @@ int main(int argc, char* argv[]) {
           "  --zip         output to zip format\n"
           "  --zlib        output to zlib format instead of gzip\n"
           "  --deflate     output to deflate format instead of gzip\n"
-          "  --splitlast   do block splitting last instead of first\n");
+          "  --splitlast   do block splitting last instead of first\n"
+          "  --dir         accept directory as input, requires: --zip\n");
       return 0;
     }
   }
@@ -238,7 +334,16 @@ int main(int argc, char* argv[]) {
       if (options.verbose && outfilename) {
         fprintf(stderr, "Saving to: %s\n", outfilename);
       }
-      CompressFile(&options, output_type, filename, outfilename);
+      if(options.usescandir == 1) {
+        if(output_type == ZOPFLI_FORMAT_ZIP) {
+          CompressMultiFile(&options, filename, outfilename);
+        } else {
+          fprintf(stderr, "Error: --dir will only work with ZIP container (--zip).");
+          return 0;
+        }
+      } else {
+        CompressFile(&options, output_type, filename, outfilename);
+      }
       free(outfilename);
     }
   }

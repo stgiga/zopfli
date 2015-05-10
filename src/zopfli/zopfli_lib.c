@@ -18,6 +18,8 @@ Author: lode.vandevenne@gmail.com (Lode Vandevenne)
 Author: jyrki.alakuijala@gmail.com (Jyrki Alakuijala)
 */
 
+#include <string.h>
+
 #include "zopfli.h"
 
 #include "deflate.h"
@@ -30,6 +32,7 @@ Author: jyrki.alakuijala@gmail.com (Jyrki Alakuijala)
 void ZopfliCompress(const ZopfliOptions* options, ZopfliFormat output_type,
                     const unsigned char* in, size_t insize,
                     unsigned char** out, size_t* outsize, size_t* outsizeraw, const char* infilename) {
+  ZipCDIR zipcdir;
   if (output_type == ZOPFLI_FORMAT_GZIP) {
     ZopfliGzipCompress(options, in, insize, out, outsize, infilename, 0);
   } else if (output_type == ZOPFLI_FORMAT_GZIP_NAME) {
@@ -37,7 +40,8 @@ void ZopfliCompress(const ZopfliOptions* options, ZopfliFormat output_type,
   } else if (output_type == ZOPFLI_FORMAT_ZLIB) {
     ZopfliZlibCompress(options, in, insize, out, outsize);
   } else if (output_type == ZOPFLI_FORMAT_ZIP) {
-    ZopfliZipCompress(options, in, insize, out, outsize, outsizeraw, infilename);
+    InitCDIR(&zipcdir);
+    ZopfliZipCompress(options, in, insize, out, outsize, outsizeraw, infilename, &zipcdir);
   } else if (output_type == ZOPFLI_FORMAT_DEFLATE) {
     unsigned char bp = 0;
     ZopfliDeflate(options, 2 /* Dynamic block */, 1,

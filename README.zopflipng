@@ -34,7 +34,7 @@ images are still 26 % smaller than images recompressed with ZopfliPNG.
 
 2013-05-07, Lode Vandevenne and Jyrki Alakuijala
 
-Mr_KrzYch00's KrzYmod v7:
+Mr_KrzYch00's KrzYmod v8:
 - adds 7 command line switches for zopflipng:
 * --mbs=[number]: maximum block splits, 0 = unlimited (default 15),
 * --mls=[number]: maximum length for score (default 1024),

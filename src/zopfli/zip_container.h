@@ -41,9 +41,20 @@ out: pointer to the dynamic output array to which the result is appended. Must
 outsize: pointer to the dynamic output array size.
 */
 
+typedef struct ZipCDIR {
+  unsigned char* data;
+  unsigned char* enddata;
+  unsigned long size;
+  unsigned long curfileoffset;
+  unsigned long offset;
+  unsigned int fileid;
+} ZipCDIR;
+
+void InitCDIR(ZipCDIR *zipcdir);
+
 void ZopfliZipCompress(const ZopfliOptions* options,
                         const unsigned char* in, size_t insize,
-                        unsigned char** out, size_t* outsize, size_t* outsizeraw, const char *infilename);
+                        unsigned char** out, size_t* outsize, size_t* outsizeraw, const char *infilename, ZipCDIR* zipcdir);
 
 #ifdef __cplusplus
 }  // extern "C"

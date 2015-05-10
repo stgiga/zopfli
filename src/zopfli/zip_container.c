@@ -33,6 +33,15 @@ static unsigned long crc_table[256];
 /* Flag: has the table been computed? Initially false. */
 static int crc_table_computed = 0;
 
+void InitCDIR(ZipCDIR *zipcdir) {
+  zipcdir->data = NULL;
+  zipcdir->enddata = malloc(22);
+  zipcdir->size = 0;
+  zipcdir->curfileoffset = 0;
+  zipcdir->offset = 0;
+  zipcdir->fileid = 0;
+}
+
 static void MakeCRCTable() {
   unsigned long c;
   int n, k;
@@ -79,17 +88,21 @@ Compresses the data according to the zip specification.
 
 void ZopfliZipCompress(const ZopfliOptions* options,
                         const unsigned char* in, size_t insize,
-                        unsigned char** out, size_t* outsize, size_t* outsizeraw, const char *infilename) {
+                        unsigned char** out, size_t* outsize, size_t* outsizeraw, const char *infilename, ZipCDIR* zipcdir) {
   unsigned long crcvalue = CRC(in, insize);
-  unsigned long cdiroffset;
-  unsigned long cdirlength = 46;
+  unsigned long oldcdirlength;
   unsigned msdos_date;
   unsigned msdos_time;
   unsigned char bp = 0;
-  int i;
-  int max = strlen(infilename);
+  unsigned long i;
+  unsigned long max = strlen(infilename);
   struct tm* tt;
   struct stat attrib;
+
+  oldcdirlength=zipcdir->size;
+  zipcdir->size+=max+46;
+  zipcdir->data=realloc(zipcdir->data,zipcdir->size*sizeof(unsigned char*));
+
   stat(infilename, &attrib);
   tt = localtime(&(attrib.st_mtime));
   if(tt->tm_year<80) {
@@ -152,114 +165,85 @@ void ZopfliZipCompress(const ZopfliOptions* options,
                 in, insize, &bp, out, outsize);
   *outsizeraw=*outsize-max-30;
 
-  cdirlength+=max;
-  cdiroffset=*outsize;
-
-  /* C-DIR PK */
-  ZOPFLI_APPEND_DATA(80, out, outsize);
-  ZOPFLI_APPEND_DATA(75, out, outsize);
-  ZOPFLI_APPEND_DATA(1, out, outsize);
-  ZOPFLI_APPEND_DATA(2, out, outsize);
-  ZOPFLI_APPEND_DATA(20, out, outsize);
-  ZOPFLI_APPEND_DATA(0, out, outsize);
-  ZOPFLI_APPEND_DATA(20, out, outsize);
-  ZOPFLI_APPEND_DATA(0, out, outsize);
-  ZOPFLI_APPEND_DATA(2, out, outsize);
-  ZOPFLI_APPEND_DATA(0, out, outsize);
-
-  /* CM */
-  ZOPFLI_APPEND_DATA(8, out, outsize);
-  ZOPFLI_APPEND_DATA(0, out, outsize);
-
-  /* MS-DOS TIME */
-  ZOPFLI_APPEND_DATA(msdos_time % 256, out, outsize);
-  ZOPFLI_APPEND_DATA((msdos_time >> 8) % 256, out, outsize);
-  ZOPFLI_APPEND_DATA(msdos_date % 256, out, outsize);
-  ZOPFLI_APPEND_DATA((msdos_date >> 8) % 256, out, outsize);
-
-  /* CRC */
-  ZOPFLI_APPEND_DATA(crcvalue % 256, out, outsize);
-  ZOPFLI_APPEND_DATA((crcvalue >> 8) % 256, out, outsize);
-  ZOPFLI_APPEND_DATA((crcvalue >> 16) % 256, out, outsize);
-  ZOPFLI_APPEND_DATA((crcvalue >> 24) % 256, out, outsize);
-
-
-  /* OSIZE, MODIFY ALSO IN File PK */
-  ZOPFLI_APPEND_DATA(*outsizeraw % 256, out, outsize);
-  ZOPFLI_APPEND_DATA((*outsizeraw >> 8) % 256, out, outsize);
-  ZOPFLI_APPEND_DATA((*outsizeraw >> 16) % 256, out, outsize);
-  ZOPFLI_APPEND_DATA((*outsizeraw >> 24) % 256, out, outsize);
+  zipcdir->data[oldcdirlength++] = 80;
+  zipcdir->data[oldcdirlength++] = 75;
+  zipcdir->data[oldcdirlength++] = 1;
+  zipcdir->data[oldcdirlength++] = 2;
+  zipcdir->data[oldcdirlength++] = 20;
+  zipcdir->data[oldcdirlength++] = 0;
+  zipcdir->data[oldcdirlength++] = 20;
+  zipcdir->data[oldcdirlength++] = 0;
+  zipcdir->data[oldcdirlength++] = 2;
+  zipcdir->data[oldcdirlength++] = 0;
+  zipcdir->data[oldcdirlength++] = 8;
+  zipcdir->data[oldcdirlength++] = 0;
+  zipcdir->data[oldcdirlength++] = msdos_time % 256;
+  zipcdir->data[oldcdirlength++] = (msdos_time >> 8) % 256;
+  zipcdir->data[oldcdirlength++] = msdos_date % 256;
+  zipcdir->data[oldcdirlength++] = (msdos_date >> 8) % 256;
+  zipcdir->data[oldcdirlength++] = crcvalue % 256;
+  zipcdir->data[oldcdirlength++] = (crcvalue >> 8) % 256;
+  zipcdir->data[oldcdirlength++] = (crcvalue >> 16) % 256;
+  zipcdir->data[oldcdirlength++] = (crcvalue >> 24) % 256;
+  zipcdir->data[oldcdirlength++] = *outsizeraw % 256;
+  zipcdir->data[oldcdirlength++] = (*outsizeraw >> 8) % 256;
+  zipcdir->data[oldcdirlength++] = (*outsizeraw >> 16) % 256;
+  zipcdir->data[oldcdirlength++] = (*outsizeraw >> 24) % 256;
   (*out)[18]=(*outsizeraw % 256);
   (*out)[19]=((*outsizeraw >> 8) % 256);
   (*out)[20]=((*outsizeraw >> 16) % 256);
   (*out)[21]=((*outsizeraw >> 24) % 256);
+  zipcdir->data[oldcdirlength++] = insize % 256;
+  zipcdir->data[oldcdirlength++] = (insize >> 8) % 256;
+  zipcdir->data[oldcdirlength++] = (insize >> 16) % 256;
+  zipcdir->data[oldcdirlength++] = (insize >> 24) % 256;
+  zipcdir->data[oldcdirlength++] = max % 256;
+  zipcdir->data[oldcdirlength++] = (max >> 8) % 256;
+  zipcdir->data[oldcdirlength++] = 0;
+  zipcdir->data[oldcdirlength++] = 0;
+  zipcdir->data[oldcdirlength++] = 0;
+  zipcdir->data[oldcdirlength++] = 0;
+  zipcdir->data[oldcdirlength++] = 0;
+  zipcdir->data[oldcdirlength++] = 0;
+  zipcdir->data[oldcdirlength++] = 0;
+  zipcdir->data[oldcdirlength++] = 0;
+  zipcdir->data[oldcdirlength++] = 32;
+  zipcdir->data[oldcdirlength++] = 0;
+  zipcdir->data[oldcdirlength++] = 0;
+  zipcdir->data[oldcdirlength++] = 0;
+  zipcdir->data[oldcdirlength++] = zipcdir->offset % 256;
+  zipcdir->data[oldcdirlength++] = (zipcdir->offset >> 8) % 256;
+  zipcdir->data[oldcdirlength++] = (zipcdir->offset >> 16) % 256;
+  zipcdir->data[oldcdirlength++] = (zipcdir->offset >> 24) % 256;
+  for(i=0; i<max;++i) zipcdir->data[oldcdirlength++]=infilename[i];
+  zipcdir->offset+=(unsigned long)*outsize;
+  for(i=0; i<zipcdir->size; ++i) ZOPFLI_APPEND_DATA(zipcdir->data[i], out, outsize);
 
-  /* ISIZE */
-  ZOPFLI_APPEND_DATA(insize % 256, out, outsize);
-  ZOPFLI_APPEND_DATA((insize >> 8) % 256, out, outsize);
-  ZOPFLI_APPEND_DATA((insize >> 16) % 256, out, outsize);
-  ZOPFLI_APPEND_DATA((insize >> 24) % 256, out, outsize);
+  ++zipcdir->fileid;
 
-  /* FNLENGTH */
-  ZOPFLI_APPEND_DATA(max % 256, out, outsize);
-  ZOPFLI_APPEND_DATA((max >> 8) % 256, out, outsize);
-
-  /* SOME NOT NEEDED INFO */
-  ZOPFLI_APPEND_DATA(0, out, outsize);
-  ZOPFLI_APPEND_DATA(0, out, outsize);
-  ZOPFLI_APPEND_DATA(0, out, outsize);
-  ZOPFLI_APPEND_DATA(0, out, outsize);
-  ZOPFLI_APPEND_DATA(0, out, outsize);
-  ZOPFLI_APPEND_DATA(0, out, outsize);
-  ZOPFLI_APPEND_DATA(0, out, outsize);
-  ZOPFLI_APPEND_DATA(0, out, outsize);
-  ZOPFLI_APPEND_DATA(32, out, outsize);
-  ZOPFLI_APPEND_DATA(0, out, outsize);
-  ZOPFLI_APPEND_DATA(0, out, outsize);
-  ZOPFLI_APPEND_DATA(0, out, outsize);
-
-  /* RELATIVE OFFSET, CURRENTLY ONLY ONE FILE SO 0 WILL DO */
-  ZOPFLI_APPEND_DATA(0, out, outsize);
-  ZOPFLI_APPEND_DATA(0, out, outsize);
-  ZOPFLI_APPEND_DATA(0, out, outsize);
-  ZOPFLI_APPEND_DATA(0, out, outsize);
-
-  for(i=0;i<max;++i) ZOPFLI_APPEND_DATA(infilename[i], out, outsize);
-
-  /* C-DIR END PK */
-
-  ZOPFLI_APPEND_DATA(80, out, outsize);
-  ZOPFLI_APPEND_DATA(75, out, outsize);
-  ZOPFLI_APPEND_DATA(5, out, outsize);
-  ZOPFLI_APPEND_DATA(6, out, outsize);
-  ZOPFLI_APPEND_DATA(0, out, outsize);
-  ZOPFLI_APPEND_DATA(0, out, outsize);
-  ZOPFLI_APPEND_DATA(0, out, outsize);
-  ZOPFLI_APPEND_DATA(0, out, outsize);
-
-  /* NR OF ENTRIES, CURRENTLY ONLY 1 FILE */
-  ZOPFLI_APPEND_DATA(1, out, outsize);
-  ZOPFLI_APPEND_DATA(0, out, outsize);
-
-  /* NR OF ENTRIES, CURRENTLY ONLY 1 FILE */
-  ZOPFLI_APPEND_DATA(1, out, outsize);
-  ZOPFLI_APPEND_DATA(0, out, outsize);
-
-  /* C-DIR LENGTH */
-  ZOPFLI_APPEND_DATA(cdirlength % 256, out, outsize);
-  ZOPFLI_APPEND_DATA((cdirlength >> 8) % 256, out, outsize);
-  ZOPFLI_APPEND_DATA((cdirlength >> 16) % 256, out, outsize);
-  ZOPFLI_APPEND_DATA((cdirlength >> 24) % 256, out, outsize);
-
-  /* C-DIR OFFSET */
-  ZOPFLI_APPEND_DATA(cdiroffset % 256, out, outsize);
-  ZOPFLI_APPEND_DATA((cdiroffset >> 8) % 256, out, outsize);
-  ZOPFLI_APPEND_DATA((cdiroffset >> 16) % 256, out, outsize);
-  ZOPFLI_APPEND_DATA((cdiroffset >> 24) % 256, out, outsize);
-
-  /* 0 COMMENT LENGTH */
-  ZOPFLI_APPEND_DATA(0, out, outsize);
-  ZOPFLI_APPEND_DATA(0, out, outsize);
+  zipcdir->enddata[0] = 80;
+  zipcdir->enddata[1] = 75;
+  zipcdir->enddata[2] = 5;
+  zipcdir->enddata[3] = 6;
+  zipcdir->enddata[4] = 0;
+  zipcdir->enddata[5] = 0;
+  zipcdir->enddata[6] = 0;
+  zipcdir->enddata[7] = 0;
+  zipcdir->enddata[8] = zipcdir->fileid % 256;
+  zipcdir->enddata[9] = (zipcdir->fileid >> 8) % 256;
+  zipcdir->enddata[10] = zipcdir->fileid % 256;
+  zipcdir->enddata[11] = (zipcdir->fileid >> 8) % 256;
+  zipcdir->enddata[12] = zipcdir->size % 256;
+  zipcdir->enddata[13] = (zipcdir->size >> 8) % 256;
+  zipcdir->enddata[14] = (zipcdir->size >> 16) % 256;
+  zipcdir->enddata[15] = (zipcdir->size >> 24) % 256;
+  zipcdir->enddata[16] = zipcdir->offset % 256;
+  zipcdir->enddata[17] = (zipcdir->offset >> 8) % 256;
+  zipcdir->enddata[18] = (zipcdir->offset >> 16) % 256;
+  zipcdir->enddata[19] = (zipcdir->offset >> 24) % 256;
+  zipcdir->enddata[20] = 0;
+  zipcdir->enddata[21] = 0;
+  for(i=0; i<22; ++i) ZOPFLI_APPEND_DATA(zipcdir->enddata[i], out, outsize);
 
   if (options->verbose) {
     fprintf(stderr,

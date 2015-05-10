@@ -215,4 +215,5 @@ void ZopfliInitOptions(ZopfliOptions* options) {
   options->lazymatching = 0;
   options->optimizehuffmanheader = 0;
   options->maxfailiterations = 0;
+  options->usescandir = 0;
 }

@@ -94,6 +94,15 @@ typedef struct ZopfliOptions {
   than this value, otherwise it will have no effect.
   */
   int maxfailiterations;
+
+  /*
+  Use scandir to get list of files to compress to ZIP. File will be updated
+  on-fly after every file successfully gets compressed. So it should be 
+  posible to copy it at any time while holding already successfully compressed files,
+  or break the operation with CTRL+C and resume it later by manually getting rid
+  of already compressed files in pointed directory.
+  */
+  int usescandir;
 } ZopfliOptions;
 
 /* Initializes options with default values. */

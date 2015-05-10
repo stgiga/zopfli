@@ -31,14 +31,21 @@ use "make libzopfli". The source code of Zopfli is under src/zopfli.
 Zopfli Compression Algorithm was created by Lode Vandevenne and Jyrki
 Alakuijala, based on an algorithm by Jyrki Alakuijala.
 
-Mr_KrzYch00's KrzYmod v7:
-- adds 7 command line switches for zopfli:
+Mr_KrzYch00's KrzYmod v8:
+- adds 9 command line switches for zopfli:
 * --mbs#: maximum block splits, 0 = unlimited (default 15),
 * --mls#: maximum length for score (default 1024),
 * --mui#: maximum unsuccessful iterations after best, 0 = unlimited/--i limited (default 0),
 * --lazy: enable lazy matching in LZ77 Greedy (default OFF),
 * --ohh: optymize huffman header (default OFF) [by Frédéric Kayser],
 * --gzipname: output to gzip format with filename,
+* --zip: output to zip format,
+* --dir: read directory recursively instead of file and add all files inside to ZIP archive.
+         ZIP file is updated on-fly on every compressed file, so You can always break (CTRL+C)
+         the operation, delete manually already compressed files in dir and zipmix two results
+         together. THIS FEATURE IS HIGHLY EXPERIMENTAL. As I program in C since like
+         2 weeks, my code may not be perfect, but as far as I tested it's a working code.
+         Empty directories are NOT compressed,
 * -w: displays current processed iteration (same line).
 - faster compression but very increased memory usage by altering few preprocessor directives,
 - added zopfliavx, zopflipngavx, zopflineon and zopflipngneon to makefile for AVX and NEON builds.
