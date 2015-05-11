@@ -241,7 +241,7 @@ int main(int argc, char* argv[]) {
 
   fprintf(stderr,
     "Zopfli, a Compression Algorithm to produce Deflate/Zlib streams.\n"
-    "Commit: a29e46ba9f268ab273903558dcb7ac13b9fe8e29 + KrzYmod v8\n"
+    "Commit: a29e46ba9f268ab273903558dcb7ac13b9fe8e29 + KrzYmod v9\n"
     "Adds more command line switches, should be faster, uses more memory\n\n");
 
   ZopfliInitOptions(&options);
