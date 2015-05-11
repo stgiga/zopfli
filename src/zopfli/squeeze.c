@@ -24,6 +24,7 @@ Author: jyrki.alakuijala@gmail.com (Jyrki Alakuijala)
 #include <math.h>
 #include <stdio.h>
 
+#include "inthandler.h"
 #include "blocksplitter.h"
 #include "deflate.h"
 #include "tree.h"
@@ -521,7 +522,7 @@ void ZopfliLZ77Optimal(ZopfliBlockState *s,
       lastrandomstep = i;
     }
     lastcost = cost;
-    if(s->options->maxfailiterations>0 && fails==s->options->maxfailiterations) {
+    if(mui>0 && fails>=mui) {
       if(s->options->verbose) fprintf(stderr, "Iteration %d: No further reduction in the last %d tries.\n", i,fails);
       break;
     }

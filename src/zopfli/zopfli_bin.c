@@ -27,6 +27,7 @@ decompressor.
 
 #define _XOPEN_SOURCE 500
 
+#include <signal.h>
 #include <dirent.h>
 #include <sys/stat.h>
 #include <assert.h>
@@ -34,6 +35,7 @@ decompressor.
 #include <stdlib.h>
 #include <string.h>
 
+#include "inthandler.h"
 #include "deflate.h"
 #include "gzip_container.h"
 #include "zip_container.h"
@@ -42,6 +44,10 @@ decompressor.
 /*
 Loads a file into a memory array.
 */
+
+int mui;
+
+void intHandler(int exit_code);
 
 static void LoadFile(const char* filename,
                      unsigned char** out, size_t* outsize) {
@@ -231,6 +237,8 @@ int main(int argc, char* argv[]) {
   int output_to_stdout = 0;
   int i;
 
+  signal(SIGINT, intHandler);
+
   fprintf(stderr,
     "Zopfli, a Compression Algorithm to produce Deflate/Zlib streams.\n"
     "Commit: a29e46ba9f268ab273903558dcb7ac13b9fe8e29 + KrzYmod v8\n"
@@ -316,6 +324,8 @@ int main(int argc, char* argv[]) {
     fprintf(stderr, "Error: --mui parameter must be at least 0.");
     return 0;
   }
+
+  mui = options.maxfailiterations;
 
   for (i = 1; i < argc; i++) {
     if (argv[i][0] != '-') {

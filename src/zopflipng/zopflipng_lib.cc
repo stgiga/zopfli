@@ -31,7 +31,10 @@ See zopflipng_lib.h
 
 #include "lodepng/lodepng.h"
 #include "lodepng/lodepng_util.h"
+#include "../zopfli/inthandler.h"
 #include "../zopfli/deflate.h"
+
+int mui;
 
 ZopfliPNGOptions::ZopfliPNGOptions()
   : lossy_transparent(false)
@@ -70,7 +73,7 @@ unsigned CustomPNGDeflate(unsigned char** out, size_t* outsize,
   options.verbose_more          = png_options->verbosezopflimore;
   options.lazymatching          = png_options->lazymatching;
   options.optimizehuffmanheader = png_options->optimizehuffmanheader;
-  options.maxfailiterations     = png_options->maxfailiterations;
+  mui                           = png_options->maxfailiterations;
 
   if (png_options->block_split_strategy == 3) {
     // Try both block splitting first and last.

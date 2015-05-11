@@ -20,11 +20,21 @@ Author: jyrki.alakuijala@gmail.com (Jyrki Alakuijala)
 Command line tool to recompress and optimize PNG images, using zopflipng_lib.
 */
 
+#include <signal.h>
 #include <stdlib.h>
 #include <stdio.h>
 
 #include "lodepng/lodepng.h"
 #include "zopflipng_lib.h"
+#include "../zopfli/inthandler.h"
+
+void intHandlerpng(int exit_code) {
+  if(exit_code==2) {
+    fprintf(stderr,"\n (!!) CTRL+C detected! Setting --mui to 1 to finish work ASAP!\n"
+                   " (!!) Press it again to abort work.\n");
+    mui=1;
+  }
+}
 
 // Returns directory path (including last slash) in dir, filename without
 // extension in file, extension (including the dot) in ext
@@ -164,6 +174,9 @@ printf("ZopfliPNG, a Portable Network Graphics (PNG) image optimizer.\n"
 
   std::vector<std::string> files;
   std::vector<char> options;
+
+  signal(SIGINT, intHandlerpng);
+
   for (int i = 1; i < argc; i++) {
     std::string arg = argv[i];
     if (arg[0] == '-' && arg.size() > 1 && arg[1] != '-') {
