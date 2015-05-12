@@ -34,6 +34,10 @@ decompressor.
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+/* Windows workaround for stdout output. */
+#if _WIN32
+#include <fcntl.h>
+#endif
 
 #include "inthandler.h"
 #include "deflate.h"
@@ -83,11 +87,15 @@ Saves a file from a memory array, overwriting the file if it existed.
 */
 static void SaveFile(const char* filename,
                      const unsigned char* in, size_t insize, size_t fseekdata) {
-  FILE* file = fopen(filename, "r+b" );
+  FILE* file;
+  if(fseekdata==0) {
+    file = fopen(filename, "wb");
+  } else {
+    file = fopen(filename, "r+b");
+  }
   if(file == NULL) {
-   file = fopen(filename, "wb" );
-   fclose(file);
-   file = fopen(filename, "r+b" );
+    fprintf(stderr,"Error: Can't write to output file, terminating.\n");
+    exit(1);
   }
   assert(file);
   fseek(file,fseekdata,SEEK_SET);
@@ -220,10 +228,16 @@ static void CompressFile(const ZopfliOptions* options,
     SaveFile(outfilename, out, outsize,0);
   } else {
     size_t i;
+    /* Windows workaround for stdout output. */
+#if _WIN32
+    _setmode(_fileno(stdout), _O_BINARY);
+#endif
     for (i = 0; i < outsize; i++) {
-      /* Works only if terminal does not convert newlines. */
       printf("%c", out[i]);
     }
+#if _WIN32
+    _setmode(_fileno(stdout), _O_TEXT);
+#endif
   }
 
   free(out);
@@ -239,12 +253,12 @@ int main(int argc, char* argv[]) {
 
   signal(SIGINT, intHandler);
 
-  fprintf(stderr,
-    "Zopfli, a Compression Algorithm to produce Deflate/Zlib streams.\n"
-    "Commit: a29e46ba9f268ab273903558dcb7ac13b9fe8e29 + KrzYmod v9\n"
-    "Adds more command line switches, should be faster, uses more memory\n\n");
-
   ZopfliInitOptions(&options);
+
+  fprintf(stderr,
+  "Zopfli, a Compression Algorithm to produce Deflate/Zlib streams.\n"
+  "Commit: a29e46ba9f268ab273903558dcb7ac13b9fe8e29 + KrzYmod v9\n"
+  "Adds more command line switches, should be faster, uses more memory\n\n");
 
   for (i = 1; i < argc; i++) {
     const char* arg = argv[i];
@@ -306,22 +320,22 @@ int main(int argc, char* argv[]) {
   }
 
   if (options.numiterations < 1) {
-    fprintf(stderr, "Error: --i parameter must be at least 1.");
+    fprintf(stderr, "Error: --i parameter must be at least 1.\n");
     return 0;
   }
 
   if (options.blocksplittingmax < 0) {
-    fprintf(stderr, "Error: --mbs parameter must be at least 0.");
+    fprintf(stderr, "Error: --mbs parameter must be at least 0.\n");
     return 0;
   }
 
   if (options.lengthscoremax < 1) {
-    fprintf(stderr, "Error: --mls parameter must be at least 1.");
+    fprintf(stderr, "Error: --mls parameter must be at least 1.\n");
     return 0;
   }
 
   if (options.maxfailiterations < 0) {
-    fprintf(stderr, "Error: --mui parameter must be at least 0.");
+    fprintf(stderr, "Error: --mui parameter must be at least 0.\n");
     return 0;
   }
 
@@ -347,10 +361,14 @@ int main(int argc, char* argv[]) {
         fprintf(stderr, "Saving to: %s\n", outfilename);
       }
       if(options.usescandir == 1) {
-        if(output_type == ZOPFLI_FORMAT_ZIP) {
+        if(output_type == ZOPFLI_FORMAT_ZIP && !output_to_stdout) {
           CompressMultiFile(&options, filename, outfilename);
         } else {
-          fprintf(stderr, "Error: --dir will only work with ZIP container (--zip).");
+          if(!output_to_stdout) {
+            fprintf(stderr, "Error: --dir will only work with ZIP container (--zip).\n");
+          } else {
+            fprintf(stderr, "Error: Can't output to stdout when compressing multiple files (--dir and -c).\n");
+          }
           return 0;
         }
       } else {
@@ -362,7 +380,7 @@ int main(int argc, char* argv[]) {
 
   if (!filename) {
     fprintf(stderr,
-            "Please provide filename to compress.\nFor help, type: %s -h\n", argv[0]);
+            "Error: Please provide filename to compress.\nFor help, type: %s -h\n", argv[0]);
   }
 
   return 0;
