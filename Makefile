@@ -6,7 +6,7 @@ CXXFLAGS = -W -Wall -Wextra -ansi -pedantic
 
 ZDEFOPT = -Ofast
 ZARMOPT = -O2
-ZADDOPT = -g0 -s -flto -fuse-linker-plugin -ffat-lto-objects -flto-compression-level=0 -finline-functions -funswitch-loops -fpredictive-commoning -ftree-loop-distribute-patterns -ftree-slp-vectorize -ffast-math -fomit-frame-pointer -ftracer -ftree-loop-ivcanon -ftree-loop-distribution -fselective-scheduling2 -fsel-sched-pipelining -fsel-sched-pipelining-outer-loops -fira-region=all -fira-hoist-pressure -free -fno-crossjumping -fno-cx-limited-range -fno-defer-pop -fno-function-cse -fno-rerun-cse-after-loop -fno-sched-interblock -fno-sched-last-insn-heuristic -fno-sched-spec -fno-sel-sched-pipelining-outer-loops -fno-tree-fre -fno-tree-loop-im -fno-zero-initialized-in-bss
+ZADDOPT = -g0 -s -flto -fuse-linker-plugin -ffat-lto-objects -flto-compression-level=0 -finline-functions -funswitch-loops -fpredictive-commoning -ftree-loop-distribute-patterns -ftree-slp-vectorize -ffast-math -fomit-frame-pointer -ftracer -ftree-loop-ivcanon -ftree-loop-distribution -fselective-scheduling2 -fsel-sched-pipelining -fira-region=all -fira-hoist-pressure -free -fno-crossjumping -fno-cx-limited-range -fno-defer-pop -fno-function-cse -fno-rerun-cse-after-loop -fno-sched-interblock -fno-sched-last-insn-heuristic -fno-sched-spec -fno-sel-sched-pipelining-outer-loops -fno-tree-fre -fno-tree-loop-im -fno-zero-initialized-in-bss
 # -flto-partition=max - provides ~1% speed up on linux but doesn't work with mingw32 
 CAVXFLAGS = -mavx -mtune=corei7-avx -march=corei7-avx
 CNEONFLAGS = -march=armv7-a -mcpu=cortex-a9 -mfpu=neon -mfloat-abi=hard -mthumb-interwork -mword-relocations -mno-unaligned-access -mneon-for-64bits
