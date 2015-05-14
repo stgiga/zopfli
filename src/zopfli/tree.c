@@ -21,8 +21,6 @@ Author: jyrki.alakuijala@gmail.com (Jyrki Alakuijala)
 
 #include <assert.h>
 #include <math.h>
-#include <stdio.h>
-#include <stdlib.h>
 
 #include "katajainen.h"
 #include "util.h"

@@ -22,8 +22,6 @@ Author: jyrki.alakuijala@gmail.com (Jyrki Alakuijala)
 #include "util.h"
 
 #include <assert.h>
-#include <stdio.h>
-#include <stdlib.h>
 
 void ZopfliInitLZ77Store(ZopfliLZ77Store* store) {
   store->size = 0;

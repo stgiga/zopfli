@@ -19,10 +19,6 @@ Author: jyrki.alakuijala@gmail.com (Jyrki Alakuijala)
 
 #include "hash.h"
 
-#include <assert.h>
-#include <stdio.h>
-#include <stdlib.h>
-
 #define HASH_SHIFT 5
 #define HASH_MASK 32767
 

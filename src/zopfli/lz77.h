@@ -26,8 +26,6 @@ compression.
 #ifndef ZOPFLI_LZ77_H_
 #define ZOPFLI_LZ77_H_
 
-#include <stdlib.h>
-
 #include "cache.h"
 #include "hash.h"
 #include "zopfli.h"

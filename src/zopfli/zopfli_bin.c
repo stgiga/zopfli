@@ -32,7 +32,6 @@ decompressor.
 #include <sys/stat.h>
 #include <assert.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 /* Windows workaround for stdout output. */
 #if _WIN32
@@ -111,8 +110,11 @@ static char StringsEqual(const char* str1, const char* str2) {
 Add two strings together. Size does not matter. Result must be freed.
 */
 static char* AddStrings(const char* str1, const char* str2) {
-  size_t len = strlen(str1) + strlen(str2);
-  char* result = (char*)malloc(len + 1);
+  int a,b;
+  char* result;
+  for(a=0;str1[a]!='\0';a++) {}
+  for(b=0;str2[b]!='\0';b++) {}
+  result = (char*)malloc((a+b) + 1);
   if (!result) exit(-1); /* Allocation failed. */
   strcpy(result, str1);
   strcat(result, str2);
@@ -124,7 +126,7 @@ static int ListDir(const char* filename, char ***filesindir, unsigned int *j, in
   struct dirent *ent;
   struct stat attrib;
   char* initdir=AddStrings(filename,"/");
-  unsigned int i;
+  unsigned int i, k, l;
   dir = opendir(filename);
   if(! dir) {
     return 0;
@@ -137,14 +139,15 @@ static int ListDir(const char* filename, char ***filesindir, unsigned int *j, in
         if((attrib.st_mode & S_IFDIR)==0) {
           *filesindir = realloc(*filesindir,((unsigned int)*j+1)*(sizeof(char*)));
           if(isroot==1) {
-            (*filesindir)[*j] = malloc(strlen(ent->d_name) * sizeof(char*) +1);
+            for(i=0;ent->d_name[i]!='\0';i++) {}
+            (*filesindir)[*j] = malloc(i * sizeof(char*) +1);
             strcpy((*filesindir)[*j], ent->d_name);
           } else {
-            for(i=0;i<strlen(initdir);++i) {
-              if(initdir[i]=='/') break;
-            }
-            ++i;
-            (*filesindir)[*j] = malloc(strlen(initdir+i)+strlen(ent->d_name) * sizeof(char*) +1);
+            for(i=0;initdir[i]!='/';i++) {}
+            for(k=i;initdir[k]!='\0';k++) {}
+            k-=i;
+            for(l=0;ent->d_name[l]!='\0';l++) {}
+            (*filesindir)[*j] = malloc(k+l * sizeof(char*) +1);
             strcpy((*filesindir)[*j], AddStrings(initdir+i,ent->d_name));
           }
           ++*j;
@@ -183,8 +186,9 @@ static void CompressMultiFile(const ZopfliOptions* options,
   }
   InitCDIR(&zipcdir);
   dirname=AddStrings(infilename, "/");
-  zipcdir.rootdir=realloc(zipcdir.rootdir,strlen(dirname)*sizeof(char *));
-  memcpy(zipcdir.rootdir,dirname,strlen(dirname)*sizeof(char *));
+  for(i=0;dirname[i]!='\0';i++) {}
+  zipcdir.rootdir=realloc(zipcdir.rootdir,i*sizeof(char *));
+  memcpy(zipcdir.rootdir,dirname,i*sizeof(char *));
   for(i = 0; i < j; ++i) {
     outsize=0;
     outsizeraw=0;

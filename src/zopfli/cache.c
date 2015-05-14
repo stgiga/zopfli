@@ -20,8 +20,6 @@ Author: jyrki.alakuijala@gmail.com (Jyrki Alakuijala)
 #include "cache.h"
 
 #include <assert.h>
-#include <stdio.h>
-#include <stdlib.h>
 
 #ifdef ZOPFLI_LONGEST_MATCH_CACHE
 

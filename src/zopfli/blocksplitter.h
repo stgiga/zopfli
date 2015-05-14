@@ -28,8 +28,6 @@ ones that enhance it.
 #ifndef ZOPFLI_BLOCKSPLITTER_H_
 #define ZOPFLI_BLOCKSPLITTER_H_
 
-#include <stdlib.h>
-
 #include "zopfli.h"
 
 

@@ -23,7 +23,6 @@ Author: jyrki.alakuijala@gmail.com (Jyrki Alakuijala)
 
 #include <assert.h>
 #include <stdio.h>
-#include <stdlib.h>
 
 #include "inthandler.h"
 #include "blocksplitter.h"
@@ -965,7 +964,7 @@ void ZopfliDeflate(const ZopfliOptions* options, int btype, int final,
 #endif
   if (options->verbose) {
     fprintf(stderr,
-            "Original Size: %d, Deflate: %d, Compression: %f%% Removed\n",
+            "Input Size: %d, Deflate: %d, Compression: %f%% Removed\n",
             (int)insize, (int)(*outsize-offset),
             100.0 * (double)(insize - (*outsize-offset)) / (double)insize);
   }

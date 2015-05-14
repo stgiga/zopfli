@@ -24,7 +24,6 @@ Author: jyrki.alakuijala@gmail.com (Jyrki Alakuijala)
 #include <stdio.h>
 #include <sys/stat.h>
 #include <time.h>
-#include <string.h>
 
 #include "deflate.h"
 
@@ -85,7 +84,6 @@ void ZopfliGzipCompress(const ZopfliOptions* options,
   unsigned long unixtimestamp = 0;
   unsigned char bp = 0;
   int i;
-  int max = strlen(infilename);
   struct tm* tt;
   struct stat attrib;
   stat(infilename, &attrib);
@@ -116,7 +114,7 @@ void ZopfliGzipCompress(const ZopfliOptions* options,
   ZOPFLI_APPEND_DATA(3, out, outsize);  /* OS follows Unix conventions. */
 
   if(keepname==1) {
-    for(i=0;i<max;++i) {
+    for(i=0;infilename[i] != '\0';i++) {
       ZOPFLI_APPEND_DATA(infilename[i], out, outsize);
     }
     ZOPFLI_APPEND_DATA(0, out, outsize);
@@ -139,7 +137,7 @@ void ZopfliGzipCompress(const ZopfliOptions* options,
 
   if (options->verbose) {
     fprintf(stderr,
-            "Original Size: %d, Gzip: %d, Compression: %f%% Removed\n",
+            "Input Size: %d, Gzip: %d, Compression: %f%% Removed\n",
             (int)insize, (int)*outsize,
             100.0 * (double)(insize - *outsize) / (double)insize);
   }

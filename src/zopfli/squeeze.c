@@ -21,7 +21,6 @@ Author: jyrki.alakuijala@gmail.com (Jyrki Alakuijala)
 #include "squeeze.h"
 
 #include <assert.h>
-#include <math.h>
 #include <stdio.h>
 
 #include "inthandler.h"

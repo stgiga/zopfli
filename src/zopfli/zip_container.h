@@ -46,6 +46,7 @@ typedef struct ZipCDIR {
   unsigned char* data;
   unsigned char* enddata;
   unsigned long size;
+  size_t totalinput;
   unsigned long curfileoffset;
   unsigned long offset;
   unsigned int fileid;

@@ -22,10 +22,6 @@ Author: jyrki.alakuijala@gmail.com (Jyrki Alakuijala)
 
 #include "zopfli.h"
 
-#include <assert.h>
-#include <stdio.h>
-#include <stdlib.h>
-
 int ZopfliGetDistExtraBits(int dist) {
 #ifdef __GNUC__
   if (dist < 5) return 0;

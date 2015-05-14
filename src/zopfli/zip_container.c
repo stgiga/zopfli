@@ -24,7 +24,6 @@ Author: jyrki.alakuijala@gmail.com (Jyrki Alakuijala)
 #include <stdio.h>
 #include <sys/stat.h>
 #include <time.h>
-#include <string.h>
 
 #include "deflate.h"
 
@@ -37,6 +36,7 @@ void InitCDIR(ZipCDIR *zipcdir) {
   zipcdir->rootdir = NULL;
   zipcdir->data = NULL;
   zipcdir->enddata = malloc(22);
+  zipcdir->totalinput = 0;
   zipcdir->size = 0;
   zipcdir->curfileoffset = 0;
   zipcdir->offset = 0;
@@ -95,18 +95,25 @@ void ZopfliZipCompress(const ZopfliOptions* options,
   unsigned msdos_date;
   unsigned msdos_time;
   unsigned char bp = 0;
-  unsigned long i;
-  unsigned long max = strlen(infilename);
-  char* statfile = malloc((strlen(zipcdir->rootdir)+strlen(infilename))*sizeof(char*)+1);
+  unsigned long i, j;
+  unsigned long max;
+  char* statfile;
   struct tm* tt;
   struct stat attrib;
+
+  for(i=0;zipcdir->rootdir[i] != '\0';i++) {}
+  for(max=0;infilename[max] != '\0';max++) {}
+
+  statfile=malloc((i+max)*sizeof(char*)+1);
+
+  statfile=zipcdir->rootdir;
+  for(j=0;j<max;j++) {
+    statfile[i++]=infilename[j];
+  }
 
   oldcdirlength=zipcdir->size;
   zipcdir->size+=max+46;
   zipcdir->data=realloc(zipcdir->data,zipcdir->size*sizeof(unsigned char*));
-
-  strcpy(statfile,zipcdir->rootdir);
-  strcat(statfile,infilename);
 
   stat(statfile, &attrib);
   tt = localtime(&(attrib.st_mtime));
@@ -117,7 +124,7 @@ void ZopfliZipCompress(const ZopfliOptions* options,
   msdos_date = ((tt->tm_year-80) << 9) + ((tt->tm_mon+1) << 5) + tt->tm_mday;
   msdos_time = (tt->tm_hour << 11) + (tt->tm_min << 5) + (tt->tm_sec >> 1);
 
-  /* File PK */
+  /* File PK STATIC DATA */
   ZOPFLI_APPEND_DATA(80, out, outsize);
   ZOPFLI_APPEND_DATA(75, out, outsize);
   ZOPFLI_APPEND_DATA(3, out, outsize);
@@ -143,7 +150,7 @@ void ZopfliZipCompress(const ZopfliOptions* options,
   ZOPFLI_APPEND_DATA((crcvalue >> 16) % 256, out, outsize);
   ZOPFLI_APPEND_DATA((crcvalue >> 24) % 256, out, outsize);
 
-  /* OSIZE, need to get raw deflate stream size */
+  /* OSIZE UNKNOWN, UPDATE WHEN WRITING C-DIR */
   ZOPFLI_APPEND_DATA(0, out, outsize);
   ZOPFLI_APPEND_DATA(0, out, outsize);
   ZOPFLI_APPEND_DATA(0, out, outsize);
@@ -170,6 +177,7 @@ void ZopfliZipCompress(const ZopfliOptions* options,
                 in, insize, &bp, out, outsize);
   *outsizeraw=*outsize-max-30;
 
+  /* C-DIR PK STATIC DATA */
   zipcdir->data[oldcdirlength++] = 80;
   zipcdir->data[oldcdirlength++] = 75;
   zipcdir->data[oldcdirlength++] = 1;
@@ -182,28 +190,41 @@ void ZopfliZipCompress(const ZopfliOptions* options,
   zipcdir->data[oldcdirlength++] = 0;
   zipcdir->data[oldcdirlength++] = 8;
   zipcdir->data[oldcdirlength++] = 0;
+
+  /* MS-DOS TIME */
   zipcdir->data[oldcdirlength++] = msdos_time % 256;
   zipcdir->data[oldcdirlength++] = (msdos_time >> 8) % 256;
   zipcdir->data[oldcdirlength++] = msdos_date % 256;
   zipcdir->data[oldcdirlength++] = (msdos_date >> 8) % 256;
+
+  /* CRC */
   zipcdir->data[oldcdirlength++] = crcvalue % 256;
   zipcdir->data[oldcdirlength++] = (crcvalue >> 8) % 256;
   zipcdir->data[oldcdirlength++] = (crcvalue >> 16) % 256;
   zipcdir->data[oldcdirlength++] = (crcvalue >> 24) % 256;
+
+  /* OSIZE */
   zipcdir->data[oldcdirlength++] = *outsizeraw % 256;
   zipcdir->data[oldcdirlength++] = (*outsizeraw >> 8) % 256;
   zipcdir->data[oldcdirlength++] = (*outsizeraw >> 16) % 256;
   zipcdir->data[oldcdirlength++] = (*outsizeraw >> 24) % 256;
+  /* also update in File PK */
   (*out)[18]=(*outsizeraw % 256);
   (*out)[19]=((*outsizeraw >> 8) % 256);
   (*out)[20]=((*outsizeraw >> 16) % 256);
   (*out)[21]=((*outsizeraw >> 24) % 256);
+
+  /* ISIZE */
   zipcdir->data[oldcdirlength++] = insize % 256;
   zipcdir->data[oldcdirlength++] = (insize >> 8) % 256;
   zipcdir->data[oldcdirlength++] = (insize >> 16) % 256;
   zipcdir->data[oldcdirlength++] = (insize >> 24) % 256;
+
+  /* FILE NUMBER */
   zipcdir->data[oldcdirlength++] = max % 256;
   zipcdir->data[oldcdirlength++] = (max >> 8) % 256;
+
+  /* C-DIR STATIC DATA */
   zipcdir->data[oldcdirlength++] = 0;
   zipcdir->data[oldcdirlength++] = 0;
   zipcdir->data[oldcdirlength++] = 0;
@@ -216,16 +237,22 @@ void ZopfliZipCompress(const ZopfliOptions* options,
   zipcdir->data[oldcdirlength++] = 0;
   zipcdir->data[oldcdirlength++] = 0;
   zipcdir->data[oldcdirlength++] = 0;
+
+  /* FilePK offset in ZIP file */
   zipcdir->data[oldcdirlength++] = zipcdir->offset % 256;
   zipcdir->data[oldcdirlength++] = (zipcdir->offset >> 8) % 256;
   zipcdir->data[oldcdirlength++] = (zipcdir->offset >> 16) % 256;
   zipcdir->data[oldcdirlength++] = (zipcdir->offset >> 24) % 256;
+
+  /* FILENAME */
   for(i=0; i<max;++i) zipcdir->data[oldcdirlength++]=infilename[i];
+
   zipcdir->offset+=(unsigned long)*outsize;
   for(i=0; i<zipcdir->size; ++i) ZOPFLI_APPEND_DATA(zipcdir->data[i], out, outsize);
 
   ++zipcdir->fileid;
 
+  /* END C-DIR PK STATIC DATA */
   zipcdir->enddata[0] = 80;
   zipcdir->enddata[1] = 75;
   zipcdir->enddata[2] = 5;
@@ -234,26 +261,37 @@ void ZopfliZipCompress(const ZopfliOptions* options,
   zipcdir->enddata[5] = 0;
   zipcdir->enddata[6] = 0;
   zipcdir->enddata[7] = 0;
+
+  /* TOTAL FILES IN ARCHIVE */
   zipcdir->enddata[8] = zipcdir->fileid % 256;
   zipcdir->enddata[9] = (zipcdir->fileid >> 8) % 256;
   zipcdir->enddata[10] = zipcdir->fileid % 256;
   zipcdir->enddata[11] = (zipcdir->fileid >> 8) % 256;
+
+  /* C-DIR SIZE */
   zipcdir->enddata[12] = zipcdir->size % 256;
   zipcdir->enddata[13] = (zipcdir->size >> 8) % 256;
   zipcdir->enddata[14] = (zipcdir->size >> 16) % 256;
   zipcdir->enddata[15] = (zipcdir->size >> 24) % 256;
+
+  /* C-DIR OFFSET */
   zipcdir->enddata[16] = zipcdir->offset % 256;
   zipcdir->enddata[17] = (zipcdir->offset >> 8) % 256;
   zipcdir->enddata[18] = (zipcdir->offset >> 16) % 256;
   zipcdir->enddata[19] = (zipcdir->offset >> 24) % 256;
+
+  /* NO COMMENTS IN END C-DIR */
   zipcdir->enddata[20] = 0;
   zipcdir->enddata[21] = 0;
+
   for(i=0; i<22; ++i) ZOPFLI_APPEND_DATA(zipcdir->enddata[i], out, outsize);
 
   if (options->verbose) {
+    max=(zipcdir->offset+zipcdir->size)+22;
+    zipcdir->totalinput+=insize;
     fprintf(stderr,
-            "Original Size: %d, Zip: %d, Compression: %f%% Removed\n",
-            (int)insize, (int)*outsize,
-            100.0 * (double)(insize - *outsize) / (double)insize);
+            "Input Size: %d, Zip: %d, Compression: %f%% Removed\n",
+            (int)zipcdir->totalinput, (int)max,
+            100.0 * (double)(zipcdir->totalinput - max) / (double)zipcdir->totalinput);
   }
 }

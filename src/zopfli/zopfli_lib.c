@@ -18,16 +18,12 @@ Author: lode.vandevenne@gmail.com (Lode Vandevenne)
 Author: jyrki.alakuijala@gmail.com (Jyrki Alakuijala)
 */
 
-#include <string.h>
-
 #include "zopfli.h"
 
 #include "deflate.h"
 #include "gzip_container.h"
 #include "zip_container.h"
 #include "zlib_container.h"
-
-#include <assert.h>
 
 void intHandler(int exit_code);
 
@@ -44,13 +40,15 @@ void ZopfliCompress(const ZopfliOptions* options, ZopfliFormat output_type,
   } else if (output_type == ZOPFLI_FORMAT_ZIP) {
     InitCDIR(&zipcdir);
     zipcdir.rootdir=realloc(zipcdir.rootdir,3*sizeof(char *));
-    memcpy(zipcdir.rootdir,"./\0",3*sizeof(char *));
+    zipcdir.rootdir[0]='.';
+    zipcdir.rootdir[1]='/';
+    zipcdir.rootdir[2]='\0';
     ZopfliZipCompress(options, in, insize, out, outsize, outsizeraw, infilename, &zipcdir);
   } else if (output_type == ZOPFLI_FORMAT_DEFLATE) {
     unsigned char bp = 0;
     ZopfliDeflate(options, 2 /* Dynamic block */, 1,
                   in, insize, &bp, out, outsize);
   } else {
-    assert(0);
+    exit(6);
   }
 }
