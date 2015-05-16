@@ -94,7 +94,7 @@ static void SaveFile(const char* filename,
   }
   if(file == NULL) {
     fprintf(stderr,"Error: Can't write to output file, terminating.\n");
-    exit(1);
+    exit (EXIT_FAILURE);
   }
   assert(file);
   fseek(file,fseekdata,SEEK_SET);

@@ -49,6 +49,6 @@ void ZopfliCompress(const ZopfliOptions* options, ZopfliFormat output_type,
     ZopfliDeflate(options, 2 /* Dynamic block */, 1,
                   in, insize, &bp, out, outsize);
   } else {
-    exit(6);
+    exit (EXIT_FAILURE);
   }
 }

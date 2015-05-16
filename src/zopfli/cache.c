@@ -20,6 +20,7 @@ Author: jyrki.alakuijala@gmail.com (Jyrki Alakuijala)
 #include "cache.h"
 
 #include <assert.h>
+#include <stdio.h>
 
 #ifdef ZOPFLI_LONGEST_MATCH_CACHE
 
@@ -29,6 +30,11 @@ void ZopfliInitCache(size_t blocksize, ZopfliLongestMatchCache* lmc) {
   lmc->dist = (unsigned short*)malloc(sizeof(unsigned short) * blocksize);
   /* Rather large amount of memory. */
   lmc->sublen = (unsigned char*)malloc(ZOPFLI_CACHE_LENGTH * 3 * blocksize);
+  if(lmc->sublen==NULL) {
+    fprintf(stderr,"Error: Out of memory. Tried allocating %lu bytes of memory.\n"
+                   "Try setting --mbs to 0 or recompile with lower ZOPFLI_CACHE_LENGTH.\n.",(unsigned long)(ZOPFLI_CACHE_LENGTH * 3 * blocksize));
+    exit(EXIT_FAILURE);
+  }
 
   /* length > 0 and dist 0 is invalid combination, which indicates on purpose
   that this cache value is not filled in yet. */
