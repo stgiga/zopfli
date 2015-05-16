@@ -366,7 +366,10 @@ printf("ZopfliPNG, a Portable Network Graphics (PNG) image optimizer.\n"
       if (use_prefix) {
         std::string dir, file, ext;
         GetFileNameParts(files[i], &dir, &file, &ext);
-        out_filename = dir + prefix + file + ext;
+        out_filename = dir;
+        out_filename += prefix;
+        out_filename += file;
+        out_filename += ext;
       }
       bool different_output_name = out_filename != files[i];
 
