@@ -844,7 +844,6 @@ static void DeflateSplittingFirst(const ZopfliOptions* options,
   for (i = 0; i <= npoints; i++) {
     size_t start = i == 0 ? instart : splitpoints[i - 1];
     size_t end = i == npoints ? inend : splitpoints[i];
-    fprintf(stderr, "Total progress: %.1f%%",100.0 * (double)start / (double)inend);
     if(options->verbose) {
       fprintf(stderr, "  ---  bytes left: %d\n", (int)(inend - start));
       fprintf(stderr, "Compressing block: %d / %d\n", (int)(i + 1), (int)(npoints + 1));
