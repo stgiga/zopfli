@@ -969,7 +969,7 @@ void ZopfliDeflate(const ZopfliOptions* options, int btype, int final,
     i += size;
   }
 #endif
-  fprintf(stderr,"Total progress: 100.0%%\n");
+  fprintf(stderr,"Compression progress: 100.0%%\n");
   if (options->verbose) {
     fprintf(stderr,
             "Input Size: %d, Deflate: %d, Compression: %f%% Removed\n",
