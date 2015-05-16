@@ -844,6 +844,13 @@ static void DeflateSplittingFirst(const ZopfliOptions* options,
   for (i = 0; i <= npoints; i++) {
     size_t start = i == 0 ? instart : splitpoints[i - 1];
     size_t end = i == npoints ? inend : splitpoints[i];
+    fprintf(stderr, "Total progress: %.1f%%",100.0 * (double)start / (double)inend);
+    if(options->verbose) {
+      fprintf(stderr, "  ---  bytes left: %d\n", (int)(inend - start));
+      fprintf(stderr, "Compressing block: %d / %d\n", (int)(i + 1), (int)(npoints + 1));
+    } else {
+      fprintf(stderr,"\r");
+    }
     DeflateBlock(options, btype, i == npoints && final, in, start, end,
                  bp, out, outsize);
   }
@@ -870,7 +877,7 @@ static void DeflateSplittingLast(const ZopfliOptions* options,
 
   if (btype == 0) {
     /* This function only supports LZ77 compression. DeflateSplittingFirst
-       supports the special case of noncompressed data. Punt it to that one. */
+       supports the special case of noncompressed data. Put it to that one. */
     DeflateSplittingFirst(options, btype, final,
                           in, instart, inend,
                           bp, out, outsize);
@@ -962,6 +969,7 @@ void ZopfliDeflate(const ZopfliOptions* options, int btype, int final,
     i += size;
   }
 #endif
+  fprintf(stderr,"Total progress: 100.0%%\n");
   if (options->verbose) {
     fprintf(stderr,
             "Input Size: %d, Deflate: %d, Compression: %f%% Removed\n",
