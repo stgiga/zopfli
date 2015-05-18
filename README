@@ -31,7 +31,7 @@ use "make libzopfli". The source code of Zopfli is under src/zopfli.
 Zopfli Compression Algorithm was created by Lode Vandevenne and Jyrki
 Alakuijala, based on an algorithm by Jyrki Alakuijala.
 
-Mr_KrzYch00's KrzYmod v9:
+Mr_KrzYch00's KrzYmod v10:
 - adds 9 command line switches for zopfli:
 * --mbs#: maximum block splits, 0 = unlimited (d: 15),
 * --mls#: maximum length for score (d: 1024),
@@ -48,7 +48,8 @@ Mr_KrzYch00's KrzYmod v9:
          2 weeks, my code may not be perfect, but as far as I tested
          it's a working code. Empty directories are NOT compressed,
 * -w: displays current processed iteration (same line).
-- faster compression but very increased memory usage by altering few preprocessor directives,
+- faster compression by altering few preprocessor directives and makefile finetuning,
+- crash fixes when can't write file or out of memory for cache + other,
 - added zopfliavx, zopflipngavx, zopflineon and zopflipngneon to makefile for AVX and NEON builds,
 - CTRL+C pressed once sets --mui to 1. 2nd time aborts.
 

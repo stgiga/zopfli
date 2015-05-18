@@ -66,8 +66,10 @@ faster. Uses this many times three bytes per single byte of the input data.
 This is so because longest match finding has to find the exact distance
 that belongs to each length for the best lz77 strategy.
 Good values: e.g. 5, 8.
+Actually 9 seems best. Tested on Odroid U3 and Lenovo Y500. Using higher
+values than 9 or lower than 7 made compressing lodepng.cpp file longer.
 */
-#define ZOPFLI_CACHE_LENGTH 256
+#define ZOPFLI_CACHE_LENGTH 9
 
 /*
 limit the max hash chain hits for this hash value. This has an effect only
@@ -106,8 +108,10 @@ This has no effect on the compression result, only on speed.
 Enable this, to avoid slowness for files which are a repetition of the same
 character more than a multiple of ZOPFLI_MAX_MATCH times. This should not affect
 the compression result.
+Doesn't seem to alter iteration reductions and provides a little speed up by 1% or less.
+Tested by copressing lodepng.cpp.
 */
-#define ZOPFLI_SHORTCUT_LONG_REPETITIONS
+#define ZOPFLI_SHORTCUT_LONG_REPETITIONS 1
 
 /*
 Whether to use lazy matching in the greedy LZ77 implementation. This gives a

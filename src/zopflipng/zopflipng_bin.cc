@@ -154,9 +154,8 @@ void PrintResultSize(const char* label, size_t oldsize, size_t newsize) {
 
 int main(int argc, char *argv[]) {
 printf("ZopfliPNG, a Portable Network Graphics (PNG) image optimizer.\n"
-         "Commit: a29e46ba9f268ab273903558dcb7ac13b9fe8e29 + KrzYmod v9\n"
-         "Adds more command line switches, should be faster, uses more memory\n"
-         "\n");
+         "Commit: a29e46ba9f268ab273903558dcb7ac13b9fe8e29 + KrzYmod v10\n"
+         "Adds more command line switches, faster builds\n\n");
   if (argc < 2) {
     ShowHelp();
     return 0;

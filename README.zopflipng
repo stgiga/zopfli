@@ -34,7 +34,7 @@ images are still 26 % smaller than images recompressed with ZopfliPNG.
 
 2013-05-07, Lode Vandevenne and Jyrki Alakuijala
 
-Mr_KrzYch00's KrzYmod v9:
+Mr_KrzYch00's KrzYmod v10:
 - adds 7 command line switches for zopflipng:
 * --mbs=[number]: maximum block splits, 0 = unlimited (d: 15),
 * --mls=[number]: maximum length for score (d: 1024),
@@ -43,7 +43,8 @@ Mr_KrzYch00's KrzYmod v9:
 * --ohh: optymize huffman header (d: OFF) [by Frédéric Kayser],
 * -v: verbose zopfli output during zopflipng optimization.
 * -w: displays current processed zopfli iteration (same line).
-- faster compression but very increased memory usage by altering few preprocessor directives,
+- faster compression by altering few preprocessor directives and makefile finetuning,
+- crash fixes when can't write file or out of memory for cache + other,
 - added zopfliavx, zopflipngavx, zopflineon and zopflipngneon to makefile for AVX and NEON builds.
 - CTRL+C pressed once sets --mui to 1. 2nd time aborts.
 
