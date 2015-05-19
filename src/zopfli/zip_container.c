@@ -105,13 +105,12 @@ void ZopfliZipCompress(const ZopfliOptions* options,
   for(max=0;infilename[max] != '\0';max++) {}
 
   statfile=malloc((i+max)*sizeof(char*)+1);
-  memcpy(statfile,zipcdir->rootdir,i);
+  for(i=0;zipcdir->rootdir[i] != '\0';i++) statfile[i]=zipcdir->rootdir[i];
   for(j=0;j<=max;j++) statfile[i++]=infilename[j];
 
   oldcdirlength=zipcdir->size;
   zipcdir->size+=max+46;
   zipcdir->data=realloc(zipcdir->data,zipcdir->size*sizeof(unsigned char*));
-
   stat(statfile, &attrib);
   free(statfile);
   tt = localtime(&(attrib.st_mtime));
@@ -121,7 +120,6 @@ void ZopfliZipCompress(const ZopfliOptions* options,
   }
   msdos_date = ((tt->tm_year-80) << 9) + ((tt->tm_mon+1) << 5) + tt->tm_mday;
   msdos_time = (tt->tm_hour << 11) + (tt->tm_min << 5) + (tt->tm_sec >> 1);
-
   /* File PK STATIC DATA */
   ZOPFLI_APPEND_DATA(80, out, outsize);
   ZOPFLI_APPEND_DATA(75, out, outsize);
