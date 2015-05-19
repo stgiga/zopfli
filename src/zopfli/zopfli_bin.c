@@ -126,16 +126,20 @@ static int ListDir(const char* filename, char ***filesindir, unsigned int *j, in
   struct dirent *ent;
   struct stat attrib;
   char* initdir=AddStrings(filename,"/");
+  char* statfile=NULL;
   unsigned int i, k, l;
   dir = opendir(filename);
   if(! dir) {
+    free(initdir);
     return 0;
   } else {
     while(1) {
       ent = readdir(dir);
       if(! ent) break;
       if(!StringsEqual(ent->d_name,".") && !StringsEqual(ent->d_name,"..")) {
-        stat(AddStrings(initdir,ent->d_name), &attrib);
+        statfile=AddStrings(initdir,ent->d_name);
+        stat(statfile, &attrib);
+        free(statfile);
         if((attrib.st_mode & S_IFDIR)==0) {
           *filesindir = realloc(*filesindir,((unsigned int)*j+1)*(sizeof(char*)));
           if(isroot==1) {
@@ -144,20 +148,26 @@ static int ListDir(const char* filename, char ***filesindir, unsigned int *j, in
             strcpy((*filesindir)[*j], ent->d_name);
           } else {
             for(i=0;initdir[i]!='/';i++) {}
+            ++i;
             for(k=i;initdir[k]!='\0';k++) {}
             k-=i;
             for(l=0;ent->d_name[l]!='\0';l++) {}
-            (*filesindir)[*j] = malloc(k+l * sizeof(char*) +1);
-            strcpy((*filesindir)[*j], AddStrings(initdir+i,ent->d_name));
+            (*filesindir)[*j] = malloc(k+l * sizeof(char*)+1);
+            statfile=AddStrings(initdir+i,ent->d_name);
+            strcpy((*filesindir)[*j], statfile);
+            free(statfile);
           }
           ++*j;
         } else {
-          ListDir(AddStrings(initdir,ent->d_name), filesindir, j,0);
+          statfile=AddStrings(initdir,ent->d_name);
+          ListDir(statfile, filesindir, j,0);
+          free(statfile);
         }
       }
     }
     closedir(dir);
   }
+  free(initdir);
   return 1;
 }
 
@@ -187,13 +197,13 @@ static void CompressMultiFile(const ZopfliOptions* options,
   InitCDIR(&zipcdir);
   dirname=AddStrings(infilename, "/");
   for(i=0;dirname[i]!='\0';i++) {}
-  zipcdir.rootdir=realloc(zipcdir.rootdir,i*sizeof(char *));
-  memcpy(zipcdir.rootdir,dirname,i*sizeof(char *));
+  zipcdir.rootdir=realloc(zipcdir.rootdir,i*sizeof(char *)+1);
+  memcpy(zipcdir.rootdir,dirname,i*sizeof(char *)+1);
   for(i = 0; i < j; ++i) {
     outsize=0;
     outsizeraw=0;
     fileindir=AddStrings(dirname,filesindir[i]);
-  
+
     LoadFile(fileindir, &in, &insize);
     if (insize == 0) {
       fprintf(stderr, "Invalid filename: %s - trying next\n", fileindir);
@@ -205,7 +215,14 @@ static void CompressMultiFile(const ZopfliOptions* options,
       free(out);
       free(in);
     }
+    free(filesindir[i]);
+    free(fileindir);
   }
+  free(filesindir);
+  free(dirname);
+  free(zipcdir.rootdir);
+  free(zipcdir.data);
+  free(zipcdir.enddata);
 }
 
 /*

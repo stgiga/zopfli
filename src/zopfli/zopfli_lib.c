@@ -44,6 +44,9 @@ void ZopfliCompress(const ZopfliOptions* options, ZopfliFormat output_type,
     zipcdir.rootdir[1]='/';
     zipcdir.rootdir[2]='\0';
     ZopfliZipCompress(options, in, insize, out, outsize, outsizeraw, infilename, &zipcdir);
+    free(zipcdir.rootdir);
+    free(zipcdir.data);
+    free(zipcdir.enddata);
   } else if (output_type == ZOPFLI_FORMAT_DEFLATE) {
     unsigned char bp = 0;
     ZopfliDeflate(options, 2 /* Dynamic block */, 1,

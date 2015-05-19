@@ -62,4 +62,4 @@ void ZopfliZipCompress(const ZopfliOptions* options,
 }  // extern "C"
 #endif
 
-#endif  /* ZOPFLI_GZIP_H_ */
+#endif  /* ZOPFLI_ZIP_H_ */

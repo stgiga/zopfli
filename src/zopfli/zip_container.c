@@ -105,17 +105,15 @@ void ZopfliZipCompress(const ZopfliOptions* options,
   for(max=0;infilename[max] != '\0';max++) {}
 
   statfile=malloc((i+max)*sizeof(char*)+1);
-
-  statfile=zipcdir->rootdir;
-  for(j=0;j<max;j++) {
-    statfile[i++]=infilename[j];
-  }
+  memcpy(statfile,zipcdir->rootdir,i);
+  for(j=0;j<=max;j++) statfile[i++]=infilename[j];
 
   oldcdirlength=zipcdir->size;
   zipcdir->size+=max+46;
   zipcdir->data=realloc(zipcdir->data,zipcdir->size*sizeof(unsigned char*));
 
   stat(statfile, &attrib);
+  free(statfile);
   tt = localtime(&(attrib.st_mtime));
   if(tt->tm_year<80) {
     tt->tm_year=80;
