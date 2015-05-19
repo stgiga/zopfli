@@ -50,7 +50,8 @@ ZopfliPNGOptions::ZopfliPNGOptions()
   , verbosezopflimore(0)
   , lazymatching(0)
   , optimizehuffmanheader(0)
-  , maxfailiterations(0) {
+  , maxfailiterations(0)
+  , findminimumrec(9) {
 }
 
 // Deflate compressor passed as fuction pointer to LodePNG to have it use Zopfli
@@ -74,6 +75,7 @@ unsigned CustomPNGDeflate(unsigned char** out, size_t* outsize,
   options.lazymatching          = png_options->lazymatching;
   options.optimizehuffmanheader = png_options->optimizehuffmanheader;
   mui                           = png_options->maxfailiterations;
+  options.findminimumrec        = png_options->findminimumrec;
 
   if (png_options->block_split_strategy == 3) {
     // Try both block splitting first and last.
@@ -469,6 +471,7 @@ extern "C" void CZopfliPNGSetDefaults(CZopfliPNGOptions* png_options) {
   png_options->lazymatching          = opts.lazymatching;
   png_options->optimizehuffmanheader = opts.optimizehuffmanheader;
   png_options->maxfailiterations     = opts.maxfailiterations;
+  png_options->findminimumrec        = opts.findminimumrec;
 }
 
 extern "C" int CZopfliPNGOptimize(const unsigned char* origpng,
@@ -494,6 +497,7 @@ extern "C" int CZopfliPNGOptimize(const unsigned char* origpng,
   opts.lazymatching          = png_options->lazymatching;
   opts.optimizehuffmanheader = png_options->optimizehuffmanheader;
   opts.maxfailiterations     = png_options->maxfailiterations;
+  opts.findminimumrec        = png_options->findminimumrec;
 
   for (int i = 0; i < png_options->num_filter_strategies; i++) {
     opts.filter_strategies.push_back(png_options->filter_strategies[i]);

@@ -41,7 +41,7 @@ Finds minimum of function f(i) where is is of type size_t, f(i) is of type
 double, i is in range start-end (excluding end).
 */
 static size_t FindMinimum(FindMinimumFun f, void* context,
-                          size_t start, size_t end) {
+                          size_t start, size_t end, const ZopfliOptions* options) {
   if (end - start < 1024) {
     double best = ZOPFLI_LARGE_FLOAT;
     size_t result = start;
@@ -56,40 +56,42 @@ static size_t FindMinimum(FindMinimumFun f, void* context,
     return result;
   } else {
     /* Try to find minimum faster by recursively checking multiple points. */
-#define NUM 9  /* Good value: 9. */
     size_t i;
-    size_t p[NUM];
-    double vp[NUM];
+    size_t *p = malloc(options->findminimumrec * sizeof(size_t));
+    double *vp = malloc(options->findminimumrec * sizeof(double));
     size_t besti;
     double best;
     double lastbest = ZOPFLI_LARGE_FLOAT;
     size_t pos = start;
 
     for (;;) {
-      if (end - start <= NUM) break;
-
-      for (i = 0; i < NUM; i++) {
-        p[i] = start + (i + 1) * ((end - start) / (NUM + 1));
+      if (end - start <= options->findminimumrec) break;
+      if(options->verbose) fprintf(stderr,"[S:%lu / E:%lu] Preparing . . .\r",(unsigned long)start,(unsigned long)end);
+      for (i = 0; i < options->findminimumrec; i++) {
+        p[i] = start + (i + 1) * ((end - start) / (options->findminimumrec + 1));
         vp[i] = f(p[i], context);
       }
       besti = 0;
       best = vp[0];
-      for (i = 1; i < NUM; i++) {
+      for (i = 1; i < options->findminimumrec; i++) {
         if (vp[i] < best) {
           best = vp[i];
           besti = i;
         }
+        if(options->verbose) fprintf(stderr,"[S:%lu / E:%lu] FM Iteration %d: %.0f / Best: %.0f    \r",(unsigned long)start,(unsigned long)end,(int)i,vp[i],best);
       }
+      if(options->verbose) fprintf(stderr,"\n");
       if (best > lastbest) break;
 
       start = besti == 0 ? start : p[besti - 1];
-      end = besti == NUM - 1 ? end : p[besti + 1];
+      end = besti == options->findminimumrec - 1 ? end : p[besti + 1];
 
       pos = p[besti];
       lastbest = best;
     }
+    free(p);
+    free(vp);
     return pos;
-#undef NUM
   }
 }
 
@@ -252,7 +254,7 @@ void ZopfliBlockSplitLZ77(const ZopfliOptions* options,
     c.end = lend;
     c.ohh = options->optimizehuffmanheader;
     assert(lstart < lend);
-    llpos = FindMinimum(SplitCost, &c, lstart + 1, lend);
+    llpos = FindMinimum(SplitCost, &c, lstart + 1, lend,options);
 
     assert(llpos > lstart);
     assert(llpos < lend);

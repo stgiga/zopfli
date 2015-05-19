@@ -103,6 +103,12 @@ typedef struct ZopfliOptions {
   of already compressed files in pointed directory.
   */
   int usescandir;
+
+  /*
+  This has an impact on block splitting model by recursively checking multiple
+  split points. Higher values slow down block splitting. Default is 9.
+  */
+  unsigned int findminimumrec;
 } ZopfliOptions;
 
 /* Initializes options with default values. */

@@ -34,10 +34,11 @@ images are still 26 % smaller than images recompressed with ZopfliPNG.
 
 2013-05-07, Lode Vandevenne and Jyrki Alakuijala
 
-Mr_KrzYch00's KrzYmod v10:
-- adds 7 command line switches for zopflipng:
+Mr_KrzYch00's KrzYmod v11:
+- adds 8 command line switches for zopflipng:
 * --mbs=[number]: maximum block splits, 0 = unlimited (d: 15),
 * --mls=[number]: maximum length for score (d: 1024),
+* --fmr=[number]: find minimum recursively by checking multiple points (d: 9),
 * --mui=[number]: maximum unsuccessful iterations after best, 0 = unlimited/--iterations limited (d: 0),
 * --lazy: enable lazy matching in LZ77 Greedy (d: OFF),
 * --ohh: optymize huffman header (d: OFF) [by Frédéric Kayser],
@@ -48,7 +49,7 @@ Mr_KrzYch00's KrzYmod v10:
 - added zopfliavx, zopflipngavx, zopflineon and zopflipngneon to makefile for AVX and NEON builds.
 - CTRL+C pressed once sets --mui to 1. 2nd time aborts.
 
-mbs and mls switches are used for finetuning and it's clear they provide
+mbs, mls and fmr switches are used for finetuning and it's clear they provide
 better result sometimes... sometime worse.
 
 If You enjoy these changes You may give me a small reward in Bitcoins to:

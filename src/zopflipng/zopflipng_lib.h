@@ -84,6 +84,8 @@ typedef struct CZopfliPNGOptions {
   int optimizehuffmanheader;
 
   int maxfailiterations;
+
+  unsigned int findminimumrec;
 } CZopfliPNGOptions;
 
 // Sets the default options
@@ -165,6 +167,12 @@ struct ZopfliPNGOptions {
   than this value, otherwise it will have no effect.
   */
   int maxfailiterations;
+
+  /*
+  This has an impact on block splitting model by recursively checking multiple
+  split points. Higher values slow down block splitting. Default is 9.
+  */
+  unsigned int findminimumrec;
 };
 
 // Returns 0 on success, error code otherwise.

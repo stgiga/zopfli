@@ -212,4 +212,5 @@ void ZopfliInitOptions(ZopfliOptions* options) {
   options->optimizehuffmanheader = 0;
   options->maxfailiterations = 0;
   options->usescandir = 0;
+  options->findminimumrec = 9;
 }

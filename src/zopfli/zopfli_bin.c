@@ -261,7 +261,7 @@ int main(int argc, char* argv[]) {
 
   fprintf(stderr,
   "Zopfli, a Compression Algorithm to produce Deflate/Zlib streams.\n"
-  "Commit: a29e46ba9f268ab273903558dcb7ac13b9fe8e29 + KrzYmod v10\n"
+  "Commit: a29e46ba9f268ab273903558dcb7ac13b9fe8e29 + KrzYmod v11\n"
   "Adds more command line switches, faster builds\n\n");
 
   for (i = 1; i < argc; i++) {
@@ -287,6 +287,9 @@ int main(int argc, char* argv[]) {
     }  else if (arg[0] == '-' && arg[1] == '-' && arg[2] == 'm' && arg[3] == 'l' && arg[4] == 's'
         && arg[5] >= '0' && arg[5] <= '9') {
       options.lengthscoremax = atoi(arg + 5);
+    }  else if (arg[0] == '-' && arg[1] == '-' && arg[2] == 'f' && arg[3] == 'm' && arg[4] == 'r'
+        && arg[5] >= '0' && arg[5] <= '9') {
+      options.findminimumrec = atoi(arg + 5);
     }  else if (arg[0] == '-' && arg[1] == '-' && arg[2] == 'm' && arg[3] == 'u' && arg[4] == 'i'
         && arg[5] >= '0' && arg[5] <= '9') {
       options.maxfailiterations = atoi(arg + 5);
@@ -304,6 +307,8 @@ int main(int argc, char* argv[]) {
           "  --mls#  maximum length for score (d: 1024)\n"
           "          this option has an impact on block splitting model\n");
       fprintf(stderr,
+          "  --fmr#  find minimum recursively by checking multiple points (d: 9)\n"
+          "          has an impact on block splitting model\n"
           "  --mui#  maximum unsucessful iterations after best (d: 0)\n"
           "          should be lower than --i, 0 = --i limited\n"
           "  --lazy  lazy matching in Greedy LZ77 (d: OFF)\n"
@@ -340,6 +345,11 @@ int main(int argc, char* argv[]) {
 
   if (options.maxfailiterations < 0) {
     fprintf(stderr, "Error: --mui parameter must be at least 0.\n");
+    return 0;
+  }
+
+  if (options.findminimumrec < 1) {
+    fprintf(stderr, "Error: --fmr parameter must be at least 1.\n");
     return 0;
   }
 
