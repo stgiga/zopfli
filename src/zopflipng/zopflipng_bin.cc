@@ -127,7 +127,7 @@ void ShowHelp() {
          " essential: IHDR, PLTE, tRNS, IDAT and IEND.\n"
          "--mbs=[number]: maximum block splits, 0 = unlimited (d: 15)\n"
          "--mls=[number]: maximum length for score (d: 1024)\n"
-         "--fmr=[number]: find minimum recursively by checking multiple points (d: 9)\n"
+         "--fmr=[number]: find minimum recursively by checking multiple points (min: 2, d: 9)\n"
          "--mui=[number]: maximum unsuccessful iterations after best (d: 0)\n"
          "--lazy: lazy matching in Greedy LZ77 (d: OFF)\n"
          "--ohh: optymize huffman header (d: OFF)\n"
@@ -231,7 +231,7 @@ printf("ZopfliPNG, a Portable Network Graphics (PNG) image optimizer.\n"
         if (num < 1) num = 1024;
         png_options.lengthscoremax = num;
       } else if (name == "--fmr") {
-        if (num < 1) num = 9;
+        if (num < 2) num = 9;
         png_options.findminimumrec = num;
       } else if (name == "--mui") {
         if (num < 0) num = 0;

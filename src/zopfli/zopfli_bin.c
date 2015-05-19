@@ -307,7 +307,7 @@ int main(int argc, char* argv[]) {
           "  --mls#  maximum length for score (d: 1024)\n"
           "          this option has an impact on block splitting model\n");
       fprintf(stderr,
-          "  --fmr#  find minimum recursively by checking multiple points (d: 9)\n"
+          "  --fmr#  find minimum recursively by checking multiple points (min: 2, d: 9)\n"
           "          has an impact on block splitting model\n"
           "  --mui#  maximum unsucessful iterations after best (d: 0)\n"
           "          should be lower than --i, 0 = --i limited\n"
@@ -348,8 +348,8 @@ int main(int argc, char* argv[]) {
     return 0;
   }
 
-  if (options.findminimumrec < 1) {
-    fprintf(stderr, "Error: --fmr parameter must be at least 1.\n");
+  if (options.findminimumrec < 2) {
+    fprintf(stderr, "Error: --fmr parameter must be at least 2.\n");
     return 0;
   }
 
