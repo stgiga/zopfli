@@ -53,6 +53,7 @@ static size_t FindMinimum(FindMinimumFun f, void* context,
         result = i;
       }
     }
+    if(options->verbose) fprintf(stderr,"[S:%lu / E:%lu] Best: %.0f\n",(unsigned long)start,(unsigned long)end,best);
     return result;
   } else {
     /* Try to find minimum faster by recursively checking multiple points. */
@@ -66,7 +67,6 @@ static size_t FindMinimum(FindMinimumFun f, void* context,
 
     for (;;) {
       if (end - start <= options->findminimumrec) break;
-      if(options->verbose) fprintf(stderr,"[S:%lu / E:%lu] Preparing . . .\r",(unsigned long)start,(unsigned long)end);
       for (i = 0; i < options->findminimumrec; i++) {
         p[i] = start + (i + 1) * ((end - start) / (options->findminimumrec + 1));
         vp[i] = f(p[i], context);
@@ -78,16 +78,18 @@ static size_t FindMinimum(FindMinimumFun f, void* context,
           best = vp[i];
           besti = i;
         }
-        if(options->verbose) fprintf(stderr,"[S:%lu / E:%lu] FM Iteration %d: %.0f / Best: %.0f    \r",(unsigned long)start,(unsigned long)end,(int)i,vp[i],best);
       }
-      if(options->verbose) fprintf(stderr,"\n");
-      if (best > lastbest) break;
+      if (best > lastbest) {
+        if(options->verbose) fprintf(stderr,"[S:%lu / E:%lu] Using last best\n",(unsigned long)start,(unsigned long)end);
+        break;
+      }
 
       start = besti == 0 ? start : p[besti - 1];
       end = besti == options->findminimumrec - 1 ? end : p[besti + 1];
 
       pos = p[besti];
       lastbest = best;
+      if(options->verbose) fprintf(stderr,"[S:%lu / E:%lu] Best: %.0f\n",(unsigned long)start,(unsigned long)end,best);
     }
     free(p);
     free(vp);
