@@ -53,7 +53,7 @@ static size_t FindMinimum(FindMinimumFun f, void* context,
         result = i;
       }
     }
-    if(options->verbose) fprintf(stderr,"[S:%lu / E:%lu] Best: %.0f\n",(unsigned long)start,(unsigned long)end,best);
+    if(options->verbose>4) fprintf(stderr," [%lu - %lu] Best: %.0f\n",(unsigned long)start,(unsigned long)end,best);
     return result;
   } else {
     /* Try to find minimum faster by recursively checking multiple points. */
@@ -80,7 +80,7 @@ static size_t FindMinimum(FindMinimumFun f, void* context,
         }
       }
       if (best > lastbest) {
-        if(options->verbose) fprintf(stderr,"[S:%lu / E:%lu] Using last best\n",(unsigned long)start,(unsigned long)end);
+        if(options->verbose>4) fprintf(stderr," [%lu - %lu]\n",(unsigned long)start,(unsigned long)end);
         break;
       }
 
@@ -89,7 +89,7 @@ static size_t FindMinimum(FindMinimumFun f, void* context,
 
       pos = p[besti];
       lastbest = best;
-      if(options->verbose) fprintf(stderr,"[S:%lu / E:%lu] Best: %.0f\n",(unsigned long)start,(unsigned long)end,best);
+      if(options->verbose>4) fprintf(stderr," [%lu - %lu] Best: %.0f\n",(unsigned long)start,(unsigned long)end,best);
     }
     free(p);
     free(vp);
@@ -173,18 +173,21 @@ static void PrintBlockSplitPoints(const unsigned short* litlens,
     }
   }
   assert(npoints == nlz77points);
-
   fprintf(stderr, "Block split points: ");
-  for (i = 0; i < npoints; i++) {
-    fprintf(stderr, "%d ", (int)splitpoints[i]);
+  if(npoints>0) {
+    for (i = 0; i < npoints; i++) {
+      fprintf(stderr, "%d ", (int)splitpoints[i]);
+    }
+    fprintf(stderr, "(hex:");
+    for (i = 0; i < npoints; i++) {
+      if(i==0) fprintf(stderr," "); else fprintf(stderr,",");
+      fprintf(stderr, "%x", (int)splitpoints[i]);
+    }
+    fprintf(stderr,")");
+  } else {
+    fprintf(stderr, "NONE");
   }
-  fprintf(stderr, "(hex:");
-  for (i = 0; i < npoints; i++) {
-    fprintf(stderr, " %x", (int)splitpoints[i]);
-  }
-  fprintf(stderr, ")\n");
-
-  fprintf(stderr, "Total blocks: %d\n",(int)++npoints);
+  fprintf(stderr, "                 \n");
 
   free(splitpoints);
 }
@@ -270,6 +273,7 @@ void ZopfliBlockSplitLZ77(const ZopfliOptions* options,
     } else {
       AddSorted(llpos, splitpoints, npoints);
       numblocks++;
+      if(options->verbose>0 && options->verbose<5) fprintf(stderr,"Initializing blocks: %lu\r",(unsigned long)numblocks);
     }
 
     if (!FindLargestSplittableBlock(
@@ -282,9 +286,14 @@ void ZopfliBlockSplitLZ77(const ZopfliOptions* options,
     }
   }
 
-  if (options->verbose) {
+  if (options->verbose>3) {
     PrintBlockSplitPoints(litlens, dists, llsize, *splitpoints, *npoints);
   }
+
+  if(options->verbose>2) {
+    fprintf(stderr, "Total blocks: %lu                 \n\n",(unsigned long)numblocks);
+  }
+
 
   free(done);
 }
@@ -337,14 +346,57 @@ void ZopfliBlockSplit(const ZopfliOptions* options,
   ZopfliCleanLZ77Store(&store);
 }
 
-void ZopfliBlockSplitSimple(const unsigned char* in,
-                            size_t instart, size_t inend,
+void ZopfliBlockSplitSimple(const unsigned char* in, size_t inend,
                             size_t blocksize,
-                            size_t** splitpoints, size_t* npoints) {
-  size_t i = instart;
+                            size_t** splitpoints, size_t* npoints, unsigned int verbose, unsigned long* cbs) {
+  size_t i, lasti = 0;
+  unsigned int j = 1;
+  unsigned long numblocks = 1;
+  if(cbs==NULL) {
+    i = blocksize;
+  } else {
+    i=cbs[1];
+  }
   while (i < inend) {
     ZOPFLI_APPEND_DATA(i, splitpoints, npoints);
-    i += blocksize;
+    if(cbs==NULL) {
+      i += blocksize;
+    } else {
+      do {
+        ++j;
+        if(j>cbs[0]) {
+          i=inend;
+          break;
+        }
+        lasti=i;
+        i += (cbs[j] - cbs[j-1]);
+        if(i <= lasti) {
+          fprintf(stderr,"Error: point [%x] lower or equal to [%x], skipping . . .\n",(int)cbs[j],(int)cbs[j-1]);
+        } else if(i>=inend) {
+          fprintf(stderr,"Error: point [%x] out of input data range, skipping . . .\n",(int)cbs[j]);
+        }
+      } while(i<=lasti);
+    }
+    ++numblocks;
+  }
+  if(verbose>3) {
+    fprintf(stderr, "Block split points: ");
+    if(*npoints>0) {
+      for (j = 0; j < *npoints; j++) {
+        fprintf(stderr, "%d ", (int)(*splitpoints)[j]);
+      }
+      fprintf(stderr, "(hex:");
+      for (j = 0; j < *npoints; j++) {
+        fprintf(stderr, " %x", (int)(*splitpoints)[j]);
+      }
+      fprintf(stderr,")");
+    } else {
+      fprintf(stderr, "NONE");
+    }
+    fprintf(stderr, "\n");
+  }
+  if(verbose>2) {
+    fprintf(stderr, "Total blocks: %lu                 \n\n",numblocks);
   }
   (void)in;
 }

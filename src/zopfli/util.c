@@ -201,8 +201,7 @@ int ZopfliGetLengthSymbol(int l) {
 }
 
 void ZopfliInitOptions(ZopfliOptions* options) {
-  options->verbose = 0;
-  options->verbose_more = 0;
+  options->verbose = 2;
   options->numiterations = 15;
   options->blocksplitting = 1;
   options->blocksplittinglast = 0;
@@ -213,4 +212,7 @@ void ZopfliInitOptions(ZopfliOptions* options) {
   options->maxfailiterations = 0;
   options->usescandir = 0;
   options->findminimumrec = 9;
+  options->blocksize = 0;
+  options->numblocks = 0;
+  options->custblocksplit = NULL;
 }

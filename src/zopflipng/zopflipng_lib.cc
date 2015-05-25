@@ -46,12 +46,14 @@ ZopfliPNGOptions::ZopfliPNGOptions()
   , block_split_strategy(1)
   , blocksplittingmax(15)
   , lengthscoremax(1024)
-  , verbosezopfli(0)
-  , verbosezopflimore(0)
+  , verbosezopfli(2)
   , lazymatching(0)
   , optimizehuffmanheader(0)
   , maxfailiterations(0)
-  , findminimumrec(9) {
+  , findminimumrec(9)
+  , blocksize(0)
+  , numblocks(0)
+  , custblocksplit(NULL) {
 }
 
 // Deflate compressor passed as fuction pointer to LodePNG to have it use Zopfli
@@ -71,11 +73,16 @@ unsigned CustomPNGDeflate(unsigned char** out, size_t* outsize,
   options.blocksplittingmax     = png_options->blocksplittingmax;
   options.lengthscoremax        = png_options->lengthscoremax;
   options.verbose               = png_options->verbosezopfli;
-  options.verbose_more          = png_options->verbosezopflimore;
   options.lazymatching          = png_options->lazymatching;
   options.optimizehuffmanheader = png_options->optimizehuffmanheader;
   mui                           = png_options->maxfailiterations;
   options.findminimumrec        = png_options->findminimumrec;
+  options.blocksize             = png_options->blocksize;
+  options.numblocks             = png_options->numblocks;
+  if(png_options->custblocksplit != NULL) {
+    options.custblocksplit = (unsigned long*)malloc((png_options->custblocksplit[0]+1) * sizeof(unsigned long*));
+    memcpy(options.custblocksplit,png_options->custblocksplit,((png_options->custblocksplit[0]+1) * sizeof(unsigned long*)));
+  }
 
   if (png_options->block_split_strategy == 3) {
     // Try both block splitting first and last.
@@ -467,11 +474,13 @@ extern "C" void CZopfliPNGSetDefaults(CZopfliPNGOptions* png_options) {
   png_options->blocksplittingmax     = opts.blocksplittingmax;
   png_options->lengthscoremax        = opts.lengthscoremax;
   png_options->verbosezopfli         = opts.verbosezopfli;
-  png_options->verbosezopflimore     = opts.verbosezopflimore;
   png_options->lazymatching          = opts.lazymatching;
   png_options->optimizehuffmanheader = opts.optimizehuffmanheader;
   png_options->maxfailiterations     = opts.maxfailiterations;
   png_options->findminimumrec        = opts.findminimumrec;
+  png_options->blocksize             = opts.blocksize;
+  png_options->numblocks             = opts.numblocks;
+  png_options->custblocksplit        = opts.custblocksplit;
 }
 
 extern "C" int CZopfliPNGOptimize(const unsigned char* origpng,
@@ -493,11 +502,13 @@ extern "C" int CZopfliPNGOptimize(const unsigned char* origpng,
   opts.blocksplittingmax     = png_options->blocksplittingmax;
   opts.lengthscoremax        = png_options->lengthscoremax;
   opts.verbosezopfli         = png_options->verbosezopfli;
-  opts.verbosezopflimore     = png_options->verbosezopflimore;
   opts.lazymatching          = png_options->lazymatching;
   opts.optimizehuffmanheader = png_options->optimizehuffmanheader;
   opts.maxfailiterations     = png_options->maxfailiterations;
   opts.findminimumrec        = png_options->findminimumrec;
+  opts.blocksize             = png_options->blocksize;
+  opts.numblocks             = png_options->numblocks;
+  opts.custblocksplit        = png_options->custblocksplit;
 
   for (int i = 0; i < png_options->num_filter_strategies; i++) {
     opts.filter_strategies.push_back(png_options->filter_strategies[i]);

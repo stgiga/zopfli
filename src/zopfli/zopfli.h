@@ -32,15 +32,8 @@ extern "C" {
 Options used throughout the program.
 */
 typedef struct ZopfliOptions {
-  /* Whether to print output */
+  /* How much output to print, verbose level */
   int verbose;
-
-  /*
-  Whether to print all iterations using same line, best ones are displayed
-  as usual, using separate lines. Good for keeping a track of currently
-  processed iterations.
-  */
-  int verbose_more;
 
   /*
   Maximum amount of times to rerun forward and backward pass to optimize LZ77
@@ -109,6 +102,23 @@ typedef struct ZopfliOptions {
   split points. Higher values slow down block splitting. Default is 9.
   */
   unsigned int findminimumrec;
+
+  /*
+  Allows to set custom block size. This uses simple block splitting instead
+  of zopfli auto guessing.
+  */
+  unsigned int blocksize;
+
+  /*
+  Allows to set custom number of blocks. This uses simple block splitting instead
+  of zopfli auto guessing.
+  */
+  unsigned int numblocks;
+
+  /*
+  Custom block split points in hexadecimal format comma separated.
+  */
+  unsigned long *custblocksplit;
 } ZopfliOptions;
 
 /* Initializes options with default values. */

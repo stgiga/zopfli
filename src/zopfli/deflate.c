@@ -37,6 +37,15 @@ Given the value of bp and the amount of bytes, the amount of bits represented
 is not simply bytesize * 8 + bp because even representing one bit requires a
 whole byte. It is: (bp == 0) ? (bytesize * 8) : ((bytesize - 1) * 8 + bp)
 */
+
+static int ceilz(float num) {
+    int inum = (int)num;
+    if (num == (float)inum) {
+        return inum;
+    }
+    return inum + 1;
+}
+
 static void AddBit(int bit,
                    unsigned char* bp, unsigned char** out, size_t* outsize) {
   if (*bp == 0) ZOPFLI_APPEND_DATA(0, out, outsize);
@@ -661,7 +670,7 @@ static void AddLZ77Block(const ZopfliOptions* options, int btype, int final,
 
     detect_tree_size = *outsize;
     AddDynamicTree(ll_lengths, d_lengths, bp, out, outsize, options->optimizehuffmanheader);
-    if (options->verbose) {
+    if (options->verbose>3) {
       fprintf(stderr, "Treesize: %d                           \n", (int)(*outsize - detect_tree_size));
     }
   }
@@ -680,8 +689,8 @@ static void AddLZ77Block(const ZopfliOptions* options, int btype, int final,
     uncompressed_size += dists[i] == 0 ? 1 : litlens[i];
   }
   compressed_size = *outsize - detect_block_size;
-  if (options->verbose) {
-    fprintf(stderr, "Compressed block size: %d (%dk) (unc: %d)\n",
+  if (options->verbose>2) {
+    fprintf(stderr, "Compressed block size: %d (%dk) (unc: %d)\n\n",
            (int)compressed_size, (int)(compressed_size / 1024),
            (int)(uncompressed_size));
   }
@@ -831,23 +840,40 @@ static void DeflateSplittingFirst(const ZopfliOptions* options,
   size_t i;
   size_t* splitpoints = 0;
   size_t npoints = 0;
-  if (btype == 0) {
-    ZopfliBlockSplitSimple(in, instart, inend, 65535, &splitpoints, &npoints);
-  } else if (btype == 1) {
-    /* If all blocks are fixed tree, splitting into separate blocks only
-    increases the total size. Leave npoints at 0, this represents 1 block. */
+  if(options->custblocksplit!=NULL) {
+    ZopfliBlockSplitSimple(in, inend, 0, &splitpoints, &npoints, options->verbose,options->custblocksplit);
+  } else if(options->numblocks>0) {
+    if(options->numblocks>inend) {
+      i = 1;
+    } else {
+      i = ceilz((float)inend / (float)options->numblocks);
+    }
+    ZopfliBlockSplitSimple(in, inend, i, &splitpoints, &npoints, options->verbose,NULL);
+  } else if(options->blocksize>0) {
+    ZopfliBlockSplitSimple(in, inend, options->blocksize, &splitpoints, &npoints, options->verbose,NULL);
   } else {
-    ZopfliBlockSplit(options, in, instart, inend,
-                     options->blocksplittingmax, &splitpoints, &npoints);
+    if (btype == 0) {
+      ZopfliBlockSplitSimple(in, inend, 65535, &splitpoints, &npoints, options->verbose, NULL);
+    } else if (btype == 1) {
+      /* If all blocks are fixed tree, splitting into separate blocks only
+      increases the total size. Leave npoints at 0, this represents 1 block. */
+    } else {
+      ZopfliBlockSplit(options, in, instart, inend,
+                       options->blocksplittingmax, &splitpoints, &npoints);
+    }
   }
-
+  if(options->verbose>0) fprintf(stderr,"                          \r");
   for (i = 0; i <= npoints; i++) {
     size_t start = i == 0 ? instart : splitpoints[i - 1];
     size_t end = i == npoints ? inend : splitpoints[i];
-    fprintf(stderr, "Compression progress: %.1f%%",100.0 * (double)start / (double)inend);
-    if(options->verbose) {
-      fprintf(stderr, "  ---  bytes left: %d\n", (int)(inend - start));
-      fprintf(stderr, "Compressing block: %d / %d\n", (int)(i + 1), (int)(npoints + 1));
+    if(options->verbose>0) fprintf(stderr, "Progress: %.1f%%",100.0 * (double)start / (double)inend);
+    if(options->verbose>1) {
+      fprintf(stderr, "  ---  Block: %d / %d  ---  Data left: %d bytes", (int)(i + 1), (int)(npoints + 1),(int)(inend - start));
+      if(options->verbose>2) {
+        fprintf(stderr,"\n");
+      } else {
+        fprintf(stderr,"  \r");
+      }
     } else {
       fprintf(stderr,"\r");
     }
@@ -969,11 +995,12 @@ void ZopfliDeflate(const ZopfliOptions* options, int btype, int final,
     i += size;
   }
 #endif
-  fprintf(stderr,"Compression progress: 100.0%%\n");
-  if (options->verbose) {
+  if(options->verbose>0) fprintf(stderr,"Progress: 100.0%%\n\n");
+  if (options->verbose>1) {
     fprintf(stderr,
-            "Input Size: %d, Deflate: %d, Compression: %f%% Removed\n",
-            (int)insize, (int)(*outsize-offset),
-            100.0 * (double)(insize - (*outsize-offset)) / (double)insize);
+            "Input size: %d (%dK)\n"
+            "Deflate size: %d (%dK). Compression ratio: %.3f%%\n",
+            (int)insize,(int)insize/1024, (int)(*outsize-offset), (int)(*outsize-offset) / 1024,
+            100.0 * (double)(*outsize-offset) / (double)insize);
   }
 }

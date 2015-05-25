@@ -77,8 +77,6 @@ typedef struct CZopfliPNGOptions {
 
   int verbosezopfli;
 
-  int verbosezopflimore;
-
   int lazymatching;
 
   int optimizehuffmanheader;
@@ -86,6 +84,12 @@ typedef struct CZopfliPNGOptions {
   int maxfailiterations;
 
   unsigned int findminimumrec;
+
+  unsigned int blocksize;
+
+  unsigned int numblocks;
+
+  unsigned long *custblocksplit;
 } CZopfliPNGOptions;
 
 // Sets the default options
@@ -146,11 +150,8 @@ struct ZopfliPNGOptions {
   // model and the chance for first run being closer to the optimal output.
   int lengthscoremax;
 
-  // Verbose zopfli output during zopflipng optimization.
+  // How much zopfli output to print, verbose level
   int verbosezopfli;
-
-  // Show current zopfli iteration being processed, using same line.
-  int verbosezopflimore;
 
   // Enable lazy matching in LZ77 Greedy may provide various results for different files when enabled.
   int lazymatching;
@@ -173,6 +174,23 @@ struct ZopfliPNGOptions {
   split points. Higher values slow down block splitting. Default is 9.
   */
   unsigned int findminimumrec;
+
+  /*
+  Allows to set custom block size. This uses simple block splitting instead
+  of zopfli auto guessing.
+  */
+  unsigned int blocksize;
+
+  /*
+  Allows to set custom number of blocks. This uses simple block splitting instead
+  of zopfli auto guessing.
+  */
+  unsigned int numblocks;
+
+  /*
+  Custom block split points in hexadecimal format comma separated.
+  */
+  unsigned long *custblocksplit;
 };
 
 // Returns 0 on success, error code otherwise.

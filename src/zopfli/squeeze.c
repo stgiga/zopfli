@@ -488,7 +488,7 @@ void ZopfliLZ77Optimal(ZopfliBlockState *s,
                    &currentstore);
     cost = ZopfliCalculateBlockSize(currentstore.litlens, currentstore.dists,
                                     0, currentstore.size, 2, s->options->optimizehuffmanheader);
-    if (s->options->verbose_more || (s->options->verbose && cost < bestcost)) {
+    if (s->options->verbose>4 || (s->options->verbose>2 && cost < bestcost)) {
       fprintf(stderr, "Iteration %d: %d bit      \r", i, (int) cost);
     }
     if (cost < bestcost) {
@@ -497,7 +497,7 @@ void ZopfliLZ77Optimal(ZopfliBlockState *s,
       CopyStats(&stats, &beststats);
       bestcost = cost;
       /* End */
-      if(s->options->verbose) {
+      if(s->options->verbose>3) {
         fprintf(stderr, "\n");
       }
       fails=0;
@@ -522,10 +522,11 @@ void ZopfliLZ77Optimal(ZopfliBlockState *s,
     }
     lastcost = cost;
     if(mui>0 && fails>=mui) {
-      if(s->options->verbose) fprintf(stderr, "Iteration %d: No further reduction in the last %d tries.\n", i,fails);
+      if(s->options->verbose>3) fprintf(stderr, "Iteration %d: No further reduction in the last %d tries.\n", i,fails);
       break;
     }
   }
+  if(s->options->verbose==3) fprintf(stderr,"\n");
 
   free(length_array);
   free(path);

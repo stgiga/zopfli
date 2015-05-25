@@ -124,15 +124,18 @@ void ShowHelp() {
          " that would normally be removed, e.g. tEXt,zTXt,iTXt,gAMA, ... \n"
          " Due to adding extra data, this increases the result size. By default"
          " ZopfliPNG only keeps the following chunks because they are"
-         " essential: IHDR, PLTE, tRNS, IDAT and IEND.\n"
-         "--mbs=[number]: maximum block splits, 0 = unlimited (d: 15)\n"
-         "--mls=[number]: maximum length for score (d: 1024)\n"
-         "--fmr=[number]: find minimum recursively by checking multiple points (min: 2, d: 9)\n"
-         "--mui=[number]: maximum unsuccessful iterations after best (d: 0)\n"
-         "--lazy: lazy matching in Greedy LZ77 (d: OFF)\n"
-         "--ohh: optymize huffman header (d: OFF)\n"
-         "-v: verbose zopfli output\n"
-         "-w: show current processed zopfli iteration (same line)\n"
+         " essential: IHDR, PLTE, tRNS, IDAT and IEND.\n\n"
+         "     CUSTOM ZOPFLI OPTIONS:\n"
+         "--v=[number]:   verbose level for zopfli (0-5, d:2)\n"
+         "--mui=[number]: maximum unsuccessful iterations after last best (d: 0)\n"
+         "--mb=[number]:  maximum blocks, 0 = unlimited (d: 15)\n"
+         "--bsr=[number]: block splitting recursion (min: 2, d: 9)\n"
+         "--mls=[number]: maximum length score (d: 1024)\n"
+         "--n=[number]:   number of blocks\n"
+         "--b=[number]:   block size in bytes\n"
+         "--cbs=[number]: custom block split points in hex separated with comma\n"
+         "--lazy:         lazy matching in Greedy LZ77 (d: OFF)\n"
+         "--ohh:          optymize huffman header (d: OFF)\n"
          "\n"
          "Usage examples:\n"
          "Optimize a file and overwrite if smaller: zopflipng infile.png"
@@ -155,8 +158,7 @@ void PrintResultSize(const char* label, size_t oldsize, size_t newsize) {
 
 int main(int argc, char *argv[]) {
 printf("ZopfliPNG, a Portable Network Graphics (PNG) image optimizer.\n"
-         "Commit: a29e46ba9f268ab273903558dcb7ac13b9fe8e29 + KrzYmod v11\n"
-         "Adds more command line switches, faster builds\n\n");
+         "KrzYmod extends ZopfliPNG functionality - version 12\n\n");
   if (argc < 2) {
     ShowHelp();
     return 0;
@@ -193,10 +195,6 @@ printf("ZopfliPNG, a Portable Network Graphics (PNG) image optimizer.\n"
           png_options.block_split_strategy = 3;
         } else if (c == 'q') {
           png_options.use_zopfli = false;
-        } else if (c == 'v') {
-          png_options.verbosezopfli = 1;
-        } else if (c == 'w') {
-          png_options.verbosezopflimore = 1;
         } else if (c == 'h') {
           ShowHelp();
           return 0;
@@ -224,18 +222,46 @@ printf("ZopfliPNG, a Portable Network Graphics (PNG) image optimizer.\n"
         if (num < 1) num = 1;
         png_options.num_iterations = num;
         png_options.num_iterations_large = num;
-      } else if (name == "--mbs") {
+      } else if (name == "--mb") {
         if (num < 0) num = 15;
         png_options.blocksplittingmax = num;
       } else if (name == "--mls") {
         if (num < 1) num = 1024;
         png_options.lengthscoremax = num;
-      } else if (name == "--fmr") {
+      } else if (name == "--bsr") {
         if (num < 2) num = 9;
         png_options.findminimumrec = num;
       } else if (name == "--mui") {
         if (num < 0) num = 0;
         png_options.maxfailiterations = num;
+      } else if (name == "--v") {
+        if (num < 0) num = 1;
+        png_options.verbosezopfli = num;
+      } else if (name == "--n") {
+        if (num < 0) num = 0;
+        png_options.numblocks = num;
+      } else if (name == "--b") {
+        if (num < 0) num = 0;
+        png_options.blocksize = num;
+      } else if (name == "--cbs") {
+        int k=1;
+        char* cbsbuff = (char *)malloc(2 * sizeof(char*));
+        png_options.custblocksplit = (unsigned long*)realloc(png_options.custblocksplit, ++k * sizeof(unsigned long*));
+        png_options.custblocksplit[0] = 1;
+        png_options.custblocksplit[1] = 0;
+        for (size_t j = 0; j < value.size(); j++) {
+          char f = value[j];
+          if(f!=',') {
+            cbsbuff[0]=f;
+            cbsbuff[1]='\0';
+            png_options.custblocksplit[k-1] = (png_options.custblocksplit[k-1]<<4) + strtoul(cbsbuff,NULL,16);
+          } else {
+            ++png_options.custblocksplit[0];
+            png_options.custblocksplit = (unsigned long*)realloc(png_options.custblocksplit, ++k * sizeof(unsigned long*));
+            png_options.custblocksplit[k-1] = 0;
+          }
+        }
+        free(cbsbuff);
       } else if (name == "--splitting") {
         if (num < 0 || num > 3) num = 1;
         png_options.block_split_strategy = num;
@@ -451,6 +477,8 @@ printf("ZopfliPNG, a Portable Network Graphics (PNG) image optimizer.\n"
   }
 
   if (dryrun) printf("No files were written because dry run was specified\n");
+
+  if(png_options.custblocksplit != NULL) free(png_options.custblocksplit);
 
   return total_errors;
 }

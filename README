@@ -31,31 +31,66 @@ use "make libzopfli". The source code of Zopfli is under src/zopfli.
 Zopfli Compression Algorithm was created by Lode Vandevenne and Jyrki
 Alakuijala, based on an algorithm by Jyrki Alakuijala.
 
-Mr_KrzYch00's KrzYmod v11:
-- adds 10 command line switches for zopfli:
-* --mbs#: maximum block splits, 0 = unlimited (d: 15),
-* --mls#: maximum length for score (d: 1024),
-* --fmr#: find minimum recursively by checking multiple points (d: 9),
-* --mui#: maximum unsuccessful iterations after best, 0 = unlimited/--i limited (d: 0),
-* --lazy: enable lazy matching in LZ77 Greedy (d: OFF),
-* --ohh: optymize huffman header (d: OFF) [by Frédéric Kayser],
-* --gzipname: output to gzip format with filename,
-* --zip: output to zip format,
-* --dir: read directory recursively instead of file and add all files inside
-         to ZIP archive. ZIP file is updated on-fly on every compressed file,
-         so You can always break (CTRL+C) the operation, delete manually already
-         compressed files in dir and zipmix two results together.
-         THIS FEATURE IS HIGHLY EXPERIMENTAL. As I program in C since like
-         2 weeks, my code may not be perfect, but as far as I tested
-         it's a working code. Empty directories are NOT compressed,
-* -w: displays current processed iteration (same line).
-- faster compression by altering few preprocessor directives and makefile finetuning,
-- crash fixes when can't write file or out of memory for cache + other,
-- added zopfliavx, zopflipngavx, zopflineon and zopflipngneon to makefile for AVX and NEON builds,
-- CTRL+C pressed once sets --mui to 1. 2nd time aborts.
+====================================
+         KrzYmod v12 Notes
+====================================
 
-mbs, mls and fmr switches are used for finetuning and it's clear they provide
-better result sometimes... sometimes worse.
+Additional command line switches:
+* --mb#:      maximum blocks, 0 = unlimited (d: 15),
+* --mls#:     maximum length score (d: 1024),
+* --bsr#:     block splitting recursion (min: 2, d: 9),
+* --mui#:     maximum unsucessful iterations after last best (d: 0),
+* --lazy:     enable lazy matching in LZ77 Greedy (d: OFF),
+* --ohh:      optymize huffman header (d: OFF) [by Frédéric Kayser],
+* --gzipname: output to gzip format with filename,
+* --zip:      output to zip format,
+* --dir:      accept directory as input, requires: --zip,
+* --v#:       verbose level (0-4, d: 1),
+* --n#:       number of blocks,
+* --b#:       block size in bytes,
+* --cbs#:     custom block split points in hex separated with comma.
+
+--mb allows to increase or reduce number of blocks the stram gets split to
+when using automatic splitting.
+
+--mls, --bsr, --lazy, --ohh provide finetuning for zopfli.
+
+--n --b --cbs allow to set number, size of blocks or custom block split
+points to override zopfli block split decissions.
+
+--zip outputs to ZIP container.
+
+--dir will read all files in given directory and add them to ZIP archive
+one at a time while updating zip on-fly. So in case operation is aborted
+You can still access Your already compressed files.
+KrzYmod doesn't support empty files and directories, adding to existing
+ZIP archive is also not supported. Character encoding may be lost
+or rendered improperly when using other alphabet types than english.
+Most compression programs allow changing filenames without recompression.
+
+--v is customized -v making it possible to set verbosity of Zopfli output,
+as well as making it fully quiet (level 0).
+
+Pressing CTRL+C while program is compressing data will set maximum
+unsuccessful iterations after last best to 1. This will make Zopfli
+finish work faster if the parameters were set too high.
+
+Supports Unix (gzip) and MS-DOS (zip) timestamps, as well as outputting
+to gzip format with filename included (gzipname).
+
+Adds percentage progress bar updated everytime block gets
+successfully compressed and a lot of more information on
+different verbosity levels.
+
+Fixes few bugs/crashes found in original Zopfli project.
+
+Makefile included should provide ~20% faster builds.
+
 
 If You enjoy these changes You may give me a small reward in Bitcoins to:
 1KrzY1CwE532e6YjN4aCzgV19gtAzQMatJ ;)
+
+====================================
+           by Mr_KrzYch00
+====================================
+end of KrzYmod Notes.

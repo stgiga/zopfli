@@ -70,10 +70,10 @@ void ZopfliZlibCompress(const ZopfliOptions* options,
   ZOPFLI_APPEND_DATA((checksum >> 8) % 256, out, outsize);
   ZOPFLI_APPEND_DATA(checksum % 256, out, outsize);
 
-  if (options->verbose) {
+  if (options->verbose>1) {
     fprintf(stderr,
-            "Input Size: %d, Zlib: %d, Compression: %f%% Removed\n",
-            (int)insize, (int)*outsize,
-            100.0 * (double)(insize - *outsize) / (double)insize);
+            "ZLIB size: %d (%dK). Compression ratio: %.3f%%\n",
+            (int)*outsize, (int)*outsize/1024,
+            100.0 * (double)*outsize / (double)insize);
   }
 }

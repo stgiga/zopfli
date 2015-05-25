@@ -34,23 +34,29 @@ images are still 26 % smaller than images recompressed with ZopfliPNG.
 
 2013-05-07, Lode Vandevenne and Jyrki Alakuijala
 
-Mr_KrzYch00's KrzYmod v11:
-- adds 8 command line switches for zopflipng:
-* --mbs=[number]: maximum block splits, 0 = unlimited (d: 15),
-* --mls=[number]: maximum length for score (d: 1024),
-* --fmr=[number]: find minimum recursively by checking multiple points (d: 9),
-* --mui=[number]: maximum unsuccessful iterations after best, 0 = unlimited/--iterations limited (d: 0),
-* --lazy: enable lazy matching in LZ77 Greedy (d: OFF),
-* --ohh: optymize huffman header (d: OFF) [by Frédéric Kayser],
-* -v: verbose zopfli output during zopflipng optimization.
-* -w: displays current processed zopfli iteration (same line).
-- faster compression by altering few preprocessor directives and makefile finetuning,
-- crash fixes when can't write file or out of memory for cache + other,
-- added zopfliavx, zopflipngavx, zopflineon and zopflipngneon to makefile for AVX and NEON builds.
-- CTRL+C pressed once sets --mui to 1. 2nd time aborts.
+====================================
+         KrzYmod v12 Notes
+====================================
 
-mbs, mls and fmr switches are used for finetuning and it's clear they provide
-better result sometimes... sometime worse.
+Additional command line switches:
+* --mb=#:     maximum blocks, 0 = unlimited (d: 15),
+* --mls=#:    maximum length score (d: 1024),
+* --bsr=#:    block splitting recursion (min: 2, d: 9),
+* --mui=#:    maximum unsucessful iterations after last best (d: 0),
+* --lazy:     enable lazy matching in LZ77 Greedy (d: OFF),
+* --ohh:      optymize huffman header (d: OFF) [by Frédéric Kayser],
+* --v=#:      Zopfli verbose level (0-4, d: 1),
+* --n=#:      number of blocks,
+* --b=#:      block size in bytes,
+* --cbs=#:    custom block split points in hex separated with comma.
+
+For more information refer to Zopfli README.
+
 
 If You enjoy these changes You may give me a small reward in Bitcoins to:
 1KrzY1CwE532e6YjN4aCzgV19gtAzQMatJ ;)
+
+====================================
+           by Mr_KrzYch00
+====================================
+end of KrzYmod Notes.

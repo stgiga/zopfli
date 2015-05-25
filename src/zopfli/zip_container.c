@@ -282,12 +282,12 @@ void ZopfliZipCompress(const ZopfliOptions* options,
 
   for(i=0; i<22; ++i) ZOPFLI_APPEND_DATA(zipcdir->enddata[i], out, outsize);
 
-  if (options->verbose) {
+  if (options->verbose>1) {
     max=(zipcdir->offset+zipcdir->size)+22;
     zipcdir->totalinput+=insize;
     fprintf(stderr,
-            "Input Size: %d, Zip: %d, Compression: %f%% Removed\n",
-            (int)zipcdir->totalinput, (int)max,
-            100.0 * (double)(zipcdir->totalinput - max) / (double)zipcdir->totalinput);
+            "ZIP size: %d (%dK). Compression ratio: %.3f%%\n",
+            (int)max, (int)max / 1024,
+            100.0 * (double)max / (double)zipcdir->totalinput);
   }
 }

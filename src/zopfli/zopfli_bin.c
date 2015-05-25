@@ -203,12 +203,12 @@ static void CompressMultiFile(const ZopfliOptions* options,
     outsize=0;
     outsizeraw=0;
     fileindir=AddStrings(dirname,filesindir[i]);
-
     LoadFile(fileindir, &in, &insize);
+    if(options->verbose>2) fprintf(stderr, "\n");
     if (insize == 0) {
-      fprintf(stderr, "Invalid filename: %s - trying next\n", fileindir);
+      if(options->verbose>0) fprintf(stderr, "Invalid file: %s - trying next\n", fileindir);
     } else {
-      fprintf(stderr, "Adding to ZIP archive: %s\n", filesindir[i]);
+      if(options->verbose>0) fprintf(stderr, "[%d / %d] Adding file: %s\n", (i + 1), j, filesindir[i]);
       ZopfliZipCompress(options, in, insize, &out, &outsize, &outsizeraw, filesindir[i], &zipcdir);
       SaveFile(outfilename, out, outsize,fseekdata);
       fseekdata=zipcdir.offset;
@@ -265,27 +265,28 @@ static void CompressFile(const ZopfliOptions* options,
   free(in);
 }
 
+static void VersionInfo() {
+  fprintf(stderr,
+  "Zopfli, a Compression Algorithm to produce Deflate streams.\n"
+  "KrzYmod extends Zopfli functionality - version 12\n\n");
+}
+
 int main(int argc, char* argv[]) {
   ZopfliOptions options;
   ZopfliFormat output_type = ZOPFLI_FORMAT_GZIP;
   const char* filename = 0;
+  char* cbsbuff = NULL;
   int output_to_stdout = 0;
-  int i;
+  int i, j;
+  int k=1;
 
   signal(SIGINT, intHandler);
 
   ZopfliInitOptions(&options);
 
-  fprintf(stderr,
-  "Zopfli, a Compression Algorithm to produce Deflate/Zlib streams.\n"
-  "Commit: a29e46ba9f268ab273903558dcb7ac13b9fe8e29 + KrzYmod v11\n"
-  "Adds more command line switches, faster builds\n\n");
-
   for (i = 1; i < argc; i++) {
     const char* arg = argv[i];
-    if (StringsEqual(arg, "-v")) options.verbose = 1;
-    else if (StringsEqual(arg, "-w")) options.verbose_more = 1;
-    else if (StringsEqual(arg, "-c")) output_to_stdout = 1;
+    if (StringsEqual(arg, "--c")) output_to_stdout = 1;
     else if (StringsEqual(arg, "--deflate")) output_type = ZOPFLI_FORMAT_DEFLATE;
     else if (StringsEqual(arg, "--zlib")) output_type = ZOPFLI_FORMAT_ZLIB;
     else if (StringsEqual(arg, "--gzip")) output_type = ZOPFLI_FORMAT_GZIP;
@@ -298,52 +299,84 @@ int main(int argc, char* argv[]) {
     else if (arg[0] == '-' && arg[1] == '-' && arg[2] == 'i'
         && arg[3] >= '0' && arg[3] <= '9') {
       options.numiterations = atoi(arg + 3);
-    }  else if (arg[0] == '-' && arg[1] == '-' && arg[2] == 'm' && arg[3] == 'b' && arg[4] == 's'
+    }  else if (arg[0] == '-' && arg[1] == '-' && arg[2] == 'm' && arg[3] == 'b'
         && arg[5] >= '0' && arg[5] <= '9') {
       options.blocksplittingmax = atoi(arg + 5);
     }  else if (arg[0] == '-' && arg[1] == '-' && arg[2] == 'm' && arg[3] == 'l' && arg[4] == 's'
         && arg[5] >= '0' && arg[5] <= '9') {
       options.lengthscoremax = atoi(arg + 5);
-    }  else if (arg[0] == '-' && arg[1] == '-' && arg[2] == 'f' && arg[3] == 'm' && arg[4] == 'r'
+    }  else if (arg[0] == '-' && arg[1] == '-' && arg[2] == 'b' && arg[3] == 's' && arg[4] == 'r'
         && arg[5] >= '0' && arg[5] <= '9') {
       options.findminimumrec = atoi(arg + 5);
     }  else if (arg[0] == '-' && arg[1] == '-' && arg[2] == 'm' && arg[3] == 'u' && arg[4] == 'i'
         && arg[5] >= '0' && arg[5] <= '9') {
       options.maxfailiterations = atoi(arg + 5);
+    }  else if (arg[0] == '-' && arg[1] == '-' && arg[2] == 'c' && arg[3] == 'b' && arg[4] == 's' && arg[5] != '\0') {
+      cbsbuff = realloc(cbsbuff,2 * sizeof(char*));
+      options.custblocksplit = realloc(options.custblocksplit, ++k * sizeof(unsigned long*));
+      options.custblocksplit[0] = 1;
+      options.custblocksplit[1] = 0;
+      for(j=5;arg[j]!='\0';j++) {
+        if(arg[j]!=',') {
+          cbsbuff[0]=arg[j];
+          cbsbuff[1]='\0';
+          options.custblocksplit[k-1] = (options.custblocksplit[k-1]<<4) + strtoul(cbsbuff,NULL,16);
+        } else {
+          ++options.custblocksplit[0];
+          options.custblocksplit = realloc(options.custblocksplit, ++k * sizeof(unsigned long*));
+          options.custblocksplit[k-1] = 0;
+        }
+      }
+      free(cbsbuff);
+    }  else if (arg[0] == '-' && arg[1] == '-' && arg[2] == 'v' && arg[3] >= '0' && arg[3] <= '9') {
+      options.verbose = atoi(arg + 3);
+    }  else if (arg[0] == '-' && arg[1] == '-' && arg[2] == 'b' && arg[3] >= '0' && arg[3] <= '9') {
+      options.blocksize = atoi(arg + 3);
+    }  else if (arg[0] == '-' && arg[1] == '-' && arg[2] == 'n' && arg[3] >= '0' && arg[3] <= '9') {
+      options.numblocks = atoi(arg + 3);
     }
-    else if (StringsEqual(arg, "-h")) {
+    else if (arg[0] == '-' && (arg[1] == 'h' || arg[1] == '?' || (arg[1] == '-' && (arg[2] == 'h' || arg[2] == '?')))) {
+      VersionInfo();
       fprintf(stderr,
-          "Usage: zopfli [OPTIONS] FILE\n"
-          "  -h      gives this help\n"
-          "  -c      write the resulting output to stdout\n"
-          "  -v      verbose mode\n"
-          "  --i#    perform # iterations (d: 15).\n"
-          "          Higher number may provide better compression ratio but is slower\n"
-          "  --mbs#  maximum block splits, 0 = unlimited (d: 15)\n"
-          "          0 is usually a good choice and provides betters compression\n"
-          "  --mls#  maximum length for score (d: 1024)\n"
-          "          this option has an impact on block splitting model\n");
+          "Usage: zopfli [OPTIONS] FILE\n\n"
+          "      GENERAL OPTIONS:\n"
+          "  --h           shows this help (--?, -h, -?)\n"
+          "  --v#          verbose level (0-5, d: 2)\n"
+          "  --dir         accept directory as input, requires: --zip\n\n");
       fprintf(stderr,
-          "  --fmr#  find minimum recursively by checking multiple points (min: 2, d: 9)\n"
-          "          has an impact on block splitting model\n"
-          "  --mui#  maximum unsucessful iterations after best (d: 0)\n"
-          "          should be lower than --i, 0 = --i limited\n"
-          "  --lazy  lazy matching in Greedy LZ77 (d: OFF)\n"
-          "          this option has an impack on block splitting model\n"
-          "  --ohh   optymize huffman header (d: OFF)\n"
-          "          from: https://github.com/frkay/zopfli\n"
-          "\n");
+          "      COMPRESSION TIME CONTROL:\n"
+          "  --i#          perform # iterations (d: 15)\n"
+          "  --mui#        maximum unsucessful iterations after last best (d: 0)\n\n");
       fprintf(stderr,
+          "      AUTO BLOCK SPLITTING CONTROL:\n"
+          "  --mb#         maximum blocks, 0 = unlimited (d: 15)\n"
+          "  --bsr#        block splitting recursion (min: 2, d: 9)\n"
+          "  --mls#        maximum length score (d: 1024)\n"
+          "  --splitlast   do block splitting last instead of first\n\n");
+      fprintf(stderr,
+          "      MANUAL BLOCK SPLITTING CONTROL:\n"
+          "  --n#          number of blocks\n"
+          "  --b#          block size in bytes\n"
+          "  --cbs#        custom block split points in hex separated with comma\n\n");
+      fprintf(stderr,
+          "      OUTPUT CONTROL:\n"
+          "  --c           output to stdout\n"
+          "  --zip         output to zip format\n"
           "  --gzip        output to gzip format (default)\n"
           "  --gzipname    output to gzip format with filename\n"
-          "  --zip         output to zip format\n"
-          "  --zlib        output to zlib format instead of gzip\n"
-          "  --deflate     output to deflate format instead of gzip\n"
-          "  --splitlast   do block splitting last instead of first\n"
-          "  --dir         accept directory as input, requires: --zip\n");
+          "  --zlib        output to zlib format\n"
+          "  --deflate     output to deflate format\n\n");
+      fprintf(stderr,
+          "      MISCELLANEOUS:\n"
+          "  --lazy        lazy matching in Greedy LZ77 (d: OFF)\n"
+          "  --ohh         optymize huffman header (d: OFF)\n\n"
+          " Pressing CTRL+C will set maximum unsuccessful iterations to 1.\n"
+          "\n");
       return 0;
     }
   }
+
+  if(options.verbose>0) VersionInfo();
 
   if (options.numiterations < 1) {
     fprintf(stderr, "Error: --i parameter must be at least 1.\n");
@@ -351,7 +384,7 @@ int main(int argc, char* argv[]) {
   }
 
   if (options.blocksplittingmax < 0) {
-    fprintf(stderr, "Error: --mbs parameter must be at least 0.\n");
+    fprintf(stderr, "Error: --mb parameter must be at least 0.\n");
     return 0;
   }
 
@@ -366,7 +399,7 @@ int main(int argc, char* argv[]) {
   }
 
   if (options.findminimumrec < 2) {
-    fprintf(stderr, "Error: --fmr parameter must be at least 2.\n");
+    fprintf(stderr, "Error: --bsr parameter must be at least 2.\n");
     return 0;
   }
 
@@ -388,17 +421,21 @@ int main(int argc, char* argv[]) {
         assert(output_type == ZOPFLI_FORMAT_DEFLATE);
         outfilename = AddStrings(filename, ".deflate");
       }
-      if (options.verbose && outfilename) {
-        fprintf(stderr, "Saving to: %s\n", outfilename);
+      if (options.verbose>0 && outfilename) {
+        fprintf(stderr, "Saving to: %s\n\n", outfilename);
       }
       if(options.usescandir == 1) {
         if(output_type == ZOPFLI_FORMAT_ZIP && !output_to_stdout) {
+            if(options.custblocksplit != NULL) {
+              fprintf(stderr, "Error: --cbs works only in single file compression (no --dir).\n");
+              return 0;
+            }
           CompressMultiFile(&options, filename, outfilename);
         } else {
           if(!output_to_stdout) {
             fprintf(stderr, "Error: --dir will only work with ZIP container (--zip).\n");
           } else {
-            fprintf(stderr, "Error: Can't output to stdout when compressing multiple files (--dir and -c).\n");
+            fprintf(stderr, "Error: Can't output to stdout when compressing multiple files (--dir and --c).\n");
           }
           return 0;
         }
@@ -411,7 +448,7 @@ int main(int argc, char* argv[]) {
 
   if (!filename) {
     fprintf(stderr,
-            "Error: Please provide filename to compress.\nFor help, type: %s -h\n", argv[0]);
+            "Error: Please provide filename to compress.\nFor help, type: %s --h\n", argv[0]);
   }
 
   return 0;
