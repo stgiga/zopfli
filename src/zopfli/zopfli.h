@@ -119,6 +119,16 @@ typedef struct ZopfliOptions {
   Custom block split points in hexadecimal format comma separated.
   */
   unsigned long *custblocksplit;
+
+  /*
+  Block types 0-2, comma separated
+  */
+  unsigned long *custblocktypes;
+
+  /*
+  Runs zopfli splitting between manual/custom split points
+  */
+  int additionalautosplits;
 } ZopfliOptions;
 
 /* Initializes options with default values. */

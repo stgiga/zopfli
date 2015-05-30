@@ -268,7 +268,7 @@ static void CompressFile(const ZopfliOptions* options,
 static void VersionInfo() {
   fprintf(stderr,
   "Zopfli, a Compression Algorithm to produce Deflate streams.\n"
-  "KrzYmod extends Zopfli functionality - version 12\n\n");
+  "KrzYmod extends Zopfli functionality - version 13\n\n");
 }
 
 int main(int argc, char* argv[]) {
@@ -278,7 +278,7 @@ int main(int argc, char* argv[]) {
   char* cbsbuff = NULL;
   int output_to_stdout = 0;
   int i, j;
-  int k=1;
+  int k;
 
   signal(SIGINT, intHandler);
 
@@ -296,12 +296,13 @@ int main(int argc, char* argv[]) {
     else if (StringsEqual(arg, "--lazy")) options.lazymatching = 1;
     else if (StringsEqual(arg, "--ohh")) options.optimizehuffmanheader = 1;
     else if (StringsEqual(arg, "--dir")) options.usescandir = 1;
+    else if (StringsEqual(arg, "--aas")) options.additionalautosplits = 1;
     else if (arg[0] == '-' && arg[1] == '-' && arg[2] == 'i'
         && arg[3] >= '0' && arg[3] <= '9') {
       options.numiterations = atoi(arg + 3);
     }  else if (arg[0] == '-' && arg[1] == '-' && arg[2] == 'm' && arg[3] == 'b'
-        && arg[5] >= '0' && arg[5] <= '9') {
-      options.blocksplittingmax = atoi(arg + 5);
+        && arg[4] >= '0' && arg[4] <= '9') {
+      options.blocksplittingmax = atoi(arg + 4);
     }  else if (arg[0] == '-' && arg[1] == '-' && arg[2] == 'm' && arg[3] == 'l' && arg[4] == 's'
         && arg[5] >= '0' && arg[5] <= '9') {
       options.lengthscoremax = atoi(arg + 5);
@@ -312,6 +313,7 @@ int main(int argc, char* argv[]) {
         && arg[5] >= '0' && arg[5] <= '9') {
       options.maxfailiterations = atoi(arg + 5);
     }  else if (arg[0] == '-' && arg[1] == '-' && arg[2] == 'c' && arg[3] == 'b' && arg[4] == 's' && arg[5] != '\0') {
+      k = 1;
       cbsbuff = realloc(cbsbuff,2 * sizeof(char*));
       options.custblocksplit = realloc(options.custblocksplit, ++k * sizeof(unsigned long*));
       options.custblocksplit[0] = 1;
@@ -328,6 +330,26 @@ int main(int argc, char* argv[]) {
         }
       }
       free(cbsbuff);
+      cbsbuff=NULL;
+    }  else if (arg[0] == '-' && arg[1] == '-' && arg[2] == 'c' && arg[3] == 'b' && arg[4] == 't' && arg[5] != '\0') {
+      k = 1;
+      cbsbuff = realloc(cbsbuff,2 * sizeof(char*));
+      options.custblocktypes = realloc(options.custblocktypes, ++k * sizeof(unsigned int*));
+      options.custblocktypes[0] = 1;
+      for(j=5;arg[j]!='\0';j++) {
+        if(arg[j]!=',') {
+          cbsbuff[0]=arg[j];
+          cbsbuff[1]='\0';
+          options.custblocktypes[k-1] = atoi(cbsbuff);
+          if(options.custblocktypes[k-1]>2) options.custblocktypes[k-1]=2;
+        } else {
+          ++options.custblocktypes[0];
+          options.custblocktypes = realloc(options.custblocktypes, ++k * sizeof(unsigned int*));
+          options.custblocktypes[k-1] = 0;
+        }
+      }
+      free(cbsbuff);
+      cbsbuff=NULL;
     }  else if (arg[0] == '-' && arg[1] == '-' && arg[2] == 'v' && arg[3] >= '0' && arg[3] <= '9') {
       options.verbose = atoi(arg + 3);
     }  else if (arg[0] == '-' && arg[1] == '-' && arg[2] == 'b' && arg[3] >= '0' && arg[3] <= '9') {
@@ -357,7 +379,10 @@ int main(int argc, char* argv[]) {
           "      MANUAL BLOCK SPLITTING CONTROL:\n"
           "  --n#          number of blocks\n"
           "  --b#          block size in bytes\n"
-          "  --cbs#        custom block split points in hex separated with comma\n\n");
+          "  --cbs#        custom block split points in hex separated with comma\n"
+          "  --cbt#        custom block types separated with comma (0/1/2, d: 2)\n"
+          "                0 - uncompressed, 1 - fixed, 2 - dynamic\n"
+          "  --aas         additional automatic splitting between manual points\n\n");
       fprintf(stderr,
           "      OUTPUT CONTROL:\n"
           "  --c           output to stdout\n"

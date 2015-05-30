@@ -705,6 +705,8 @@ static void DeflateDynamicBlock(const ZopfliOptions* options, int final,
   size_t blocksize = inend - instart;
   ZopfliLZ77Store store;
   int btype = 2;
+  double dyncost, fixedcost;
+  ZopfliLZ77Store fixedstore;
 
   ZopfliInitLZ77Store(&store);
 
@@ -718,25 +720,25 @@ static void DeflateDynamicBlock(const ZopfliOptions* options, int final,
 
   ZopfliLZ77Optimal(&s, in, instart, inend, &store, options);
 
-  /* For small block, encoding with fixed tree can be smaller. For large block,
-  don't bother doing this expensive test, dynamic tree will be better.*/
-  if (store.size < 1000) {
-    double dyncost, fixedcost;
-    ZopfliLZ77Store fixedstore;
-    ZopfliInitLZ77Store(&fixedstore);
-    ZopfliLZ77OptimalFixed(&s, in, instart, inend, &fixedstore);
-    dyncost = ZopfliCalculateBlockSize(store.litlens, store.dists,
-        0, store.size, 2, options->optimizehuffmanheader);
-    fixedcost = ZopfliCalculateBlockSize(fixedstore.litlens, fixedstore.dists,
-        0, fixedstore.size, 1, options->optimizehuffmanheader);
-    if (fixedcost < dyncost) {
-      btype = 1;
-      ZopfliCleanLZ77Store(&store);
-      store = fixedstore;
-    } else {
-      ZopfliCleanLZ77Store(&fixedstore);
-    }
+  /* This test is nothing compared to running zopfli with a lot of iterations,
+     so let's do it always. */
+  ZopfliInitLZ77Store(&fixedstore);
+  ZopfliLZ77OptimalFixed(&s, in, instart, inend, &fixedstore);
+  dyncost = ZopfliCalculateBlockSize(store.litlens, store.dists,
+      0, store.size, 2, options->optimizehuffmanheader);
+  fixedcost = ZopfliCalculateBlockSize(fixedstore.litlens, fixedstore.dists,
+      0, fixedstore.size, 1, options->optimizehuffmanheader);
+  if(options->verbose>2) fprintf(stderr,"Fixed block size: %.0f bit ",fixedcost);
+  if (fixedcost < dyncost) {
+    btype = 1;
+    ZopfliCleanLZ77Store(&store);
+    store = fixedstore;
+    if(options->verbose>2) fprintf(stderr,"<");
+  } else {
+    ZopfliCleanLZ77Store(&fixedstore);
+    if(options->verbose>2) fprintf(stderr,">");
   }
+  if(options->verbose>2) fprintf(stderr," %.0f bit\n\n",dyncost);
 
   AddLZ77Block(s.options, btype, final,
                store.litlens, store.dists, 0, store.size,
@@ -746,6 +748,7 @@ static void DeflateDynamicBlock(const ZopfliOptions* options, int final,
   ZopfliCleanCache(s.lmc);
   free(s.lmc);
 #endif
+
   ZopfliCleanLZ77Store(&store);
 }
 
@@ -837,29 +840,31 @@ static void DeflateSplittingFirst(const ZopfliOptions* options,
                                   size_t instart, size_t inend,
                                   unsigned char* bp,
                                   unsigned char** out, size_t* outsize) {
+  int btypeb;
   size_t i;
   size_t* splitpoints = 0;
   size_t npoints = 0;
+  size_t numblocks = 1;
   if(options->custblocksplit!=NULL) {
-    ZopfliBlockSplitSimple(in, inend, 0, &splitpoints, &npoints, options->verbose,options->custblocksplit);
+    ZopfliBlockSplitSimple(in, inend, 0, &splitpoints, &npoints, options,options->custblocksplit,options->additionalautosplits);
   } else if(options->numblocks>0) {
     if(options->numblocks>inend) {
       i = 1;
     } else {
       i = ceilz((float)inend / (float)options->numblocks);
     }
-    ZopfliBlockSplitSimple(in, inend, i, &splitpoints, &npoints, options->verbose,NULL);
+    ZopfliBlockSplitSimple(in, inend, i, &splitpoints, &npoints, options,NULL,options->additionalautosplits);
   } else if(options->blocksize>0) {
-    ZopfliBlockSplitSimple(in, inend, options->blocksize, &splitpoints, &npoints, options->verbose,NULL);
+    ZopfliBlockSplitSimple(in, inend, options->blocksize, &splitpoints, &npoints, options,NULL,options->additionalautosplits);
   } else {
     if (btype == 0) {
-      ZopfliBlockSplitSimple(in, inend, 65535, &splitpoints, &npoints, options->verbose, NULL);
+      ZopfliBlockSplitSimple(in, inend, 65535, &splitpoints, &npoints, options, NULL,0);
     } else if (btype == 1) {
       /* If all blocks are fixed tree, splitting into separate blocks only
       increases the total size. Leave npoints at 0, this represents 1 block. */
     } else {
       ZopfliBlockSplit(options, in, instart, inend,
-                       options->blocksplittingmax, &splitpoints, &npoints);
+                       options->blocksplittingmax, &splitpoints, &npoints,&numblocks);
     }
   }
   if(options->verbose>0) fprintf(stderr,"                          \r");
@@ -877,7 +882,15 @@ static void DeflateSplittingFirst(const ZopfliOptions* options,
     } else {
       fprintf(stderr,"\r");
     }
-    DeflateBlock(options, btype, i == npoints && final, in, start, end,
+    btypeb=btype;
+    if(options->custblocktypes!=NULL) {
+      if(i<options->custblocktypes[0]) {
+        btypeb=options->custblocktypes[i+1];
+        if(btypeb==0 && (end-start)>65535) btypeb=2;
+      } else {
+      }
+    }
+    DeflateBlock(options, btypeb, i == npoints && final, in, start, end,
                  bp, out, outsize);
   }
 
@@ -900,6 +913,7 @@ static void DeflateSplittingLast(const ZopfliOptions* options,
   ZopfliLZ77Store store;
   size_t* splitpoints = 0;
   size_t npoints = 0;
+  size_t numblocks=1;
 
   if (btype == 0) {
     /* This function only supports LZ77 compression. DeflateSplittingFirst
@@ -932,7 +946,7 @@ static void DeflateSplittingLast(const ZopfliOptions* options,
     increases the total size. Leave npoints at 0, this represents 1 block. */
   } else {
     ZopfliBlockSplitLZ77(options, store.litlens, store.dists, store.size,
-                         options->blocksplittingmax, &splitpoints, &npoints);
+                         options->blocksplittingmax, &splitpoints, &npoints, &numblocks, 0);
   }
 
   for (i = 0; i <= npoints; i++) {

@@ -134,6 +134,7 @@ void ShowHelp() {
          "--n=[number]:   number of blocks\n"
          "--b=[number]:   block size in bytes\n"
          "--cbs=[number]: custom block split points in hex separated with comma\n"
+         "--aas           additional automatic splitting between manual points\n"
          "--lazy:         lazy matching in Greedy LZ77 (d: OFF)\n"
          "--ohh:          optymize huffman header (d: OFF)\n"
          "\n"
@@ -158,7 +159,7 @@ void PrintResultSize(const char* label, size_t oldsize, size_t newsize) {
 
 int main(int argc, char *argv[]) {
 printf("ZopfliPNG, a Portable Network Graphics (PNG) image optimizer.\n"
-         "KrzYmod extends ZopfliPNG functionality - version 12\n\n");
+         "KrzYmod extends ZopfliPNG functionality - version 13\n\n");
   if (argc < 2) {
     ShowHelp();
     return 0;
@@ -262,6 +263,7 @@ printf("ZopfliPNG, a Portable Network Graphics (PNG) image optimizer.\n"
           }
         }
         free(cbsbuff);
+        cbsbuff=NULL;
       } else if (name == "--splitting") {
         if (num < 0 || num > 3) num = 1;
         png_options.block_split_strategy = num;
@@ -303,6 +305,8 @@ printf("ZopfliPNG, a Portable Network Graphics (PNG) image optimizer.\n"
       } else if (name == "--prefix") {
         use_prefix = true;
         if (!value.empty()) prefix = value;
+      } else if (name == "--aas") {
+        png_options.additionalautosplits = 1;
       } else if (name == "--help") {
         ShowHelp();
         return 0;

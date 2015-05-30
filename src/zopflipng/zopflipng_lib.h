@@ -90,6 +90,8 @@ typedef struct CZopfliPNGOptions {
   unsigned int numblocks;
 
   unsigned long *custblocksplit;
+
+  int additionalautosplits;
 } CZopfliPNGOptions;
 
 // Sets the default options
@@ -191,6 +193,11 @@ struct ZopfliPNGOptions {
   Custom block split points in hexadecimal format comma separated.
   */
   unsigned long *custblocksplit;
+
+  /*
+  Runs zopfli splitting between manual/custom split points
+  */
+  int additionalautosplits;
 };
 
 // Returns 0 on success, error code otherwise.

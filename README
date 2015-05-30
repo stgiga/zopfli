@@ -48,15 +48,20 @@ Additional command line switches:
 * --v#:       verbose level (0-4, d: 1),
 * --n#:       number of blocks,
 * --b#:       block size in bytes,
-* --cbs#:     custom block split points in hex separated with comma.
+* --cbs#:     custom block split points in hex separated with comma,
+* --cbt#:     custom block types separated with comma (0/1/2, d: 2),
+* --aas:      additional automatic splitting between manual points.
 
---mb allows to increase or reduce number of blocks the stram gets split to
+--mb allows to increase or reduce number of blocks the stream gets split to
 when using automatic splitting.
 
 --mls, --bsr, --lazy, --ohh provide finetuning for zopfli.
 
---n --b --cbs allow to set number, size of blocks or custom block split
+--n --b --cbs allows to set number, size of blocks or custom block split
 points to override zopfli block split decissions.
+--cbt allows to force certain blocks to be uncompressed (0), fixed
+tree (1) or default dynamic tree (2).
+--aas runs zopfli block splitting between manually set block split points.
 
 --zip outputs to ZIP container.
 

@@ -526,7 +526,6 @@ void ZopfliLZ77Optimal(ZopfliBlockState *s,
       break;
     }
   }
-  if(s->options->verbose==3) fprintf(stderr,"\n");
 
   free(length_array);
   free(path);

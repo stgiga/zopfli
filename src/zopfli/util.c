@@ -215,4 +215,6 @@ void ZopfliInitOptions(ZopfliOptions* options) {
   options->blocksize = 0;
   options->numblocks = 0;
   options->custblocksplit = NULL;
+  options->custblocktypes = NULL;
+  options->additionalautosplits = 0;
 }
