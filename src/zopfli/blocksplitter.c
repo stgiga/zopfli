@@ -176,12 +176,12 @@ static void PrintBlockSplitPoints(const unsigned short* litlens,
   fprintf(stderr, "Block split points: ");
   if(npoints>0) {
     for (i = 0; i < npoints; i++) {
-      fprintf(stderr, "%d ", (int)splitpoints[i]+offset);
+      fprintf(stderr, "%d ", (int)(splitpoints[i]+offset));
     }
     fprintf(stderr, "(hex:");
     for (i = 0; i < npoints; i++) {
       if(i==0) fprintf(stderr," "); else fprintf(stderr,",");
-      fprintf(stderr, "%x", (int)splitpoints[i]+offset);
+      fprintf(stderr, "%x", (int)(splitpoints[i]+offset));
     }
     fprintf(stderr,")");
   } else {
@@ -380,11 +380,11 @@ void ZopfliBlockSplitSimple(const unsigned char* in, size_t inend,
     } else {
       do {
         ++j;
+        lasti=i;
         if(j>cbs[0]) {
           i=inend;
           break;
         }
-        lasti=i;
         i += (cbs[j] - cbs[j-1]);
         if(i <= lasti) {
           fprintf(stderr,"Error: point [%x] lower or equal to [%x], skipping . . .\n",(int)cbs[j],(int)cbs[j-1]);
