@@ -1,111 +1,198 @@
-Zopfli Compression Algorithm is a compression library programmed in C to perform
-very good, but slow, deflate or zlib compression.
+KrzYmod highly extends Zopfli/ZopfliPNG functionality.
+Without passing its special commands the program should run as usual.
 
-The basic function to compress data is ZopfliCompress in zopfli.h. Use the
-ZopfliOptions object to set parameters that affect the speed and compression.
-Use the ZopfliInitOptions function to place the default values in the
-ZopfliOptions first.
+Firstly it may be hard to understand what these commands are used for
+and if they are actually useful for You.
 
-ZopfliCompress supports deflate, gzip and zlib output format with a parameter.
-To support only one individual format, you can instead use ZopfliDeflate in
-deflate.h, ZopfliZlibCompress in zlib_container.h or ZopfliGzipCompress in
-gzip_container.h.
+In this document Zopfli switches will be used as an examples.
+ZopfliPNG ones are the same but in case of additional parameters
+next to the switch = sign is required.
 
-ZopfliDeflate creates a valid deflate stream in memory, see:
-http://www.ietf.org/rfc/rfc1951.txt
-ZopfliZlibCompress creates a valid zlib stream in memory, see:
-http://www.ietf.org/rfc/rfc1950.txt
-ZopfliGzipCompress creates a valid gzip stream in memory, see:
-http://www.ietf.org/rfc/rfc1952.txt
+1. --mb#
 
-This library can only compress, not decompress. Existing zlib or deflate
-libraries can decompress the data.
+   This command tells zopfli to how many blocks at maximum split
+   stream to. It's limited to 15 in the original Zopfli version
+   and considered by program authors to be the best choice.
+   However, it was found out that increasing number of blocks that
+   stream gets split to produces smaller files.
+   In case of too many blocks, stream may be slower to decompress.
+   Setting it to 0 will use as many blocks as Zopfli auto block splitting
+   model finds optimal.
 
-zopfli_bin.c is separate from the library and contains an example program to
-create very well compressed gzip files. Currently the makefile builds this
-program with the library statically linked in.
+2. --mls#
 
-To build the binary, use "make". To build the library as a shared Linux library,
-use "make libzopfli". The source code of Zopfli is under src/zopfli.
+   This command alters the GetLengthScore function. Changing this parameter
+   will alter certain Zopfli compression decissions and block splitting model
+   which can improve or hurt compression. The default is 1024 and there is
+   no logic whatsoever in changing this option other than try&error.
+   However during my tests on 16KB BMP file chaging this parameter reduced
+   compressed file further by 5 bytes (NOT bits).
 
-Zopfli Compression Algorithm was created by Lode Vandevenne and Jyrki
-Alakuijala, based on an algorithm by Jyrki Alakuijala.
+3. --bsr#
 
-====================================
-         KrzYmod v14 Notes
-====================================
+   Block splitting recursion. Changing this options will alter block splitting
+   model. The default is 9 and this is another try&error option. Setting this
+   value too high will cause Zopfli to spend more time splitting stream to
+   blocks, as well as, may cause Zopfli to use fewer blocks without properly
+   checking if the decissions are optimal enough.
 
-Additional command line switches:
-* --mb#:      maximum blocks, 0 = unlimited,
-* --mls#:     maximum length score,
-* --bsr#:     block splitting recursion,
-* --mui#:     maximum unsucessful iterations after last best,
-* --lazy:     enable lazy matching in LZ77 Greedy,
-* --ohh:      optymize huffman header [by Frédéric Kayser],
-* --gzipname: output to gzip format with filename,
-* --zip:      output to zip format,
-* --dir:      accept directory as input, requires: --zip,
-* --v#:       verbose level,
-* --n#:       number of blocks,
-* --b#:       block size in bytes,
-* --cbs#:     custom block start points and types,
-* --cbsfile#: same as above but instead read from file #,
-* --cbd#:     dump block start points to # file and exit,
-* --aas:      additional automatic splitting between manual points,
-* --rw#:      initial random W for iterations,
-* --rz#:      initial random Z for iterations.
+4. --mui#
 
---mb allows to increase or reduce number of blocks the stream gets split to
-when using automatic splitting.
+   Maximum unsuccessful iterations after last best. This switch is used to
+   limit Zopfli work if it can't find another bit reductions after trying
+   # iterations. In order for this option to be the most useful --i# parameter
+   should be set very high, for example: --i999999 --mui999 will cause Zopfli
+   to give up after 999 iterations that proved to be of no use for compressed
+   block size bit reduction.
+   This parameter is set to 1 when CTRL+C is pressed. Zopfli will still try
+   to gain some savings on each block but only if the reduction comes with
+   every iteration done, if there is at least one result that is not
+   the best, Zopfli will end working on that block.
 
---mls, --bsr, --lazy, --ohh provide finetuning for zopfli.
+5. --lazy
 
---n --b --cbs allows to set number, size of blocks, or custom block start
-points and types to override zopfli default block split decissions.
-The format is: block_start_point_in_hex[=block_type],...
-parameters in [] are optional and should always start with 0,
-example: 0=2,7fe=0,9bd,fff=1
---cbsfile is the same as above but read them from file,
---cbd will dump block start points to file,
---aas runs zopfli block splitting between manually set block split points.
+   Use lazy matching in LZ77 Greedy. This option has an impact on block
+   splitting model and iteration progression. In original version it
+   can only be changed before compiling the software and it's considered
+   to be another try&error switch.
 
---zip outputs to ZIP container.
+6. --ohh
 
---dir will read all files in given directory and add them to ZIP archive
-one at a time while updating zip on-fly. So in case operation is aborted
-You can still access Your already compressed files.
-KrzYmod doesn't support empty files and directories, adding to existing
-ZIP archive is also not supported. Character encoding may be lost
-or rendered improperly when using other alphabet types than english.
-Most compression programs allow changing filenames without recompression.
+   Optimize Huffman Header by Frédéric Kayser. This options changes how
+   Huffman trees are encoded in dynamic blocks.
+   It records 8 as 4+4 not as 6+single+single and 7 as 4+3 not as 6+single
+   as in default Zopfli Huffman tree encoding.
+   Enabling this mode will usually improve compression by a few bits per blocks,
+   rarery the result will be worse. Sometimes also impacts block splitting model.
 
---v is customized -v making it possible to set verbosity of Zopfli output,
-as well as making it fully quiet (level 0).
+7. --gzipname
 
---rw and --rz allow to change the random values generated by 
-Multiply-With-Carry generator by feeding it with different base values
-than default 1 and 2 respectively.
+   This will tell Zopfli to include filename inside GZip archive, so then changing
+   gz filename will not cause archived file to be renamed. Note that it will produce
+   file bigger by (compressed file name length + 1) bytes.
 
-Pressing CTRL+C while program is compressing data will set maximum
-unsuccessful iterations after last best to 1. This will make Zopfli
-finish work faster if the parameters were set too high.
+8. --zip
 
-Supports Unix (gzip) and MS-DOS (zip) timestamps, as well as outputting
-to gzip format with filename included (gzipname).
+   Tells Zopfli to use ZIP container instead of the default GZip. This can be useful
+   on Microsoft based operating systems that support ZIP better. Note that the
+   resulting file will be bigger than GZip.
 
-Adds percentage progress bar updated everytime block gets
-successfully compressed and a lot of more information on
-different verbosity levels.
+9. --dir
 
-Fixes few bugs/crashes found in original Zopfli project.
+   Tells Zopfli to read directory as input instead of file. Scan it recursively and
+   compress all files found. This option works only in conjuction with --zip switch,
+   as only Zip from containers supported by Zopfli can hold multiple files.
+   The uniqueness of this option is that ZIP file is updated on every successfully
+   compressed file. The downside to this is that file IS NOT LOCKED and deleting or
+   modyfing it before closing Zopfli may cause unexpected behaviour from corrupted
+   ZIP file to Zopfli Crash.
+   Note that there are limitations in this mode:
+    - empty directories are not added,
+    - empty files are not added,
+    - directory structure is maintained by files being inside, there are no real
+      records of directories preset in ZIP archive (this reduces ZIP size a bit
+      but deleting all files inside a directory may cause directory in ZIP file
+      to disappear),
+    - character encoding may be incorrect if using special letters.
+   Usually the workaround for above is to use some 1 bytes file in directories that
+   are supposed to be empty like empty.dir and to use english alphabets only.
+   These issues may or may not be fixed in future releases (depends if there are any
+   requests for them to be fixed).
 
-Makefile included should provide ~20% faster builds.
+10. --v#
+
+   This option is formerly known as just -v and it extends control over Zopfli
+   verbosity. The default is 2 and it can be set from 0 (quiet) to 5 (most verbose):
+   * 0 - quiet mode, don't display anthing except some errors,
+   * 1 - program title, percentage progress and file added when --zip & --dir are used,
+   * 2 - display block progression, bytes left to compress next to percentage progress,
+         as well as, summary after every file being successfully compressed,
+   * 3 - display fixed/dynamic block comparison + per block summary,
+   * 4 - additionally display block split points, best iterations using separate lines
+         and treesize (same functionality as -v in original release),
+   * 5 - additionally display block splitting decissions and current iteration being
+         processed using same line until bit reduction occurs.
+
+11. --n#
+
+   Use dumb block splitting by telling zopfli to how many blocks split stream to.
+
+12. --b#
+
+   Same as above but instead use size in bytes as delimeter. This and above option
+   are most likely useless unless it's required for stream to use certain amount
+   of blocks or certain uncompressed block size.
+
+13. --cbs#
+
+   Manually pass block start positions with optional block type. The list must be
+   passed in hexadecimal format, separated by commas while optionally adding
+   = sign and block type of 0-2 after each start position. This can be used to tell
+   Zopfli which parts of data should be stored in uncompressed block types (0) or
+   forced as fixed (1), as currently Zopfli is unable to tell which data should
+   not be compressed and left in uncompressed blocks. It should be noted that
+   first typed block split is REALLY omitted so can be anything or even empty,
+   however, a comma should be passed then. Example: ,513=0,5555,fe89=0,14532 .
+
+14. --cbsfile#
+
+   Same as above but instead of typing manually block start positions a file
+   can be prepared holding that data. The contents MUST be the same as it would
+   be passed with command line parameter, this means no new lines or any other
+   characters than [0-f],[,],[=] should be used. Otherwise undefined behaviour
+   may occur.
+
+15. --cbd#
+
+   Save block start positons to a file and exit without compressing any data.
+   This is useful in case of testing various options while preserving block
+   boundaries by feeding --cbsfile with that file data. This option works
+   in auto splitting mode, manual splitting mode and manual+auto splitting mode.
+
+16. --aas
+
+   Enables additional auto splitting mode when custom block start positions are passed
+   so Zopfli can still decide between the boundaries if the data should be split
+   further while preserving start positions that were passed by other command
+   line switches. Each data between manually passed block start positions is
+   analysed separately as if it were separate stream inputs (files).
+
+17. --rw# and --rz#
+
+   Initial random W and Z for iterations. These parameters are 1 for W and 2 for Z
+   by default and they are locked in original Zopfli. They are used to init
+   Multiply-With-Carry random generator before iterations per given block start.
+   The random values are 32 bit unsigned integers that are generated when
+   zopfli iteration is above 5 and the produced size is the same as the one before it.
+   So changing these values will change random numbers being generated and make
+   Zopfli find best result on lower or higher iteration than on default values.
+   They are useful when re-running Zopfli multiple times with limited number of
+   iterations while incrementing/randomizing --rw and/or --rz. The results
+   per block can be compared or maybe even mixed together to produce yet
+   smaller result with certain tools. Note that during my tests I got further
+   1 bit reduction when changing these parameters on --mui999 when previously
+   the file was created doing as many as 99,999 unsucessful iteration.
 
 
-If You enjoy these changes You may give me a small reward in Bitcoins to:
-1KrzY1CwE532e6YjN4aCzgV19gtAzQMatJ ;)
+Additionally to mentioned above options KrzYmod Zopfli version also fix few issues found
+in original release, for example incorrect Deflate stream size being raported.
+Also supports Unix (gzip) and MS-DOS (zip) timestamps inside archives.
+
+Bitcoin: 1KrzY1CwE532e6YjN4aCzgV19gtAzQMatJ
+^ in case You want to reward my work.
 
 ====================================
            by Mr_KrzYch00
 ====================================
-end of KrzYmod Notes.
+
+Zopfli Compression Algorithm was created by Lode Vandevenne and Jyrki
+Alakuijala, based on an algorithm by Jyrki Alakuijala. Further modifications
+as described in the document above were done by Mr_KrzYch00.
+
+For more information on Zopfli please refer to:
+- README.zopfli
+- README.zopflipng
+- original zopfli project at https://github.com/google/zopfli
+- frkay's fork: https://github.com/frkay/zopfli
+- all other forks this fork may include changes from:
+  https://github.com/frkay/zopfli/network

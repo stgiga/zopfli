@@ -33,35 +33,3 @@ suitable plugins for other browsers, it is good to note that WebP lossless
 images are still 26 % smaller than images recompressed with ZopfliPNG.
 
 2013-05-07, Lode Vandevenne and Jyrki Alakuijala
-
-====================================
-         KrzYmod v14 Notes
-====================================
-
-Additional command line switches:
-* --mb=#:      maximum blocks, 0 = unlimited,
-* --mls=#:     maximum length score,
-* --bsr=#:     block splitting recursion,
-* --mui=#:     maximum unsucessful iterations after last best,
-* --lazy:      enable lazy matching in LZ77 Greedy,
-* --ohh:       optymize huffman header [by Frédéric Kayser],
-* --v=#:       Zopfli verbose level,
-* --n=#:       number of blocks,
-* --b=#:       block size in bytes,
-* --cbs=#:     custom block start points and types,
-* --cbsfile=#: same as above but instead read from file #,
-* --cbd=#:     dump block start points to # file and exit,
-* --aas        additional automatic splitting between manual points,
-* --rw=#:      initial random W for iterations,
-* --rz=#:      initial random Z for iterations.
-
-For more information refer to Zopfli README.
-
-
-If You enjoy these changes You may give me a small reward in Bitcoins to:
-1KrzY1CwE532e6YjN4aCzgV19gtAzQMatJ ;)
-
-====================================
-           by Mr_KrzYch00
-====================================
-end of KrzYmod Notes.
