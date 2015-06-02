@@ -35,21 +35,25 @@ images are still 26 % smaller than images recompressed with ZopfliPNG.
 2013-05-07, Lode Vandevenne and Jyrki Alakuijala
 
 ====================================
-         KrzYmod v13 Notes
+         KrzYmod v14 Notes
 ====================================
 
 Additional command line switches:
-* --mb=#:     maximum blocks, 0 = unlimited (d: 15),
-* --mls=#:    maximum length score (d: 1024),
-* --bsr=#:    block splitting recursion (min: 2, d: 9),
-* --mui=#:    maximum unsucessful iterations after last best (d: 0),
-* --lazy:     enable lazy matching in LZ77 Greedy (d: OFF),
-* --ohh:      optymize huffman header (d: OFF) [by Frédéric Kayser],
-* --v=#:      Zopfli verbose level (0-4, d: 1),
-* --n=#:      number of blocks,
-* --b=#:      block size in bytes,
-* --cbs=#:    custom block split points in hex separated with comma.
-* --aas       additional automatic splitting between manual points.
+* --mb=#:      maximum blocks, 0 = unlimited,
+* --mls=#:     maximum length score,
+* --bsr=#:     block splitting recursion,
+* --mui=#:     maximum unsucessful iterations after last best,
+* --lazy:      enable lazy matching in LZ77 Greedy,
+* --ohh:       optymize huffman header [by Frédéric Kayser],
+* --v=#:       Zopfli verbose level,
+* --n=#:       number of blocks,
+* --b=#:       block size in bytes,
+* --cbs=#:     custom block start points and types,
+* --cbsfile=#: same as above but instead read from file #,
+* --cbd=#:     dump block start points to # file and exit,
+* --aas        additional automatic splitting between manual points,
+* --rw=#:      initial random W for iterations,
+* --rz=#:      initial random Z for iterations.
 
 For more information refer to Zopfli README.
 

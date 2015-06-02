@@ -91,7 +91,14 @@ typedef struct CZopfliPNGOptions {
 
   unsigned long *custblocksplit;
 
+  unsigned short *custblocktypes;
+
   int additionalautosplits;
+
+  unsigned short ranstatew;
+  unsigned short ranstatez;
+
+  char* dumpsplitsfile;
 } CZopfliPNGOptions;
 
 // Sets the default options
@@ -190,14 +197,32 @@ struct ZopfliPNGOptions {
   unsigned int numblocks;
 
   /*
-  Custom block split points in hexadecimal format comma separated.
+  Custom block start points in hexadecimal format comma separated.
   */
   unsigned long *custblocksplit;
 
   /*
-  Runs zopfli splitting between manual/custom split points
+  Block types 0-2, comma separated
+  */
+  unsigned short *custblocktypes;
+
+  /*
+  Runs zopfli splitting between manual/custom start points
   */
   int additionalautosplits;
+
+  /*
+  Initial randomness for iterations.
+  Changing the default 1 and 2 allows zopfli to act more random
+  on each run.
+  */
+  unsigned short ranstatew;
+  unsigned short ranstatez;
+
+  /*
+  Save block splits to file and exit zopfli
+  */
+  char* dumpsplitsfile;
 };
 
 // Returns 0 on success, error code otherwise.

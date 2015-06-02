@@ -77,9 +77,9 @@ typedef struct RanState {
   unsigned int m_w, m_z;
 } RanState;
 
-static void InitRanState(RanState* state) {
-  state->m_w = 1;
-  state->m_z = 2;
+static void InitRanState(RanState* state,short int m_w,short int m_z) {
+  state->m_w = m_w;
+  state->m_z = m_z;
 }
 
 /* Get random number: "Multiply-With-Carry" generator of G. Marsaglia */
@@ -467,7 +467,7 @@ void ZopfliLZ77Optimal(ZopfliBlockState *s,
 
   if (!length_array) exit(-1); /* Allocation failed. */
 
-  InitRanState(&ran_state);
+  InitRanState(&ran_state,s->options->ranstatew,s->options->ranstatez);
   InitStats(&stats);
   ZopfliInitLZ77Store(&currentstore);
 

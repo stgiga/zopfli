@@ -155,13 +155,23 @@ Prints the block split points as decimal and hex values in the terminal.
 static void PrintBlockSplitPoints(const unsigned short* litlens,
                                   const unsigned short* dists,
                                   size_t llsize, const size_t* lz77splitpoints,
-                                  size_t nlz77points, size_t offset) {
+                                  size_t nlz77points, size_t offset, const char* dumpfile) {
   size_t* splitpoints = 0;
   size_t npoints = 0;
   size_t i;
+  int dumpingtofile = 0;
+  size_t pos = 0;
+  FILE* file = NULL;
+  if(dumpfile != NULL) {
+    dumpingtofile = 1;
+    if(fopen(dumpfile, "r")!=NULL) {
+      fprintf(stderr,"Error: File %s already exists.",dumpfile);
+      exit(EXIT_FAILURE);
+    }
+    file = fopen(dumpfile, "wb");
+  }
   /* The input is given as lz77 indices, but we want to see the uncompressed
   index values. */
-  size_t pos = 0;
   if (nlz77points > 0) {
     for (i = 0; i < llsize; i++) {
       size_t length = dists[i] == 0 ? 1 : litlens[i];
@@ -174,6 +184,7 @@ static void PrintBlockSplitPoints(const unsigned short* litlens,
   }
   assert(npoints == nlz77points);
   fprintf(stderr, "Block split points: ");
+  if(dumpingtofile == 1) fprintf(file,"0");
   if(npoints>0) {
     for (i = 0; i < npoints; i++) {
       fprintf(stderr, "%d ", (int)(splitpoints[i]+offset));
@@ -182,6 +193,7 @@ static void PrintBlockSplitPoints(const unsigned short* litlens,
     for (i = 0; i < npoints; i++) {
       if(i==0) fprintf(stderr," "); else fprintf(stderr,",");
       fprintf(stderr, "%x", (int)(splitpoints[i]+offset));
+      if(dumpingtofile == 1) fprintf(file, ",%x", (int)(splitpoints[i]+offset));
     }
     fprintf(stderr,")");
   } else {
@@ -190,6 +202,11 @@ static void PrintBlockSplitPoints(const unsigned short* litlens,
   fprintf(stderr, "                 \n");
 
   free(splitpoints);
+  if(dumpingtofile==1) {
+    fprintf(stderr,"Hex split points successfully saved to file: %s\n",dumpfile);
+    fclose(file);
+    exit(EXIT_SUCCESS);
+  }
 }
 
 /*
@@ -285,8 +302,12 @@ void ZopfliBlockSplitLZ77(const ZopfliOptions* options,
     }
   }
 
-  if (options->verbose>3) {
-    PrintBlockSplitPoints(litlens, dists, llsize, *splitpoints, *npoints, *offset);
+  if (options->verbose>3 || options->dumpsplitsfile!=NULL) {
+    if(options->additionalautosplits==1) {
+      PrintBlockSplitPoints(litlens, dists, llsize, *splitpoints, *npoints, *offset, NULL);
+    } else {
+      PrintBlockSplitPoints(litlens, dists, llsize, *splitpoints, *npoints, *offset, options->dumpsplitsfile);
+    }
   }
 
   if(options->verbose>2 && options->additionalautosplits==0) {
@@ -344,7 +365,7 @@ void ZopfliBlockSplit(const ZopfliOptions* options,
 }
 
 static void ZopfliAdditionalAutoSplitting(const ZopfliOptions* options, const unsigned char* in, size_t start, size_t end,
-                                          size_t** splitpoints, size_t* npoints, size_t* numblocks) {
+                                          size_t** splitpoints, size_t* npoints, size_t** blocktypes, size_t * ntypes, size_t* numblocks) {
   size_t* aassplitpoints = 0;
   size_t aasnpoints = 0;
   size_t aasnumblocks = *numblocks;
@@ -353,6 +374,7 @@ static void ZopfliAdditionalAutoSplitting(const ZopfliOptions* options, const un
   ZopfliBlockSplit(options, in, start, end, 0, &aassplitpoints, &aasnpoints, &aasnumblocks);
   for(k=0;k<aasnpoints;++k) {
     ZOPFLI_APPEND_DATA(aassplitpoints[k],splitpoints, npoints);
+    ZOPFLI_APPEND_DATA(2,blocktypes,ntypes);
     ++(*numblocks);
   }
   free(aassplitpoints);
@@ -360,20 +382,30 @@ static void ZopfliAdditionalAutoSplitting(const ZopfliOptions* options, const un
 
 void ZopfliBlockSplitSimple(const unsigned char* in, size_t inend,
                             size_t blocksize,
-                            size_t** splitpoints, size_t* npoints, const ZopfliOptions* options, unsigned long* cbs, int aas) {
+                            size_t** splitpoints, size_t* npoints, size_t** blocktypes, size_t* ntypes, const ZopfliOptions* options, unsigned long* cbs, int aas) {
   size_t i, lasti = 0;
-  unsigned int j = 1;
+  unsigned int j = 2;
   size_t numblocks = 1;
+  int dumpingtofile = 0;
+  FILE* file = NULL;
+  if(options->dumpsplitsfile != NULL) {
+    dumpingtofile = 1;
+    if(fopen(options->dumpsplitsfile, "r")!=NULL) {
+      fprintf(stderr,"Error: File %s already exists.",options->dumpsplitsfile);
+      exit(EXIT_FAILURE);
+    }
+    file = fopen(options->dumpsplitsfile, "wb");
+  }
   if(cbs==NULL) {
     i = blocksize;
   } else {
-    i=cbs[1];
+    i=cbs[2];
   }
+  if(options->custblocktypes != NULL) ZOPFLI_APPEND_DATA(options->custblocktypes[1],blocktypes,ntypes);
   while (i < inend) {
-    if(aas==1) {
-      ZopfliAdditionalAutoSplitting(options,in, lasti, i, splitpoints, npoints, &numblocks);
-    }
+    if(aas==1) ZopfliAdditionalAutoSplitting(options,in, lasti, i, splitpoints, npoints, blocktypes, ntypes, &numblocks);
     ZOPFLI_APPEND_DATA(i, splitpoints, npoints);
+    if(options->custblocktypes != NULL) ZOPFLI_APPEND_DATA(options->custblocktypes[j],blocktypes,ntypes);
     if(cbs==NULL) {
       lasti = i;
       i += blocksize;
@@ -396,10 +428,11 @@ void ZopfliBlockSplitSimple(const unsigned char* in, size_t inend,
     ++numblocks;
   }
   if(aas==1 && lasti<inend) {
-    ZopfliAdditionalAutoSplitting(options,in, lasti, inend, splitpoints, npoints, &numblocks);
+    ZopfliAdditionalAutoSplitting(options,in, lasti, inend, splitpoints, npoints, blocktypes, ntypes, &numblocks);
     if(options->verbose>3) fprintf(stderr,"--> SUMMARY:\n");
   }
-  if(options->verbose>3) {
+  if(options->verbose>3 || dumpingtofile == 1) {
+  if(dumpingtofile == 1) fprintf(file,"0=%d",(int)(*blocktypes)[0]);
     fprintf(stderr, "Block split points: ");
     if(*npoints>0) {
       for (j = 0; j < *npoints; j++) {
@@ -409,12 +442,18 @@ void ZopfliBlockSplitSimple(const unsigned char* in, size_t inend,
       for (j = 0; j < *npoints; j++) {
         if(j==0) fprintf(stderr," "); else fprintf(stderr,",");
         fprintf(stderr, "%x", (int)(*splitpoints)[j]);
+        if(dumpingtofile == 1) fprintf(file, ",%x=%d", (int)(*splitpoints)[j],(int)(*blocktypes)[j+1]);
       }
       fprintf(stderr,")");
     } else {
       fprintf(stderr, "NONE");
     }
     fprintf(stderr, "\n");
+    if(dumpingtofile==1) {
+      fprintf(stderr,"Hex split points successfully saved to file: %s\n",options->dumpsplitsfile);
+      fclose(file);
+      exit(EXIT_SUCCESS);
+    }
   }
   if(options->verbose>2) {
     fprintf(stderr, "Total blocks: %lu                 \n\n",(unsigned long)numblocks);

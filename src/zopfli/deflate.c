@@ -844,21 +844,23 @@ static void DeflateSplittingFirst(const ZopfliOptions* options,
   size_t i;
   size_t* splitpoints = 0;
   size_t npoints = 0;
+  size_t* blocktypes = 0;
+  size_t ntypes = 0;
   size_t numblocks = 1;
   if(options->custblocksplit!=NULL) {
-    ZopfliBlockSplitSimple(in, inend, 0, &splitpoints, &npoints, options,options->custblocksplit,options->additionalautosplits);
+    ZopfliBlockSplitSimple(in, inend, 0, &splitpoints, &npoints, &blocktypes, &ntypes, options,options->custblocksplit,options->additionalautosplits);
   } else if(options->numblocks>0) {
     if(options->numblocks>inend) {
       i = 1;
     } else {
       i = ceilz((float)inend / (float)options->numblocks);
     }
-    ZopfliBlockSplitSimple(in, inend, i, &splitpoints, &npoints, options,NULL,options->additionalautosplits);
+    ZopfliBlockSplitSimple(in, inend, i, &splitpoints, &npoints, &blocktypes, &ntypes, options,NULL,options->additionalautosplits);
   } else if(options->blocksize>0) {
-    ZopfliBlockSplitSimple(in, inend, options->blocksize, &splitpoints, &npoints, options,NULL,options->additionalautosplits);
+    ZopfliBlockSplitSimple(in, inend, options->blocksize, &splitpoints, &npoints, &blocktypes, &ntypes, options,NULL,options->additionalautosplits);
   } else {
     if (btype == 0) {
-      ZopfliBlockSplitSimple(in, inend, 65535, &splitpoints, &npoints, options, NULL,0);
+      ZopfliBlockSplitSimple(in, inend, 65535, &splitpoints, &npoints, &blocktypes, &ntypes, options, NULL,0);
     } else if (btype == 1) {
       /* If all blocks are fixed tree, splitting into separate blocks only
       increases the total size. Leave npoints at 0, this represents 1 block. */
@@ -882,13 +884,11 @@ static void DeflateSplittingFirst(const ZopfliOptions* options,
     } else {
       fprintf(stderr,"\r");
     }
-    btypeb=btype;
-    if(options->custblocktypes!=NULL) {
-      if(i<options->custblocktypes[0]) {
-        btypeb=options->custblocktypes[i+1];
-        if(btypeb==0 && (end-start)>65535) btypeb=2;
-      } else {
-      }
+    if(i<ntypes) {
+      btypeb=blocktypes[i];
+      if(btypeb==0 && (end-start)>65535) btypeb=2;
+    } else {
+      btypeb=btype;
     }
     DeflateBlock(options, btypeb, i == npoints && final, in, start, end,
                  bp, out, outsize);

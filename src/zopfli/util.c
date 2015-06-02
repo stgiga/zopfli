@@ -217,4 +217,7 @@ void ZopfliInitOptions(ZopfliOptions* options) {
   options->custblocksplit = NULL;
   options->custblocktypes = NULL;
   options->additionalautosplits = 0;
+  options->ranstatew = 1;
+  options->ranstatez = 2;
+  options->dumpsplitsfile = NULL;
 }

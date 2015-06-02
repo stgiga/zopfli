@@ -268,17 +268,47 @@ static void CompressFile(const ZopfliOptions* options,
 static void VersionInfo() {
   fprintf(stderr,
   "Zopfli, a Compression Algorithm to produce Deflate streams.\n"
-  "KrzYmod extends Zopfli functionality - version 13\n\n");
+  "KrzYmod extends Zopfli functionality - version 14\n\n");
+}
+
+static void ParseCustomBlockBoundaries(unsigned long** bs,unsigned short** bt, const char* data) {
+  char buff[2] = {0, 0};
+  int i = 0,j,k = 1;
+  (*bs) = malloc(++k * sizeof(unsigned long*));
+  (*bs)[0] = 1;
+  (*bs)[1] = 0;
+  (*bt) = malloc(k * sizeof(unsigned short*));
+  (*bt)[0] = 1;
+  (*bt)[1] = 2;
+  for(j=0;data[j]!='\0';j++) {
+    if(data[j]==',') {
+      ++(*bs)[0];
+      (*bs) = realloc((*bs), ++k * sizeof(unsigned long*));
+      (*bs)[k-1] = 0;
+      ++(*bt)[0];
+      (*bt) = realloc((*bt),k * sizeof(unsigned short*));
+      (*bt)[k-1] = 2;
+    } else if(data[j]=='=') {
+      i=1;
+    } else {
+      buff[0]=data[j];
+      if(i==1) {
+        (*bt)[k-1]=atoi(buff);
+        if((*bt)[k-1]>2) (*bt)[k-1]=2;
+        i=0;
+      } else {
+        (*bs)[k-1] = ((*bs)[k-1]<<4) + strtoul(buff,NULL,16);
+      }
+    }
+  }
 }
 
 int main(int argc, char* argv[]) {
   ZopfliOptions options;
   ZopfliFormat output_type = ZOPFLI_FORMAT_GZIP;
   const char* filename = 0;
-  char* cbsbuff = NULL;
   int output_to_stdout = 0;
-  int i, j;
-  int k;
+  int i;
 
   signal(SIGINT, intHandler);
 
@@ -309,47 +339,46 @@ int main(int argc, char* argv[]) {
     }  else if (arg[0] == '-' && arg[1] == '-' && arg[2] == 'b' && arg[3] == 's' && arg[4] == 'r'
         && arg[5] >= '0' && arg[5] <= '9') {
       options.findminimumrec = atoi(arg + 5);
+    }  else if (arg[0] == '-' && arg[1] == '-' && arg[2] == 'r' && arg[3] == 'w'
+        && arg[4] >= '0' && arg[4] <= '9') {
+      options.ranstatew = atoi(arg + 4);
+      if(options.ranstatew<1) options.ranstatew=1;
+    }  else if (arg[0] == '-' && arg[1] == '-' && arg[2] == 'r' && arg[3] == 'z'
+        && arg[4] >= '0' && arg[4] <= '9') {
+      options.ranstatez = atoi(arg + 4);
+      if(options.ranstatez<1) options.ranstatez=1;
     }  else if (arg[0] == '-' && arg[1] == '-' && arg[2] == 'm' && arg[3] == 'u' && arg[4] == 'i'
         && arg[5] >= '0' && arg[5] <= '9') {
       options.maxfailiterations = atoi(arg + 5);
     }  else if (arg[0] == '-' && arg[1] == '-' && arg[2] == 'c' && arg[3] == 'b' && arg[4] == 's' && arg[5] != '\0') {
-      k = 1;
-      cbsbuff = realloc(cbsbuff,2 * sizeof(char*));
-      options.custblocksplit = realloc(options.custblocksplit, ++k * sizeof(unsigned long*));
-      options.custblocksplit[0] = 1;
-      options.custblocksplit[1] = 0;
-      for(j=5;arg[j]!='\0';j++) {
-        if(arg[j]!=',') {
-          cbsbuff[0]=arg[j];
-          cbsbuff[1]='\0';
-          options.custblocksplit[k-1] = (options.custblocksplit[k-1]<<4) + strtoul(cbsbuff,NULL,16);
-        } else {
-          ++options.custblocksplit[0];
-          options.custblocksplit = realloc(options.custblocksplit, ++k * sizeof(unsigned long*));
-          options.custblocksplit[k-1] = 0;
+      if(arg[5] == 'f' && arg[6] == 'i' && arg[7] == 'l' && arg[8] == 'e' && arg[9] != '\0') {
+        const char *cbsfile = arg+9;
+        FILE* file = fopen(cbsfile, "rb");
+        char* filedata = NULL;
+        int size;
+        if(file==NULL) {
+          fprintf(stderr,"Error: CBS file %s doesn't exist.\n",cbsfile);
+          exit(EXIT_FAILURE);
         }
-      }
-      free(cbsbuff);
-      cbsbuff=NULL;
-    }  else if (arg[0] == '-' && arg[1] == '-' && arg[2] == 'c' && arg[3] == 'b' && arg[4] == 't' && arg[5] != '\0') {
-      k = 1;
-      cbsbuff = realloc(cbsbuff,2 * sizeof(char*));
-      options.custblocktypes = realloc(options.custblocktypes, ++k * sizeof(unsigned int*));
-      options.custblocktypes[0] = 1;
-      for(j=5;arg[j]!='\0';j++) {
-        if(arg[j]!=',') {
-          cbsbuff[0]=arg[j];
-          cbsbuff[1]='\0';
-          options.custblocktypes[k-1] = atoi(cbsbuff);
-          if(options.custblocktypes[k-1]>2) options.custblocktypes[k-1]=2;
+        fseek(file,0,SEEK_END);
+        size=ftell(file);
+        if(size>0) {
+          filedata = (char *) malloc((size+1) * sizeof(char*));
+          rewind(file);
+          if(fread(filedata,1,size,file)) {}
+          filedata[size]='\0';
+          ParseCustomBlockBoundaries(&options.custblocksplit,&options.custblocktypes,filedata);
+          free(filedata);
         } else {
-          ++options.custblocktypes[0];
-          options.custblocktypes = realloc(options.custblocktypes, ++k * sizeof(unsigned int*));
-          options.custblocktypes[k-1] = 0;
+          fprintf(stderr,"Error: CBS file %s seems empty.\n",cbsfile);
+          exit(EXIT_FAILURE);
         }
+        fclose(file);
+      } else {
+        ParseCustomBlockBoundaries(&options.custblocksplit,&options.custblocktypes,arg+5);
       }
-      free(cbsbuff);
-      cbsbuff=NULL;
+    }  else if (arg[0] == '-' && arg[1] == '-' && arg[2] == 'c' && arg[3] == 'b' && arg[4] == 'd' && arg[5] != '\0') {
+       options.dumpsplitsfile = arg+5;
     }  else if (arg[0] == '-' && arg[1] == '-' && arg[2] == 'v' && arg[3] >= '0' && arg[3] <= '9') {
       options.verbose = atoi(arg + 3);
     }  else if (arg[0] == '-' && arg[1] == '-' && arg[2] == 'b' && arg[3] >= '0' && arg[3] <= '9') {
@@ -379,9 +408,11 @@ int main(int argc, char* argv[]) {
           "      MANUAL BLOCK SPLITTING CONTROL:\n"
           "  --n#          number of blocks\n"
           "  --b#          block size in bytes\n"
-          "  --cbs#        custom block split points in hex separated with comma\n"
-          "  --cbt#        custom block types separated with comma (0/1/2, d: 2)\n"
-          "                0 - uncompressed, 1 - fixed, 2 - dynamic\n"
+          "  --cbs#        customize block start points and types\n"
+          "                format: hex_startb1[=type],hex_startb2[=type]\n"
+          "                example: 0=0,33f0,56dd,8799=1,22220=0\n"
+          "  --cbsfile#    same as above but instead read from file #\n"
+          "  --cbd#        dump block start points to # file and exit\n"
           "  --aas         additional automatic splitting between manual points\n\n");
       fprintf(stderr,
           "      OUTPUT CONTROL:\n"
@@ -394,7 +425,9 @@ int main(int argc, char* argv[]) {
       fprintf(stderr,
           "      MISCELLANEOUS:\n"
           "  --lazy        lazy matching in Greedy LZ77 (d: OFF)\n"
-          "  --ohh         optymize huffman header (d: OFF)\n\n"
+          "  --ohh         optymize huffman header (d: OFF)\n"
+          "  --rw#         initial random W for iterations (1-65535, d: 1)\n"
+          "  --rz#         initial random Z for iterations (1-65535, d: 2)\n\n"
           " Pressing CTRL+C will set maximum unsuccessful iterations to 1.\n"
           "\n");
       return 0;
@@ -451,8 +484,8 @@ int main(int argc, char* argv[]) {
       }
       if(options.usescandir == 1) {
         if(output_type == ZOPFLI_FORMAT_ZIP && !output_to_stdout) {
-            if(options.custblocksplit != NULL) {
-              fprintf(stderr, "Error: --cbs works only in single file compression (no --dir).\n");
+            if(options.custblocksplit != NULL || options.dumpsplitsfile != NULL) {
+              fprintf(stderr, "Error: --cbs and --cbd work only in single file compression (no --dir).\n");
               return 0;
             }
           CompressMultiFile(&options, filename, outfilename);

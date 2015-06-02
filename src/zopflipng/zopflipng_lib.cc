@@ -54,7 +54,11 @@ ZopfliPNGOptions::ZopfliPNGOptions()
   , blocksize(0)
   , numblocks(0)
   , custblocksplit(NULL)
-  , additionalautosplits(0) {
+  , custblocktypes(NULL)
+  , additionalautosplits(0)
+  , ranstatew(1)
+  , ranstatez(2)
+  , dumpsplitsfile(NULL) {
 }
 
 // Deflate compressor passed as fuction pointer to LodePNG to have it use Zopfli
@@ -84,6 +88,15 @@ unsigned CustomPNGDeflate(unsigned char** out, size_t* outsize,
   if(png_options->custblocksplit != NULL) {
     options.custblocksplit = (unsigned long*)malloc((png_options->custblocksplit[0]+1) * sizeof(unsigned long*));
     memcpy(options.custblocksplit,png_options->custblocksplit,((png_options->custblocksplit[0]+1) * sizeof(unsigned long*)));
+  }
+  if(png_options->custblocktypes != NULL) {
+    options.custblocktypes = (unsigned short*)malloc((png_options->custblocktypes[0]+1) * sizeof(unsigned short*));
+    memcpy(options.custblocktypes,png_options->custblocktypes,((png_options->custblocktypes[0]+1) * sizeof(unsigned short*)));
+  }
+  options.ranstatew             = png_options->ranstatew;
+  options.ranstatez             = png_options->ranstatez;
+  if(png_options->dumpsplitsfile != NULL) {
+    options.dumpsplitsfile        = png_options->dumpsplitsfile;
   }
 
   if (png_options->block_split_strategy == 3) {
@@ -483,7 +496,11 @@ extern "C" void CZopfliPNGSetDefaults(CZopfliPNGOptions* png_options) {
   png_options->blocksize             = opts.blocksize;
   png_options->numblocks             = opts.numblocks;
   png_options->custblocksplit        = opts.custblocksplit;
+  png_options->custblocktypes        = opts.custblocktypes;
   png_options->additionalautosplits  = opts.additionalautosplits;
+  png_options->ranstatew             = opts.ranstatew;
+  png_options->ranstatez             = opts.ranstatez;
+  png_options->dumpsplitsfile        = opts.dumpsplitsfile;
 }
 
 extern "C" int CZopfliPNGOptimize(const unsigned char* origpng,
@@ -512,7 +529,11 @@ extern "C" int CZopfliPNGOptimize(const unsigned char* origpng,
   opts.blocksize             = png_options->blocksize;
   opts.numblocks             = png_options->numblocks;
   opts.custblocksplit        = png_options->custblocksplit;
+  opts.custblocktypes        = png_options->custblocktypes;
   opts.additionalautosplits  = png_options->additionalautosplits;
+  opts.ranstatew             = png_options->ranstatew;
+  opts.ranstatez             = png_options->ranstatez;
+  opts.dumpsplitsfile        = png_options->dumpsplitsfile;
 
   for (int i = 0; i < png_options->num_filter_strategies; i++) {
     opts.filter_strategies.push_back(png_options->filter_strategies[i]);

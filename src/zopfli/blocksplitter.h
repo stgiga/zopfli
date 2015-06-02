@@ -69,6 +69,6 @@ account.
 */
 void ZopfliBlockSplitSimple(const unsigned char* in, size_t inend,
                             size_t blocksize,
-                            size_t** splitpoints, size_t* npoints, const ZopfliOptions* options,unsigned long* cbs, int aas);
+                            size_t** splitpoints, size_t* npoints, size_t** blocktypes, size_t* ntypes, const ZopfliOptions* options,unsigned long* cbs, int aas);
 
 #endif  /* ZOPFLI_BLOCKSPLITTER_H_ */
