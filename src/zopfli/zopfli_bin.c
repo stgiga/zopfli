@@ -77,7 +77,7 @@ static void LoadFile(const char* filename,
     fseeko(file,(size_t)(-1), SEEK_SET);
     *filesize = ftello(file);
     if(*filesize > 0 && (fread(&testfile, 1, 1, file))==1) {
-      fprintf(stderr,"Error: Files %lu larger than %luMB are not supported by this version.\n",(unsigned long)*filesize,(unsigned long)((size_t)(-1)/1024/1024));
+      fprintf(stderr,"Error: Files larger than %luMB are not supported by this version.\n",(unsigned long)((size_t)(-1)/1024/1024));
       exit(EXIT_FAILURE);
     }
   }
