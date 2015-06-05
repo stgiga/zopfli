@@ -52,8 +52,9 @@ The whole compression algorithm, including the smarter block splitting, will
 be executed independently on each huge block.
 Dividing into huge blocks hurts compression, but not much relative to the size.
 Set this to, for example, 20MB (20000000). Set it to 0 to disable master blocks.
+100MB:104857600
 */
-#define ZOPFLI_MASTER_BLOCK_SIZE 20000000
+#define ZOPFLI_MASTER_BLOCK_SIZE 104857600
 
 /*
 Used to initialize costs for example
@@ -70,6 +71,12 @@ Actually 9 seems best. Tested on Odroid U3 and Lenovo Y500. Using higher
 values than 9 or lower than 7 made compressing lodepng.cpp file longer.
 */
 #define ZOPFLI_CACHE_LENGTH 9
+
+/*
+To limit maximum memory usage by cache, let's use maximum 512MB.
+This value may be exceeded when master block is set too high.
+*/
+#define ZOPFLI_MAX_CACHE_MEMORY 524288000
 
 /*
 limit the max hash chain hits for this hash value. This has an effect only

@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include "inthandler.h"
 
+unsigned int mui;
+
 void intHandler(int exit_code) {
   if(exit_code==2) {
     fprintf(stderr,"                                                              \n"

@@ -38,8 +38,8 @@ is not simply bytesize * 8 + bp because even representing one bit requires a
 whole byte. It is: (bp == 0) ? (bytesize * 8) : ((bytesize - 1) * 8 + bp)
 */
 
-static int ceilz(float num) {
-    int inum = (int)num;
+static size_t ceilz(float num) {
+    size_t inum = (size_t)num;
     if (num == (float)inum) {
         return inum;
     }
@@ -447,7 +447,7 @@ static void AddLZ77Data(const unsigned short* litlens,
 }
 
 static void GetFixedTree(unsigned* ll_lengths, unsigned* d_lengths) {
-  size_t i;
+  unsigned short i;
   for (i = 0; i < 144; i++) ll_lengths[i] = 8;
   for (i = 144; i < 256; i++) ll_lengths[i] = 9;
   for (i = 256; i < 280; i++) ll_lengths[i] = 7;
@@ -839,7 +839,7 @@ static void DeflateSplittingFirst(const ZopfliOptions* options,
                                   const unsigned char* in,
                                   size_t instart, size_t inend,
                                   unsigned char* bp,
-                                  unsigned char** out, size_t* outsize) {
+                                  unsigned char** out, size_t* outsize, size_t fullsize, size_t* processed) {
   int btypeb;
   size_t i;
   size_t* splitpoints = 0;
@@ -873,9 +873,9 @@ static void DeflateSplittingFirst(const ZopfliOptions* options,
   for (i = 0; i <= npoints; i++) {
     size_t start = i == 0 ? instart : splitpoints[i - 1];
     size_t end = i == npoints ? inend : splitpoints[i];
-    if(options->verbose>0) fprintf(stderr, "Progress: %.1f%%",100.0 * (double)start / (double)inend);
+    if(options->verbose>0) fprintf(stderr, "Progress: %.1f%%",100.0 * (double)(*processed+start) / (double)fullsize);
     if(options->verbose>1) {
-      fprintf(stderr, "  ---  Block: %d / %d  ---  Data left: %d bytes", (int)(i + 1), (int)(npoints + 1),(int)(inend - start));
+      fprintf(stderr, "  ---  Block: %d / %d  ---  Data left: %luKB", (int)(i + 1), (int)(npoints + 1),(unsigned long)((fullsize - (*processed+start))/1024));
       if(options->verbose>2) {
         fprintf(stderr,"\n");
       } else {
@@ -893,7 +893,6 @@ static void DeflateSplittingFirst(const ZopfliOptions* options,
     DeflateBlock(options, btypeb, i == npoints && final, in, start, end,
                  bp, out, outsize);
   }
-
   free(splitpoints);
 }
 
@@ -920,7 +919,7 @@ static void DeflateSplittingLast(const ZopfliOptions* options,
        supports the special case of noncompressed data. Put it to that one. */
     DeflateSplittingFirst(options, btype, final,
                           in, instart, inend,
-                          bp, out, outsize);
+                          bp, out, outsize, inend, 0);
   }
   assert(btype == 1 || btype == 2);
 
@@ -978,14 +977,14 @@ the final bit will be set on the last block.
 void ZopfliDeflatePart(const ZopfliOptions* options, int btype, int final,
                        const unsigned char* in, size_t instart, size_t inend,
                        unsigned char* bp, unsigned char** out,
-                       size_t* outsize) {
+                       size_t* outsize, size_t fullsize, size_t *processed) {
   if (options->blocksplitting) {
     if (options->blocksplittinglast) {
       DeflateSplittingLast(options, btype, final, in, instart, inend,
                            bp, out, outsize);
     } else {
       DeflateSplittingFirst(options, btype, final, in, instart, inend,
-                            bp, out, outsize);
+                            bp, out, outsize, fullsize, processed);
     }
   } else {
     DeflateBlock(options, btype, final, in, instart, inend, bp, out, outsize);
@@ -994,27 +993,44 @@ void ZopfliDeflatePart(const ZopfliOptions* options, int btype, int final,
 
 void ZopfliDeflate(const ZopfliOptions* options, int btype, int final,
                    const unsigned char* in, size_t insize,
-                   unsigned char* bp, unsigned char** out, size_t* outsize) {
- size_t offset=*outsize;
-#if ZOPFLI_MASTER_BLOCK_SIZE == 0
-  ZopfliDeflatePart(options, btype, final, in, 0, insize, bp, out, outsize);
-#else
+                   unsigned char* bp, unsigned char** out, size_t* outsize, size_t fullsize, size_t *processed) {
+  size_t offset=*outsize;
   size_t i = 0;
+  short processed_was_null = 0;
+  if(processed == NULL) {
+    processed=(size_t*)malloc(sizeof(size_t*));
+    *processed=0;
+    processed_was_null=1;
+  }
+  if(fullsize<insize) fullsize=insize;
+#if ZOPFLI_MASTER_BLOCK_SIZE == 0
+  ZopfliDeflatePart(options, btype, final, in, 0, insize, bp, out, outsize, fullsize, processed);
+#else
   while (i < insize) {
     int masterfinal = (i + ZOPFLI_MASTER_BLOCK_SIZE >= insize);
     int final2 = final && masterfinal;
     size_t size = masterfinal ? insize - i : ZOPFLI_MASTER_BLOCK_SIZE;
     ZopfliDeflatePart(options, btype, final2,
-                      in, i, i + size, bp, out, outsize);
+                      in, i, i + size, bp, out, outsize, fullsize, processed);
     i += size;
+    if(!processed_was_null) *processed+=size; else *processed=size;
   }
 #endif
-  if(options->verbose>0) fprintf(stderr,"Progress: 100.0%%\n\n");
-  if (options->verbose>1) {
-    fprintf(stderr,
-            "Input size: %d (%dK)\n"
-            "Deflate size: %d (%dK). Compression ratio: %.3f%%\n",
-            (int)insize,(int)insize/1024, (int)(*outsize-offset), (int)(*outsize-offset) / 1024,
-            100.0 * (double)(*outsize-offset) / (double)insize);
+  if(processed_was_null) free(processed);
+  if(options->havemoredata==0) {
+    if(options->verbose>0) {
+      fprintf(stderr,"Progress: 100.0%%                                                  \n\n");
+    }
+    if (options->verbose>1) {
+      fprintf(stderr,
+              "Input size: %d (%dK)\n"
+              "Deflate size: %d (%dK). Compression ratio: %.3f%%\n",
+              (int)fullsize,(int)fullsize/1024, (int)(*outsize-offset), (int)(*outsize-offset) / 1024,
+              100.0 * (double)(*outsize-offset) / (double)fullsize);
+    }
+  } else {
+    if (options->verbose>1) {
+      fprintf(stderr,"Getting more data . . .\n");
+    }
   }
 }

@@ -61,7 +61,7 @@ static void CopyStats(SymbolStats* source, SymbolStats* dest) {
 static void AddWeighedStatFreqs(const SymbolStats* stats1, double w1,
                                 const SymbolStats* stats2, double w2,
                                 SymbolStats* result) {
-  size_t i;
+  unsigned short i;
   for (i = 0; i < 288; i++) {
     result->litlens[i] =
         (size_t) (stats1->litlens[i] * w1 + stats2->litlens[i] * w2);
@@ -103,7 +103,7 @@ static void RandomizeStatFreqs(RanState* state, SymbolStats* stats) {
 }
 
 static void ClearStatFreqs(SymbolStats* stats) {
-  size_t i;
+  unsigned short i;
   for (i = 0; i < 288; i++) stats->litlens[i] = 0;
   for (i = 0; i < 32; i++) stats->dists[i] = 0;
 }
@@ -456,8 +456,8 @@ void ZopfliLZ77Optimal(ZopfliBlockState *s,
   size_t pathsize = 0;
   ZopfliLZ77Store currentstore;
   SymbolStats stats, beststats, laststats;
-  int i;
-  int fails=0;
+  unsigned int i;
+  unsigned int fails=0;
   double cost;
   double bestcost = ZOPFLI_LARGE_FLOAT;
   double lastcost = 0;

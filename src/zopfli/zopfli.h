@@ -40,7 +40,7 @@ typedef struct ZopfliOptions {
   compression cost. Good values: 10, 15 for small files, 5 for files over
   several MB in size or it will be too slow.
   */
-  int numiterations;
+  unsigned int numiterations;
 
   /*
   If true, splits the data in multiple deflate blocks with optimal choice
@@ -86,7 +86,7 @@ typedef struct ZopfliOptions {
   without further bit reductions. Number of iterations should be greater
   than this value, otherwise it will have no effect.
   */
-  int maxfailiterations;
+  unsigned int maxfailiterations;
 
   /*
   Use scandir to get list of files to compress to ZIP. File will be updated
@@ -142,6 +142,13 @@ typedef struct ZopfliOptions {
   Save block splits to file and exit zopfli
   */
   const char* dumpsplitsfile;
+
+  /*
+  Tells Zopfli to not mark last block as final.
+
+  Currently used internally to control LoadFile chunks.
+  */
+  unsigned short havemoredata;
 } ZopfliOptions;
 
 /* Initializes options with default values. */
@@ -167,8 +174,8 @@ out: pointer to the dynamic output array to which the result is appended. Must
 outsize: pointer to the dynamic output array size
 */
 void ZopfliCompress(const ZopfliOptions* options, ZopfliFormat output_type,
-                    const unsigned char* in, size_t insize,
-                    unsigned char** out, size_t* outsize, size_t* outsizeraw, const char* infilename);
+                    const unsigned char* in, size_t insize, size_t fullsize, size_t* processed, unsigned char* bp,
+                    unsigned char** out, size_t* outsize, size_t* outsizeraw, const char* infilename, unsigned long *checksum, unsigned char **adddata);
 
 #ifdef __cplusplus
 }  // extern "C"

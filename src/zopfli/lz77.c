@@ -95,7 +95,7 @@ void ZopfliVerifyLenDist(const unsigned char* data, size_t datasize, size_t pos,
                          unsigned short dist, unsigned short length) {
 
   /* TODO(lode): make this only run in a debug compile, it's for assert only. */
-  size_t i;
+  unsigned short i;
 
   assert(pos + length <= datasize);
   for (i = 0; i < length; i++) {

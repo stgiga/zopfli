@@ -28,29 +28,29 @@ Author: jyrki.alakuijala@gmail.com (Jyrki Alakuijala)
 void intHandler(int exit_code);
 
 void ZopfliCompress(const ZopfliOptions* options, ZopfliFormat output_type,
-                    const unsigned char* in, size_t insize,
-                    unsigned char** out, size_t* outsize, size_t* outsizeraw, const char* infilename) {
-  ZipCDIR zipcdir;
+                    const unsigned char* in, size_t insize, size_t fullsize, size_t* processed, unsigned char* bp,
+                    unsigned char** out, size_t* outsize, size_t* outsizeraw, const char* infilename, unsigned long *checksum, unsigned char **adddata) {
   if (output_type == ZOPFLI_FORMAT_GZIP) {
-    ZopfliGzipCompress(options, in, insize, out, outsize, infilename, 0);
+    ZopfliGzipCompress(options, in, insize, fullsize, processed, bp, out, outsize, NULL, checksum, adddata);
   } else if (output_type == ZOPFLI_FORMAT_GZIP_NAME) {
-    ZopfliGzipCompress(options, in, insize, out, outsize, infilename, 1);
+    ZopfliGzipCompress(options, in, insize, fullsize, processed, bp, out, outsize, infilename, checksum, adddata);
   } else if (output_type == ZOPFLI_FORMAT_ZLIB) {
-    ZopfliZlibCompress(options, in, insize, out, outsize);
+    ZopfliZlibCompress(options, in, insize, fullsize, processed, bp, out, outsize, checksum);
   } else if (output_type == ZOPFLI_FORMAT_ZIP) {
+    ZipCDIR zipcdir;
     InitCDIR(&zipcdir);
     zipcdir.rootdir=realloc(zipcdir.rootdir,3*sizeof(char *));
     zipcdir.rootdir[0]='.';
     zipcdir.rootdir[1]='/';
     zipcdir.rootdir[2]='\0';
-    ZopfliZipCompress(options, in, insize, out, outsize, outsizeraw, infilename, &zipcdir);
+    ZopfliZipCompress(options, in, insize, fullsize, processed, bp, out, outsize, outsizeraw, infilename, checksum, &zipcdir, adddata);
     free(zipcdir.rootdir);
     free(zipcdir.data);
     free(zipcdir.enddata);
   } else if (output_type == ZOPFLI_FORMAT_DEFLATE) {
-    unsigned char bp = 0;
-    ZopfliDeflate(options, 2 /* Dynamic block */, 1,
-                  in, insize, &bp, out, outsize);
+    if(fullsize<insize) fullsize=insize;
+    ZopfliDeflate(options, 2 /* Dynamic block */, !options->havemoredata,
+                  in, insize, bp, out, outsize, fullsize, processed);
   } else {
     exit (EXIT_FAILURE);
   }

@@ -19,61 +19,52 @@ Author: jyrki.alakuijala@gmail.com (Jyrki Alakuijala)
 
 #include "zlib_container.h"
 #include "util.h"
+#include "adler.h"
 
 #include <stdio.h>
 
 #include "deflate.h"
 
 
-/* Calculates the adler32 checksum of the data */
-static unsigned adler32(const unsigned char* data, size_t size)
-{
-  static const unsigned sums_overflow = 5550;
-  unsigned s1 = 1;
-  unsigned s2 = 1 >> 16;
-
-  while (size > 0) {
-    size_t amount = size > sums_overflow ? sums_overflow : size;
-    size -= amount;
-    while (amount > 0) {
-      s1 += (*data++);
-      s2 += s1;
-      amount--;
-    }
-    s1 %= 65521;
-    s2 %= 65521;
-  }
-
-  return (s2 << 16) | s1;
-}
-
 void ZopfliZlibCompress(const ZopfliOptions* options,
-                        const unsigned char* in, size_t insize,
-                        unsigned char** out, size_t* outsize) {
-  unsigned char bitpointer = 0;
-  unsigned checksum = adler32(in, (unsigned)insize);
+                        const unsigned char* in, size_t insize, size_t fullsize, size_t* processed, unsigned char* bp,
+                        unsigned char** out, size_t* outsize, unsigned long *adler) {
+  unsigned long checksum = 1L;
   unsigned cmf = 120;  /* CM 8, CINFO 7. See zlib spec.*/
   unsigned flevel = 0;
   unsigned fdict = 0;
-  unsigned cmfflg = 256 * cmf + fdict * 32 + flevel * 64;
-  unsigned fcheck = 31 - cmfflg % 31;
-  cmfflg += fcheck;
+  unsigned cmfflg;
+  unsigned fcheck;
+  int i;
 
-  ZOPFLI_APPEND_DATA(cmfflg / 256, out, outsize);
-  ZOPFLI_APPEND_DATA(cmfflg % 256, out, outsize);
+  if(adler == NULL) {
+    adler32u(in, insize,&checksum);
+  } else {
+    adler32u(in, insize,adler);
+    checksum = *adler;
+  }
 
-  ZopfliDeflate(options, 2 /* dynamic block */, 1 /* final */,
-                in, insize, &bitpointer, out, outsize);
+  if(*outsize==0) {
+    cmfflg = 256 * cmf + fdict * 32 + flevel * 64;
+    fcheck = 31 - cmfflg % 31;
+    cmfflg += fcheck;
+    ZOPFLI_APPEND_DATA(cmfflg / 256, out, outsize);
+    ZOPFLI_APPEND_DATA(cmfflg % 256, out, outsize);
+  }
 
-  ZOPFLI_APPEND_DATA((checksum >> 24) % 256, out, outsize);
-  ZOPFLI_APPEND_DATA((checksum >> 16) % 256, out, outsize);
-  ZOPFLI_APPEND_DATA((checksum >> 8) % 256, out, outsize);
-  ZOPFLI_APPEND_DATA(checksum % 256, out, outsize);
+  if(fullsize<insize) fullsize=insize;
+  ZopfliDeflate(options, 2 /* dynamic block */, !options->havemoredata,
+                in, insize, bp, out, outsize, fullsize, processed);
 
-  if (options->verbose>1) {
-    fprintf(stderr,
-            "ZLIB size: %d (%dK). Compression ratio: %.3f%%\n",
-            (int)*outsize, (int)*outsize/1024,
-            100.0 * (double)*outsize / (double)insize);
+  if(options->havemoredata==0) {
+
+    for(i=24;i>-1;i-=8) ZOPFLI_APPEND_DATA((checksum >> i) % 256, out, outsize);
+
+    if (options->verbose>1) {
+      fprintf(stderr,
+              "ZLIB size: %d (%dK). Compression ratio: %.3f%%\n",
+              (int)*outsize, (int)*outsize/1024,
+              100.0 * (double)*outsize / (double)fullsize);
+    }
   }
 }

@@ -33,8 +33,9 @@ See zopflipng_lib.h
 #include "lodepng/lodepng_util.h"
 #include "../zopfli/inthandler.h"
 #include "../zopfli/deflate.h"
+#include "../zopfli/util.h"
 
-int mui;
+unsigned int mui;
 
 ZopfliPNGOptions::ZopfliPNGOptions()
   : lossy_transparent(false)
@@ -85,17 +86,17 @@ unsigned CustomPNGDeflate(unsigned char** out, size_t* outsize,
   options.blocksize             = png_options->blocksize;
   options.numblocks             = png_options->numblocks;
   options.additionalautosplits  = png_options->additionalautosplits;
-  if(png_options->custblocksplit != NULL) {
+  if(png_options->custblocksplit != NULL && ZOPFLI_MASTER_BLOCK_SIZE>insize) {
     options.custblocksplit = (unsigned long*)malloc((png_options->custblocksplit[0]+1) * sizeof(unsigned long*));
     memcpy(options.custblocksplit,png_options->custblocksplit,((png_options->custblocksplit[0]+1) * sizeof(unsigned long*)));
   }
-  if(png_options->custblocktypes != NULL) {
+  if(png_options->custblocktypes != NULL && ZOPFLI_MASTER_BLOCK_SIZE>insize) {
     options.custblocktypes = (unsigned short*)malloc((png_options->custblocktypes[0]+1) * sizeof(unsigned short*));
     memcpy(options.custblocktypes,png_options->custblocktypes,((png_options->custblocktypes[0]+1) * sizeof(unsigned short*)));
   }
   options.ranstatew             = png_options->ranstatew;
   options.ranstatez             = png_options->ranstatez;
-  if(png_options->dumpsplitsfile != NULL) {
+  if(png_options->dumpsplitsfile != NULL && ZOPFLI_MASTER_BLOCK_SIZE>insize) {
     options.dumpsplitsfile        = png_options->dumpsplitsfile;
   }
 
@@ -104,11 +105,11 @@ unsigned CustomPNGDeflate(unsigned char** out, size_t* outsize,
     unsigned char* out2 = 0;
     size_t outsize2 = 0;
     options.blocksplittinglast = 0;
-    ZopfliDeflate(&options, 2 /* Dynamic */, 1, in, insize, &bp, out, outsize);
+    ZopfliDeflate(&options, 2 /* Dynamic */, 1, in, insize, &bp, out, outsize, 0, NULL);
     bp = 0;
     options.blocksplittinglast = 1;
     ZopfliDeflate(&options, 2 /* Dynamic */, 1,
-                  in, insize, &bp, &out2, &outsize2);
+                  in, insize, &bp, &out2, &outsize2, 0, NULL);
 
     if (outsize2 < *outsize) {
       free(*out);
@@ -121,7 +122,7 @@ unsigned CustomPNGDeflate(unsigned char** out, size_t* outsize,
   } else {
     if (png_options->block_split_strategy == 0) options.blocksplitting = 0;
     options.blocksplittinglast = png_options->block_split_strategy == 2;
-    ZopfliDeflate(&options, 2 /* Dynamic */, 1, in, insize, &bp, out, outsize);
+    ZopfliDeflate(&options, 2 /* Dynamic */, 1, in, insize, &bp, out, outsize, 0, NULL);
   }
 
   return 0;  // OK

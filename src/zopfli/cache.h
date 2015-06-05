@@ -40,6 +40,7 @@ typedef struct ZopfliLongestMatchCache {
   unsigned short* length;
   unsigned short* dist;
   unsigned char* sublen;
+  unsigned long cache_length;
 } ZopfliLongestMatchCache;
 
 /* Initializes the ZopfliLongestMatchCache. */
@@ -58,7 +59,7 @@ void ZopfliCacheToSublen(const ZopfliLongestMatchCache* lmc,
                          size_t pos, size_t length,
                          unsigned short* sublen);
 /* Returns the length up to which could be stored in the cache. */
-unsigned ZopfliMaxCachedSublen(const ZopfliLongestMatchCache* lmc,
+size_t ZopfliMaxCachedSublen(const ZopfliLongestMatchCache* lmc,
                                size_t pos, size_t length);
 
 #endif  /* ZOPFLI_LONGEST_MATCH_CACHE */

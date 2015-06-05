@@ -68,8 +68,8 @@ void ZopfliLengthsToSymbols(const unsigned* lengths, size_t n, unsigned maxbits,
 
 void ZopfliCalculateEntropy(const size_t* count, size_t n, double* bitlengths) {
   static const double kInvLog2 = 1.4426950408889;  /* 1.0 / log(2.0) */
-  unsigned sum = 0;
-  unsigned i;
+  size_t sum = 0;
+  size_t i;
   double log2sum;
   for (i = 0; i < n; ++i) {
     sum += count[i];

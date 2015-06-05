@@ -289,7 +289,7 @@ void ZopfliBlockSplitLZ77(const ZopfliOptions* options,
     } else {
       AddSorted(llpos, splitpoints, npoints);
       ++(*numblocks);
-      if(options->verbose>0 && options->verbose<5) fprintf(stderr,"Initializing blocks: %lu\r",(unsigned long)(*numblocks));
+      if(options->verbose>0 && options->verbose<5) fprintf(stderr,"Initializing blocks: %lu    \r",(unsigned long)(*numblocks));
     }
 
     if (!FindLargestSplittableBlock(
@@ -384,7 +384,7 @@ void ZopfliBlockSplitSimple(const unsigned char* in, size_t inend,
                             size_t blocksize,
                             size_t** splitpoints, size_t* npoints, size_t** blocktypes, size_t* ntypes, const ZopfliOptions* options, unsigned long* cbs, int aas) {
   size_t i, lasti = 0;
-  unsigned int j = 2;
+  size_t j = 2;
   size_t numblocks = 1;
   int dumpingtofile = 0;
   FILE* file = NULL;

@@ -49,14 +49,15 @@ typedef struct ZipCDIR {
   size_t totalinput;
   unsigned long curfileoffset;
   unsigned long offset;
-  unsigned int fileid;
+  unsigned short fileid;
 } ZipCDIR;
 
 void InitCDIR(ZipCDIR *zipcdir);
 
 void ZopfliZipCompress(const ZopfliOptions* options,
-                        const unsigned char* in, size_t insize,
-                        unsigned char** out, size_t* outsize, size_t* outsizeraw, const char *infilename, ZipCDIR* zipcdir);
+                        const unsigned char* in, size_t insize, size_t fullsize, size_t* processed, unsigned char* bp,
+                        unsigned char** out, size_t* outsize, size_t* outsizeraw, const char *infilename,
+                        unsigned long *crc32, ZipCDIR* zipcdir, unsigned char** adddata);
 
 #ifdef __cplusplus
 }  // extern "C"
