@@ -125,7 +125,7 @@ void ZopfliZipCompress(const ZopfliOptions* options,
  /* MS-DOS TIME, CRC, OSIZE, ISIZE FROM */
 
     if(*adddata == NULL) {
-      ZOPFLI_APPEND_DATA(33,&zipcdir->data,&zipcdir->size);
+      ZOPFLI_APPEND_DATA(31,&zipcdir->data,&zipcdir->size);
       for(i=0;i<3;++i) ZOPFLI_APPEND_DATA(0,&zipcdir->data,&zipcdir->size);
     } else {
       for(i=0;i<4;++i) ZOPFLI_APPEND_DATA((*adddata)[i],&zipcdir->data,&zipcdir->size);
