@@ -196,7 +196,7 @@ static void ParseCustomBlockBoundaries(unsigned long** bs,unsigned short** bt, c
 
 int main(int argc, char *argv[]) {
 printf("ZopfliPNG, a Portable Network Graphics (PNG) image optimizer.\n"
-         "KrzYmod extends ZopfliPNG functionality - version TRUNK5\n\n");
+         "KrzYmod extends ZopfliPNG functionality - version TEST\n\n");
   if (argc < 2) {
     ShowHelp();
     return 0;

@@ -164,7 +164,6 @@ void ZopfliZipCompress(const ZopfliOptions* options,
   /* FilePK offset in ZIP file */
     for(i=0;i<4;++i) ZOPFLI_APPEND_DATA((zipcdir->offset >> (i*8)) % 256,&zipcdir->data,&zipcdir->size);
     zipcdir->offset+=(unsigned long)(rawdeflsize+30+max);
-    fprintf(stderr,"Debug: %lu\n",zipcdir->offset);
 
   /* FILENAME */
     for(i=0; i<max;++i) ZOPFLI_APPEND_DATA(infilename[i],&zipcdir->data,&zipcdir->size);

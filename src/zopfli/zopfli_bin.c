@@ -452,7 +452,7 @@ static void CompressFile(ZopfliOptions* options,
 static void VersionInfo() {
   fprintf(stderr,
   "Zopfli, a Compression Algorithm to produce Deflate streams.\n"
-  "KrzYmod extends Zopfli functionality - version TRUNK5\n\n");
+  "KrzYmod extends Zopfli functionality - version TEST\n\n");
 }
 
 static void ParseCustomBlockBoundaries(unsigned long** bs,unsigned short** bt, const char* data) {
