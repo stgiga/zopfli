@@ -220,5 +220,4 @@ void ZopfliInitOptions(ZopfliOptions* options) {
   options->ranstatew = 1;
   options->ranstatez = 2;
   options->dumpsplitsfile = NULL;
-  options->havemoredata = 0;
 }

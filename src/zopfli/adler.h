@@ -22,6 +22,15 @@ Author: jyrki.alakuijala@gmail.com (Jyrki Alakuijala)
 
 #include <stdio.h>
 
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 void adler32u(const unsigned char* data, size_t size, unsigned long* adler);
+
+#ifdef __cplusplus
+}  // extern "C"
+#endif
 
 #endif

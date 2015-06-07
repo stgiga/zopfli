@@ -30,15 +30,29 @@ Author: jyrki.alakuijala@gmail.com (Jyrki Alakuijala)
 Compresses the data according to the gzip specification.
 */
 void ZopfliGzipCompress(const ZopfliOptions* options,
-                        const unsigned char* in, size_t insize, size_t fullsize, size_t* processed, unsigned char* bp,
-                        unsigned char** out, size_t* outsize, const char *infilename, unsigned long* crc32, unsigned char** adddata) {
+                        const unsigned char* in, size_t insize,
+                        unsigned char** out, size_t* outsize, ZopfliAdditionalData* moredata) {
   unsigned long crcvalue = 0L;
   int i;
-  if(crc32==NULL) {
+  const char* infilename = NULL;
+  unsigned char bp=0;
+  unsigned long fullsize;
+  size_t rawdeflsize;
+  size_t headersize=0;
+  unsigned short havemoredata;
+  if(moredata==NULL) {
     crcvalue = CRC(in, insize);
+    fullsize = insize;
+    havemoredata = 0;
+    rawdeflsize = 0;
   } else {
-    CRCu(in,insize,crc32);
-    crcvalue = *crc32;
+    CRCu(in,insize,&moredata->checksum);
+    crcvalue = moredata->checksum;
+    infilename = moredata->filename;
+    fullsize = moredata->fullsize;
+    havemoredata = moredata->havemoredata;
+    bp = moredata->bit_pointer;
+    rawdeflsize = moredata->comp_size;
   }
   if(*outsize==0) {
   
@@ -51,27 +65,34 @@ void ZopfliGzipCompress(const ZopfliOptions* options,
       ZOPFLI_APPEND_DATA(8, out, outsize);  /* FLG */
     }
   /* MTIME */
-    if(*adddata == NULL) {
+    if(moredata == NULL) {
       for(i=0;i<4;++i) ZOPFLI_APPEND_DATA(0, out, outsize);
     } else {
-      for(i=0;i<4;++i) ZOPFLI_APPEND_DATA((*adddata)[i], out, outsize);
+      for(i=0;i<4;++i) ZOPFLI_APPEND_DATA((moredata->timestamp >> (i*8)) % 256, out, outsize);
     }
 
     ZOPFLI_APPEND_DATA(2, out, outsize);  /* XFL, 2 indicates best compression. */
     ZOPFLI_APPEND_DATA(3, out, outsize);  /* OS follows Unix conventions. */
-
+    headersize=10;
     if(infilename!=NULL) {
       for(i=0;infilename[i] != '\0';i++) {
+        ++headersize;
         ZOPFLI_APPEND_DATA(infilename[i], out, outsize);
       }
+      ++headersize;
       ZOPFLI_APPEND_DATA(0, out, outsize);
     }
   }
 
   if(fullsize<insize) fullsize=insize;
-  ZopfliDeflate(options, 2 /* Dynamic block */, !options->havemoredata,
-                in, insize, bp, out, outsize,fullsize, processed);
-  if(options->havemoredata==0) {
+
+  ZopfliDeflate(options, 2 /* Dynamic block */, !havemoredata,
+                in, insize, &bp, out, outsize, moredata);
+
+  rawdeflsize+=(*outsize - headersize - havemoredata);
+  if(moredata!=NULL) moredata->comp_size = rawdeflsize;
+
+  if(havemoredata==0) {
   /* CRC */
     for(i=0;i<4;++i) ZOPFLI_APPEND_DATA((crcvalue >> (i*8)) % 256, out, outsize);
 
@@ -84,5 +105,7 @@ void ZopfliGzipCompress(const ZopfliOptions* options,
               (int)*outsize, (int)*outsize/1024,
               100.0 * (double)*outsize / (double)fullsize);
     }
+  } else if(moredata!=NULL) {
+    moredata->bit_pointer = bp;
   }
 }

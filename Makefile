@@ -37,10 +37,24 @@ zopfliavx:
 zopflineon:
 	$(CC) -static $(ZOPFLILIB_SRC) $(ZOPFLIBIN_SRC) $(CFLAGS) $(ZARMOPT) $(CNEONFLAGS) $(ZADDOPT) -o zopfli
 
+defdbparser:
+	$(CC) -static $(DEFDBPARSER_SRC) $(ZARMOPT) -o defdbparser
+
+testlib:
+	$(CC) src/libtest/libtest.c -ldl -lpsapi $(CFLAGS) $(ZDEFOPT) $(ZADDOPT) -o zopflitest
+
 # Zopfli shared library
 libzopfli:
-	$(CC) $(ZOPFLILIB_SRC) $(CFLAGS) $(ZDEFOPT) $(ZADDOPT) -fPIC -c
+	$(CC) $(ZOPFLILIB_SRC) $(CFLAGS) $(ZDEFOPT) $(ZADDOPT) -c
 	$(CC) $(ZOPFLILIB_OBJ) $(CFLAGS) $(ZDEFOPT) $(ZADDOPT) -shared -Wl,-soname,libzopfli.so.1 -o libzopfli.so.1.0.1
+
+libzopfliavx:
+	$(CC) $(ZOPFLILIB_SRC) $(CFLAGS) $(ZDEFOPT) $(CAVXFLAGS) $(ZADDOPT)  -c
+	$(CC) $(ZOPFLILIB_OBJ) $(CFLAGS) $(ZDEFOPT) $(CAVXFLAGS) $(ZADDOPT) -shared -Wl,-soname,libzopfli.so.1 -o libzopfli.so.1.0.1
+
+libzopflineon:
+	$(CC) $(ZOPFLILIB_SRC) $(CFLAGS) $(ZARMOPT) $(CNEONFLAGS) $(ZADDOPT)  -c
+	$(CC) $(ZOPFLILIB_OBJ) $(CFLAGS) $(ZARMOPT) $(CNEONFLAGS) $(ZADDOPT) -shared -Wl,-soname,libzopfli.so.1 -o libzopfli.so.1.0.1
 
 # ZopfliPNG binary
 zopflipng:

@@ -24,34 +24,66 @@ Author: jyrki.alakuijala@gmail.com (Jyrki Alakuijala)
 #include "gzip_container.h"
 #include "zip_container.h"
 #include "zlib_container.h"
+#include "inthandler.h"
+#include <stdio.h>
 
 void intHandler(int exit_code);
 
-void ZopfliCompress(const ZopfliOptions* options, ZopfliFormat output_type,
-                    const unsigned char* in, size_t insize, size_t fullsize, size_t* processed, unsigned char* bp,
-                    unsigned char** out, size_t* outsize, size_t* outsizeraw, const char* infilename, unsigned long *checksum, unsigned char **adddata) {
+/* You can use this function in Your own lib calls/applications.
+   ZopfliOptions and ZopfliFormat structures are REQUIRED.
+   ZopfliAdditionalData structure is optional and can be NULL,
+   however in case of ZIP You would need to deploy Your own
+   CRC32 calculation and input size detection to be updated
+   using correct FilePK offset. Additional time support would
+   need to be deployed as well but in this case You would need
+   to update it also in Central Directory Structure of ZIP file
+   at correect offset.
+*/
+
+__declspec( dllexport ) void ZopfliCompress(ZopfliOptions* options, ZopfliFormat output_type,
+                    const unsigned char* in, size_t insize,
+                    unsigned char** out, size_t* outsize, ZopfliAdditionalData* moredata) {
+  ZopfliOptions optionstemp;
+  ZopfliOptions* optionslib = NULL;
+  if(in == NULL || out == NULL || outsize == NULL) {
+    fprintf(stderr,"Critical Error: one or more required pointers are NULL\n");
+    exit(EXIT_FAILURE);
+  }
+  if(options == NULL) {
+    optionslib = &optionstemp;
+    ZopfliInitOptions(optionslib);
+    optionslib->verbose = 0;
+  } else {
+    optionslib = options;
+    mui = options->maxfailiterations;
+  }
   if (output_type == ZOPFLI_FORMAT_GZIP) {
-    ZopfliGzipCompress(options, in, insize, fullsize, processed, bp, out, outsize, NULL, checksum, adddata);
-  } else if (output_type == ZOPFLI_FORMAT_GZIP_NAME) {
-    ZopfliGzipCompress(options, in, insize, fullsize, processed, bp, out, outsize, infilename, checksum, adddata);
+    ZopfliGzipCompress(optionslib, in, insize, out, outsize, moredata);
   } else if (output_type == ZOPFLI_FORMAT_ZLIB) {
-    ZopfliZlibCompress(options, in, insize, fullsize, processed, bp, out, outsize, checksum);
+    ZopfliZlibCompress(optionslib, in, insize, out, outsize, moredata);
   } else if (output_type == ZOPFLI_FORMAT_ZIP) {
     ZipCDIR zipcdir;
     InitCDIR(&zipcdir);
-    zipcdir.rootdir=realloc(zipcdir.rootdir,3*sizeof(char *));
+    zipcdir.rootdir=(char*)realloc(zipcdir.rootdir,3*sizeof(char*));
     zipcdir.rootdir[0]='.';
     zipcdir.rootdir[1]='/';
     zipcdir.rootdir[2]='\0';
-    ZopfliZipCompress(options, in, insize, fullsize, processed, bp, out, outsize, outsizeraw, infilename, checksum, &zipcdir, adddata);
+    ZopfliZipCompress(optionslib, in, insize, out, outsize, &zipcdir, moredata);
     free(zipcdir.rootdir);
     free(zipcdir.data);
     free(zipcdir.enddata);
   } else if (output_type == ZOPFLI_FORMAT_DEFLATE) {
-    if(fullsize<insize) fullsize=insize;
-    ZopfliDeflate(options, 2 /* Dynamic block */, !options->havemoredata,
-                  in, insize, bp, out, outsize, fullsize, processed);
+    short final = 1;
+    unsigned char bp = 0;
+    if(moredata != NULL) {
+      if(moredata->fullsize<insize) moredata->fullsize=insize;
+      final = !moredata->havemoredata;
+      bp = moredata->bit_pointer;
+    }
+    ZopfliDeflate(optionslib, 2 /* Dynamic block */, final,
+                  in, insize, &bp, out, outsize, moredata);
   } else {
+    fprintf(stderr,"Error: No output format specified\n");
     exit (EXIT_FAILURE);
   }
 }

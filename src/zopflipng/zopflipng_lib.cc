@@ -105,11 +105,11 @@ unsigned CustomPNGDeflate(unsigned char** out, size_t* outsize,
     unsigned char* out2 = 0;
     size_t outsize2 = 0;
     options.blocksplittinglast = 0;
-    ZopfliDeflate(&options, 2 /* Dynamic */, 1, in, insize, &bp, out, outsize, 0, NULL);
+    ZopfliDeflate(&options, 2 /* Dynamic */, 1, in, insize, &bp, out, outsize, NULL);
     bp = 0;
     options.blocksplittinglast = 1;
     ZopfliDeflate(&options, 2 /* Dynamic */, 1,
-                  in, insize, &bp, &out2, &outsize2, 0, NULL);
+                  in, insize, &bp, &out2, &outsize2, NULL);
 
     if (outsize2 < *outsize) {
       free(*out);
@@ -122,7 +122,7 @@ unsigned CustomPNGDeflate(unsigned char** out, size_t* outsize,
   } else {
     if (png_options->block_split_strategy == 0) options.blocksplitting = 0;
     options.blocksplittinglast = png_options->block_split_strategy == 2;
-    ZopfliDeflate(&options, 2 /* Dynamic */, 1, in, insize, &bp, out, outsize, 0, NULL);
+    ZopfliDeflate(&options, 2 /* Dynamic */, 1, in, insize, &bp, out, outsize, NULL);
   }
 
   return 0;  // OK

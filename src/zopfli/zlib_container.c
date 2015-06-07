@@ -27,21 +27,33 @@ Author: jyrki.alakuijala@gmail.com (Jyrki Alakuijala)
 
 
 void ZopfliZlibCompress(const ZopfliOptions* options,
-                        const unsigned char* in, size_t insize, size_t fullsize, size_t* processed, unsigned char* bp,
-                        unsigned char** out, size_t* outsize, unsigned long *adler) {
+                        const unsigned char* in, size_t insize,
+                        unsigned char** out, size_t* outsize, ZopfliAdditionalData* moredata) {
   unsigned long checksum = 1L;
   unsigned cmf = 120;  /* CM 8, CINFO 7. See zlib spec.*/
   unsigned flevel = 0;
   unsigned fdict = 0;
   unsigned cmfflg;
   unsigned fcheck;
+  size_t rawdeflsize;
+  unsigned short headersize = 0;
+  unsigned char bp=0;
+  size_t fullsize;
+  unsigned short havemoredata;
   int i;
 
-  if(adler == NULL) {
+  if(moredata == NULL) {
     adler32u(in, insize,&checksum);
+    fullsize = insize;
+    havemoredata = 0;
+    rawdeflsize = 0;
   } else {
-    adler32u(in, insize,adler);
-    checksum = *adler;
+    adler32u(in, insize,&moredata->checksum);
+    checksum = moredata->checksum;
+    fullsize = moredata->fullsize;
+    havemoredata = moredata->havemoredata;
+    bp = moredata->bit_pointer;
+    rawdeflsize = moredata->comp_size;
   }
 
   if(*outsize==0) {
@@ -50,13 +62,17 @@ void ZopfliZlibCompress(const ZopfliOptions* options,
     cmfflg += fcheck;
     ZOPFLI_APPEND_DATA(cmfflg / 256, out, outsize);
     ZOPFLI_APPEND_DATA(cmfflg % 256, out, outsize);
+    headersize = 2;
   }
 
   if(fullsize<insize) fullsize=insize;
-  ZopfliDeflate(options, 2 /* dynamic block */, !options->havemoredata,
-                in, insize, bp, out, outsize, fullsize, processed);
+  ZopfliDeflate(options, 2 /* dynamic block */, !havemoredata,
+                in, insize, &bp, out, outsize, moredata);
 
-  if(options->havemoredata==0) {
+  rawdeflsize+=(*outsize - headersize - havemoredata);
+  if(moredata!=NULL) moredata->comp_size = rawdeflsize;
+
+  if(havemoredata==0) {
 
     for(i=24;i>-1;i-=8) ZOPFLI_APPEND_DATA((checksum >> i) % 256, out, outsize);
 
@@ -66,5 +82,7 @@ void ZopfliZlibCompress(const ZopfliOptions* options,
               (int)*outsize, (int)*outsize/1024,
               100.0 * (double)*outsize / (double)fullsize);
     }
+  } else if(moredata!=NULL) {
+    moredata->bit_pointer=bp;
   }
 }

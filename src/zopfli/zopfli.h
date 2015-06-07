@@ -143,13 +143,30 @@ typedef struct ZopfliOptions {
   */
   const char* dumpsplitsfile;
 
-  /*
-  Tells Zopfli to not mark last block as final.
-
-  Currently used internally to control LoadFile chunks.
-  */
-  unsigned short havemoredata;
 } ZopfliOptions;
+
+typedef struct ZopfliAdditionalData {
+/*
+ Used to hold additonal data that will be necessary for communication between
+ bin and lib part.
+*/
+
+  unsigned long timestamp;
+
+  unsigned long checksum;
+
+  unsigned long comp_size;
+
+  size_t fullsize;
+
+  size_t processed;
+
+  unsigned short havemoredata;
+
+  const char* filename;
+
+  unsigned char bit_pointer;
+} ZopfliAdditionalData;
 
 /* Initializes options with default values. */
 void ZopfliInitOptions(ZopfliOptions* options);
@@ -173,9 +190,9 @@ out: pointer to the dynamic output array to which the result is appended. Must
   be freed after use
 outsize: pointer to the dynamic output array size
 */
-void ZopfliCompress(const ZopfliOptions* options, ZopfliFormat output_type,
-                    const unsigned char* in, size_t insize, size_t fullsize, size_t* processed, unsigned char* bp,
-                    unsigned char** out, size_t* outsize, size_t* outsizeraw, const char* infilename, unsigned long *checksum, unsigned char **adddata);
+void ZopfliCompress(ZopfliOptions* options, ZopfliFormat output_type,
+                    const unsigned char* in, size_t insize,
+                    unsigned char** out, size_t* outsize, ZopfliAdditionalData* moredata);
 
 #ifdef __cplusplus
 }  // extern "C"

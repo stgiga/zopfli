@@ -42,17 +42,34 @@ Compresses the data according to the zip specification.
 */
 
 void ZopfliZipCompress(const ZopfliOptions* options,
-                        const unsigned char* in, size_t insize, size_t fullsize, size_t* processed, unsigned char* bp,
-                        unsigned char** out, size_t* outsize, size_t* outsizeraw, const char *infilename,
-                        unsigned long *crc32, ZipCDIR* zipcdir, unsigned char** adddata) {
+                        const unsigned char* in, size_t insize,
+                        unsigned char** out, size_t* outsize, ZipCDIR* zipcdir, ZopfliAdditionalData* moredata) {
   unsigned long crcvalue = 0L;
   unsigned long i;
+  char* tempfilename = NULL;
+  const char* infilename = NULL;
+  unsigned char bp = 0;
+  unsigned long fullsize;
+  unsigned long rawdeflsize;
+  unsigned long headersize = 0;
+  unsigned short havemoredata;
   size_t max = 0;
-  if(crc32==NULL) {
+  if(moredata==NULL) {
+    tempfilename = (char*)malloc(9 * sizeof(char*));
     crcvalue = CRC(in, insize);
+    sprintf(tempfilename,"%08lx",crcvalue & 0xFFFFFFFFUL);
+    infilename = tempfilename;
+    fullsize = insize;
+    havemoredata = 0;
+    rawdeflsize = 0;
   } else {
-    CRCu(in,insize,crc32);
-    crcvalue = *crc32;
+    CRCu(in,insize,&moredata->checksum);
+    crcvalue = moredata->checksum;
+    infilename = moredata->filename;
+    fullsize = moredata->fullsize;
+    havemoredata = moredata->havemoredata;
+    bp = moredata->bit_pointer;
+    rawdeflsize = moredata->comp_size;
   }
 
   if(*outsize==0) {
@@ -72,11 +89,11 @@ void ZopfliZipCompress(const ZopfliOptions* options,
     ZOPFLI_APPEND_DATA(0, out, outsize);
 
   /* MS-DOST TIME */
-    if(*adddata == NULL) {
-      ZOPFLI_APPEND_DATA(31, out, outsize);
+    if(moredata == NULL) {
+      ZOPFLI_APPEND_DATA(32, out, outsize);
       for(i=0;i<3;++i) ZOPFLI_APPEND_DATA(0, out, outsize);
     } else {
-      for(i=0;i<4;++i) ZOPFLI_APPEND_DATA((*adddata)[i], out, outsize);
+      for(i=0;i<4;++i) ZOPFLI_APPEND_DATA((moredata->timestamp >> (i*8)) % 256, out, outsize);
     }
 
   /* CRC AND OSIZE NOT KNOWN YET - UPDATE TO ADDDATA BUFFER */
@@ -95,19 +112,17 @@ void ZopfliZipCompress(const ZopfliOptions* options,
 
   /* FILENAME */
     for(i=0;i<max;++i) ZOPFLI_APPEND_DATA(infilename[i], out, outsize);
+    headersize = *outsize;
   }
 
   if(fullsize<insize) fullsize=insize;
-  ZopfliDeflate(options, 2 /* Dynamic block */, !options->havemoredata,
-                in, insize, bp, out, outsize, fullsize, processed);
+  ZopfliDeflate(options, 2 /* Dynamic block */, !havemoredata,
+                in, insize, &bp, out, outsize, moredata);
 
-  *outsizeraw+=(*outsize - options->havemoredata);
+  rawdeflsize+=(*outsize - headersize - havemoredata);
+  if(moredata!=NULL) moredata->comp_size = rawdeflsize;
 
-  if(options->havemoredata==0) {
-
-    for(max=0;infilename[max] != '\0';max++) {}
-
-    *outsizeraw-=(max+30);
+  if(havemoredata==0) {
 
   /* C-DIR PK STATIC DATA */
     ZOPFLI_APPEND_DATA(80,&zipcdir->data,&zipcdir->size);
@@ -124,24 +139,20 @@ void ZopfliZipCompress(const ZopfliOptions* options,
 
  /* MS-DOS TIME, CRC, OSIZE, ISIZE FROM */
 
-    if(*adddata == NULL) {
-      ZOPFLI_APPEND_DATA(31,&zipcdir->data,&zipcdir->size);
+    if(moredata == NULL) {
+      ZOPFLI_APPEND_DATA(32,&zipcdir->data,&zipcdir->size);
       for(i=0;i<3;++i) ZOPFLI_APPEND_DATA(0,&zipcdir->data,&zipcdir->size);
     } else {
-      for(i=0;i<4;++i) ZOPFLI_APPEND_DATA((*adddata)[i],&zipcdir->data,&zipcdir->size);
+      for(i=0;i<4;++i) ZOPFLI_APPEND_DATA((moredata->timestamp >> (i*8)) % 256,&zipcdir->data,&zipcdir->size);
     }
-
-    *adddata = (unsigned char*)realloc(*adddata,8 * sizeof(unsigned char*));
-    for(i=0;i<4;++i) {
-      (*adddata)[i]=(crcvalue >> (i*8)) % 256;
-      (*adddata)[i+4]=(*outsizeraw >> (i*8)) % 256;
-    }
-
-    for(i=0;i<8;++i) ZOPFLI_APPEND_DATA((*adddata)[i],&zipcdir->data,&zipcdir->size);
+    
+    for(i=0;i<4;++i) ZOPFLI_APPEND_DATA((crcvalue >> (i*8)) % 256,&zipcdir->data,&zipcdir->size);
+    for(i=0;i<4;++i) ZOPFLI_APPEND_DATA((rawdeflsize >> (i*8)) % 256,&zipcdir->data,&zipcdir->size);
 
     for(i=0;i<25;i+=8) ZOPFLI_APPEND_DATA((fullsize >> i) % 256,&zipcdir->data,&zipcdir->size);
 
   /* FILE NUMBER */
+    for(max=0;infilename[max] != '\0';max++) {}
     for(i=0;i<2;++i) ZOPFLI_APPEND_DATA((max >> (i*8)) % 256,&zipcdir->data,&zipcdir->size);
 
   /* C-DIR STATIC DATA */
@@ -152,7 +163,8 @@ void ZopfliZipCompress(const ZopfliOptions* options,
 
   /* FilePK offset in ZIP file */
     for(i=0;i<4;++i) ZOPFLI_APPEND_DATA((zipcdir->offset >> (i*8)) % 256,&zipcdir->data,&zipcdir->size);
-    zipcdir->offset+=(unsigned long)(*outsizeraw)+30+max;
+    zipcdir->offset+=(unsigned long)(rawdeflsize+30+max);
+    fprintf(stderr,"Debug: %lu\n",zipcdir->offset);
 
   /* FILENAME */
     for(i=0; i<max;++i) ZOPFLI_APPEND_DATA(infilename[i],&zipcdir->data,&zipcdir->size);
@@ -193,5 +205,8 @@ void ZopfliZipCompress(const ZopfliOptions* options,
               (int)max, (int)max / 1024,
               100.0 * (double)max / (double)zipcdir->totalinput);
     }
+  } else if(moredata!=NULL) {
+    moredata->bit_pointer = bp;
   }
+  free(tempfilename);
 }

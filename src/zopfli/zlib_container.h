@@ -40,8 +40,8 @@ out: pointer to the dynamic output array to which the result is appended. Must
 outsize: pointer to the dynamic output array size.
 */
 void ZopfliZlibCompress(const ZopfliOptions* options,
-                        const unsigned char* in, size_t insize, size_t fullsize, size_t* processed, unsigned char* bp,
-                        unsigned char** out, size_t* outsize, unsigned long *adler);
+                        const unsigned char* in, size_t insize,
+                        unsigned char** out, size_t* outsize, ZopfliAdditionalData* moredata);
 
 #ifdef __cplusplus
 }  // extern "C"

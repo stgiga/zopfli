@@ -248,8 +248,9 @@ static void RemoveIfExists(const char* tempfilename, const char* outfilename) {
 static void CompressMultiFile(ZopfliOptions* options,
                          const char* infilename,
                          const char* outfilename) {
+  ZopfliAdditionalData moredata;
+  unsigned char* buff = NULL;
   ZipCDIR zipcdir;
-  unsigned char* adddata = (unsigned char*)malloc(4 * sizeof(unsigned char*));
   char* tempfilename;
   char** filesindir = NULL;
   char* dirname = 0;
@@ -259,19 +260,13 @@ static void CompressMultiFile(ZopfliOptions* options,
   unsigned char* out = 0;
   unsigned char tempbyte;
   size_t outsize;
-  size_t outsizeraw;
   size_t fseekdata = 0;
   size_t loffset = 0;
   size_t soffset;
   size_t pkoffset = 14;
-  size_t filesize = 0;
-  size_t processed;
-  unsigned long timestamp = 0;
   unsigned int i;
   unsigned short k;
   unsigned int j = 0;
-  unsigned long checksum;
-  unsigned char bp;
 
   tempfilename = AddStrings(outfilename,".zopfli");
 
@@ -289,33 +284,32 @@ static void CompressMultiFile(ZopfliOptions* options,
   memcpy(zipcdir.rootdir,dirname,i*sizeof(char *)+1);
   for(i = 0; i < j; ++i) {
     outsize=0;
-    outsizeraw=0;
     loffset=0;
     soffset=fseekdata;
-    checksum=0L;
-    processed = 0;
-    bp=0;
+    moredata.checksum=0L;
+    moredata.processed = 0;
+    moredata.timestamp = 0;
+    moredata.bit_pointer = 0;
+    moredata.comp_size = 0;
     fileindir=AddStrings(dirname,filesindir[i]);
     if(options->verbose>2) fprintf(stderr, "\n");
     if(options->verbose>0) fprintf(stderr, "[%d / %d] Adding file: %s\n", (i + 1), j, filesindir[i]);
     do {
-      LoadFile(fileindir, &in, &insize, &loffset, &filesize);
-      if (filesize == 0) {
+      LoadFile(fileindir, &in, &insize, &loffset, &moredata.fullsize);
+      if (moredata.fullsize == 0) {
         if(options->verbose>0) fprintf(stderr, "Invalid file: %s - trying next\n", fileindir);
         break;
       } else {
         for(k = 0;fileindir[k]!='\0';k++) {}
-        if(filesize>(4294967295u-(k*2+98+fseekdata+zipcdir.size))) {
+        if(moredata.fullsize>(4294967295u-(k*2+98+fseekdata+zipcdir.size))) {
           fprintf(stderr,"Error: File %s may exceed ZIP limits of 4GB - trying next\n", fileindir);
           break;
         }
       }
-      if(timestamp == 0) {
-        timestamp = ZipTimestamp(fileindir);
-        for(k = 0;k<4;++k) adddata[k] = (timestamp >> (8*k)) % 256;
-      }
-      if(loffset<filesize) options->havemoredata = 1; else options->havemoredata = 0;
-      ZopfliZipCompress(options, in, insize, filesize, &processed, &bp, &out, &outsize, &outsizeraw, filesindir[i], &checksum, &zipcdir, &adddata);
+      if(moredata.timestamp == 0) moredata.timestamp = ZipTimestamp(fileindir);
+      if(loffset<moredata.fullsize) moredata.havemoredata = 1; else moredata.havemoredata = 0;
+      moredata.filename = fileindir;
+      ZopfliZipCompress(options, in, insize, &out, &outsize, &zipcdir, &moredata);
       free(in);
       SaveFile(tempfilename, out, outsize,soffset);
       soffset+=outsize-1;
@@ -324,9 +318,14 @@ static void CompressMultiFile(ZopfliOptions* options,
       out = (unsigned char*)malloc(sizeof(unsigned char*));
       outsize = 1;
       out[0]=tempbyte;
-    } while(loffset<filesize);
-    timestamp = 0;
-    SaveFile(tempfilename, adddata, 8, (fseekdata + pkoffset));
+    } while(loffset<moredata.fullsize);
+    buff = (unsigned char*)malloc(8 * sizeof(unsigned char*));
+    for(k=0;k<4;++k) {
+      buff[k] = (moredata.checksum >> (k*8)) % 256;
+      buff[k+4] = (moredata.comp_size >> (k*8)) % 256;
+    }
+    SaveFile(tempfilename, buff, 8,(fseekdata + pkoffset));
+    free(buff);
     fseekdata=zipcdir.offset;
     free(out);
     free(filesindir[i]);
@@ -348,55 +347,51 @@ static void CompressFile(ZopfliOptions* options,
                          ZopfliFormat output_type,
                          const char* infilename,
                          const char* outfilename) {
+  ZopfliAdditionalData moredata;
   unsigned char* in = NULL;
-  unsigned char* adddata = (unsigned char*)malloc(4 * sizeof(unsigned char*));
   char* tempfilename = NULL;
   size_t insize;
   unsigned char* out = 0;
   unsigned char tempbyte;
-  unsigned long timestamp = 0;
   size_t outsize = 0;
-  size_t outsizeraw = 0;
   size_t loffset = 0;
   size_t soffset = 0;
   size_t pkoffset = 14;
-  size_t filesize = 0;
-  size_t processed = 0;
   unsigned short k;
-  unsigned char bp = 0;
-  unsigned long checksum;
 
   if(outfilename) tempfilename = AddStrings(outfilename,".zopfli");
 
   if(output_type == ZOPFLI_FORMAT_ZLIB) {
-    checksum = 1L;
+    moredata.checksum = 1L;
   } else {
-    checksum = 0L;
+    moredata.checksum = 0L;
   }
-
+  moredata.timestamp = 0;
+  moredata.processed = 0;
+  moredata.bit_pointer = 0;
+  moredata.comp_size = 0;
   do {
-    LoadFile(infilename, &in, &insize, &loffset, &filesize);
-    if (filesize == 0) {
+    LoadFile(infilename, &in, &insize, &loffset, &moredata.fullsize);
+    if (moredata.fullsize == 0) {
       fprintf(stderr, "Error: Invalid filename: %s\n", infilename);
       exit(EXIT_FAILURE);
     } else {
       for(k = 0;infilename[k]!='\0';k++) {}
-      if(output_type == ZOPFLI_FORMAT_ZIP && filesize>(4294967295u-(k*2+98))) {
+      if(output_type == ZOPFLI_FORMAT_ZIP && moredata.fullsize>(4294967295u-(k*2+98))) {
         fprintf(stderr,"Error: File %s may exceed ZIP limits of 4G\n", infilename);
         exit(EXIT_FAILURE);
       }
-      if(timestamp == 0) {
+      if(moredata.timestamp == 0) {
         if(output_type == ZOPFLI_FORMAT_ZIP) {
-          timestamp = ZipTimestamp(infilename);
+          moredata.timestamp = ZipTimestamp(infilename);
         } else if(output_type == ZOPFLI_FORMAT_GZIP || output_type == ZOPFLI_FORMAT_GZIP_NAME) {
-          timestamp = GzipTimestamp(infilename);
+          moredata.timestamp = GzipTimestamp(infilename);
         } else {
-          timestamp = 1;
+          moredata.timestamp = 1;
         }
-        for(k = 0;k<4;++k) adddata[k] = (timestamp >> (8*k)) % 256;
       }
 
-      if(filesize > ZOPFLI_MASTER_BLOCK_SIZE) {
+      if(moredata.fullsize > ZOPFLI_MASTER_BLOCK_SIZE) {
         if(options->custblocksplit != NULL) {
           free(options->custblocksplit);
           options->custblocksplit = NULL;
@@ -408,8 +403,9 @@ static void CompressFile(ZopfliOptions* options,
         if(options->dumpsplitsfile != NULL) options->dumpsplitsfile = NULL;
       }
     }
-    if(loffset<filesize) options->havemoredata = 1; else options->havemoredata = 0;
-    ZopfliCompress(options, output_type, in, insize, filesize, &processed, &bp, &out, &outsize, &outsizeraw, infilename, &checksum, &adddata);
+    if(loffset<moredata.fullsize) moredata.havemoredata = 1; else moredata.havemoredata = 0;
+    moredata.filename = infilename;
+    ZopfliCompress(options, output_type, in, insize, &out, &outsize, &moredata);
     free(in);
     if (!outfilename) {
       size_t i;
@@ -426,9 +422,16 @@ static void CompressFile(ZopfliOptions* options,
       out = (unsigned char*)malloc(sizeof(unsigned char*));
       outsize = 1;
       out[0]=tempbyte;
-  } while(loffset<filesize);
-  if(output_type == ZOPFLI_FORMAT_ZIP) SaveFile(tempfilename, adddata, 8,pkoffset);
-  free(adddata);
+  } while(loffset<moredata.fullsize);
+  if(output_type == ZOPFLI_FORMAT_ZIP) {
+    unsigned char* buff = (unsigned char*)malloc(8 * sizeof(unsigned char*));
+    for(k=0;k<4;++k) {
+      buff[k] = (moredata.checksum >> (k*8)) % 256;
+      buff[k+4] = (moredata.comp_size >> (k*8)) % 256;
+    }
+    SaveFile(tempfilename, buff, 8,pkoffset);
+    free(buff);
+  }
 
     if (!outfilename) {
       printf("%c", tempbyte);
@@ -635,8 +638,6 @@ int main(int argc, char* argv[]) {
     fprintf(stderr, "Error: --bsr parameter must be at least 2.\n");
     return 0;
   }
-
-  mui = options.maxfailiterations;
 
   for (i = 1; i < argc; i++) {
     if (argv[i][0] != '-') {
