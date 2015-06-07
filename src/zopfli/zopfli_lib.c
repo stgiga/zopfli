@@ -30,14 +30,18 @@ Author: jyrki.alakuijala@gmail.com (Jyrki Alakuijala)
 void intHandler(int exit_code);
 
 /* You can use this function in Your own lib calls/applications.
-   ZopfliOptions and ZopfliFormat structures are REQUIRED.
-   ZopfliAdditionalData structure is optional and can be NULL,
-   however in case of ZIP You would need to deploy Your own
-   CRC32 calculation and input size detection to be updated
-   using correct FilePK offset. Additional time support would
-   need to be deployed as well but in this case You would need
-   to update it also in Central Directory Structure of ZIP file
-   at correect offset.
+   ZopfliFormat is required but can be passed as simple number.
+   ZopfliAdditionalData and ZopfliOptions structures are
+   optional and can be NULL, however in case of ZIP You would
+   need to update FilePK manually by overwritting 0 bytes
+   at correct offsets there with input data size and
+   CRC32 - this information could be copied from Central
+   Directory Structure, however, due to ability to compress
+   data in chunks Zopfli KrzYmod is currently unable to do
+   it through lib alone. Additional time support would
+   need to be deployed for ZIP and GZIP and passed with
+   ZopfliAdditionalData structure or updated manually
+   at correct offsets in output data.
 */
 
 __declspec( dllexport ) void ZopfliCompress(ZopfliOptions* options, ZopfliFormat output_type,
@@ -57,7 +61,7 @@ __declspec( dllexport ) void ZopfliCompress(ZopfliOptions* options, ZopfliFormat
     optionslib = options;
     mui = options->maxfailiterations;
   }
-  if (output_type == ZOPFLI_FORMAT_GZIP) {
+  if (output_type == ZOPFLI_FORMAT_GZIP || output_type == ZOPFLI_FORMAT_GZIP_NAME) {
     ZopfliGzipCompress(optionslib, in, insize, out, outsize, moredata);
   } else if (output_type == ZOPFLI_FORMAT_ZLIB) {
     ZopfliZlibCompress(optionslib, in, insize, out, outsize, moredata);
@@ -82,6 +86,7 @@ __declspec( dllexport ) void ZopfliCompress(ZopfliOptions* options, ZopfliFormat
     }
     ZopfliDeflate(optionslib, 2 /* Dynamic block */, final,
                   in, insize, &bp, out, outsize, moredata);
+    if(moredata != NULL) moredata->bit_pointer = bp;
   } else {
     fprintf(stderr,"Error: No output format specified\n");
     exit (EXIT_FAILURE);

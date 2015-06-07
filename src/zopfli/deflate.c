@@ -1021,7 +1021,7 @@ __declspec( dllexport ) void ZopfliDeflate(const ZopfliOptions* options, int bty
   }
   if(moredataloc->fullsize<insize) moredataloc->fullsize=insize;
 #if ZOPFLI_MASTER_BLOCK_SIZE == 0
-  ZopfliDeflatePart(options, btype, final, in, 0, insize, bp, out, outsize, ZopfliAdditionalData* moredataloc);
+  ZopfliDeflatePart(options, btype, final, in, 0, insize, bp, out, outsize, moredataloc);
 #else
   while (i < insize) {
     int masterfinal = (i + ZOPFLI_MASTER_BLOCK_SIZE >= insize);

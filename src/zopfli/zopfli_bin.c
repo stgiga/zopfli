@@ -404,7 +404,11 @@ static void CompressFile(ZopfliOptions* options,
       }
     }
     if(loffset<moredata.fullsize) moredata.havemoredata = 1; else moredata.havemoredata = 0;
-    moredata.filename = infilename;
+    if(output_type == ZOPFLI_FORMAT_GZIP) {
+      moredata.filename = NULL;
+    } else {
+      moredata.filename = infilename;
+    }
     ZopfliCompress(options, output_type, in, insize, &out, &outsize, &moredata);
     free(in);
     if (!outfilename) {
