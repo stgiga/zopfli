@@ -724,6 +724,12 @@ static void DeflateDynamicBlock(const ZopfliOptions* options, int final,
      so let's do it always. */
   ZopfliInitLZ77Store(&fixedstore);
   ZopfliLZ77OptimalFixed(&s, in, instart, inend, &fixedstore);
+
+#ifdef ZOPFLI_LONGEST_MATCH_CACHE
+  ZopfliCleanCache(s.lmc);
+  free(s.lmc);
+#endif
+
   dyncost = ZopfliCalculateBlockSize(store.litlens, store.dists,
       0, store.size, 2, options->optimizehuffmanheader);
   fixedcost = ZopfliCalculateBlockSize(fixedstore.litlens, fixedstore.dists,
@@ -738,16 +744,12 @@ static void DeflateDynamicBlock(const ZopfliOptions* options, int final,
     ZopfliCleanLZ77Store(&fixedstore);
     if(options->verbose>2) fprintf(stderr,">");
   }
+
   if(options->verbose>2) fprintf(stderr," %.0f bit\n\n",dyncost);
 
   AddLZ77Block(s.options, btype, final,
                store.litlens, store.dists, 0, store.size,
                blocksize, bp, out, outsize);
-
-#ifdef ZOPFLI_LONGEST_MATCH_CACHE
-  ZopfliCleanCache(s.lmc);
-  free(s.lmc);
-#endif
 
   ZopfliCleanLZ77Store(&store);
 }
