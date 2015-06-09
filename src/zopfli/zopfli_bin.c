@@ -268,6 +268,8 @@ static void CompressMultiFile(ZopfliOptions* options,
   unsigned short k;
   unsigned int j = 0;
 
+  mui = options->maxfailiterations;
+
   tempfilename = AddStrings(outfilename,".zopfli");
 
   if(ListDir(infilename, &filesindir, &j, 1)==0) {
@@ -535,7 +537,6 @@ int main(int argc, char* argv[]) {
     }  else if (arg[0] == '-' && arg[1] == '-' && arg[2] == 'm' && arg[3] == 'u' && arg[4] == 'i'
         && arg[5] >= '0' && arg[5] <= '9') {
       options.maxfailiterations = atoi(arg + 5);
-      mui = options.maxfailiterations;
     }  else if (arg[0] == '-' && arg[1] == '-' && arg[2] == 'c' && arg[3] == 'b' && arg[4] == 's' && arg[5] != '\0') {
       if(arg[5] == 'f' && arg[6] == 'i' && arg[7] == 'l' && arg[8] == 'e' && arg[9] != '\0') {
         const char *cbsfile = arg+9;
