@@ -815,7 +815,7 @@ static void DeflateNonCompressedBlock(const ZopfliOptions* options, int final,
   }
 }
 
-static void DeflateBlock(const ZopfliOptions* options,
+void DeflateBlock(const ZopfliOptions* options,
                          int btype, int final,
                          const unsigned char* in, size_t instart, size_t inend,
                          unsigned char* bp,

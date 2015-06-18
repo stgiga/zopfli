@@ -80,6 +80,12 @@ double ZopfliCalculateBlockSize(const unsigned short* litlens,
                                 const unsigned short* dists,
                                 size_t lstart, size_t lend, int btype, int ohh);
 
+void DeflateBlock(const ZopfliOptions* options,
+                         int btype, int final,
+                         const unsigned char* in, size_t instart, size_t inend,
+                         unsigned char* bp,
+                         unsigned char** out, size_t* outsize);
+
 #ifdef __cplusplus
 }  // extern "C"
 #endif
