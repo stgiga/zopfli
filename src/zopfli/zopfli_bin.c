@@ -373,8 +373,9 @@ static void CompressFile(ZopfliOptions* options,
   size_t *tempsplitpoints = NULL;
   size_t npoints = 0;
   size_t tempnpoints = 0;
-  size_t numblocks = 0;
+  size_t numblocks = 1;
   size_t tempnumblocks = 1;
+  size_t offset = 0;
   size_t i, j;
   int final = 0;
   unsigned short k;
@@ -392,6 +393,8 @@ static void CompressFile(ZopfliOptions* options,
   moredata.processed = 0;
   moredata.bit_pointer = 0;
   moredata.comp_size = 0;
+  j = options->verbose;
+  options->verbose = 1;
   do {
     oldloffset=loffset;
     LoadFile(infilename, &in, &insize, &loffset, &moredata.fullsize, 0);
@@ -419,6 +422,7 @@ static void CompressFile(ZopfliOptions* options,
     tempnpoints = 0;
     tempnumblocks = 1;
   } while(loffset<moredata.fullsize);
+  options->verbose = j;
   oldloffset=0;
   loffset=0;
 
@@ -448,9 +452,12 @@ static void CompressFile(ZopfliOptions* options,
     ZOPFLI_APPEND_DATA(2, &out, &outsize);
     ZOPFLI_APPEND_DATA(3, &out, &outsize);
 
+    offset+=10;
+
     if(output_type == ZOPFLI_FORMAT_GZIP_NAME) {
       for(j=0;infilename[j] != '\0';j++) ZOPFLI_APPEND_DATA(infilename[j], &out, &outsize);
       ZOPFLI_APPEND_DATA(0, &out, &outsize);
+      offset+=j+1;
     }
   } else if(output_type == ZOPFLI_FORMAT_ZLIB) {
     unsigned cmfflg = 30720;
@@ -458,8 +465,31 @@ static void CompressFile(ZopfliOptions* options,
     cmfflg += fcheck;
     ZOPFLI_APPEND_DATA(cmfflg / 256, &out, &outsize);
     ZOPFLI_APPEND_DATA(cmfflg % 256, &out, &outsize);
+    offset+=2;
   } else if(output_type == ZOPFLI_FORMAT_ZIP) {
   }
+
+  if(options->verbose>3) {
+    fprintf(stderr, "Block split points: ");
+    if(npoints>0) {
+      for (j = 0; j < npoints; j++) {
+        fprintf(stderr, "%d ", (int)splitpoints[j]);
+      }
+      fprintf(stderr, "(hex:");
+      for (j = 0; j < npoints; j++) {
+        if(j==0) fprintf(stderr," "); else fprintf(stderr,",");
+        fprintf(stderr, "%x", (int)splitpoints[j]);
+     }
+      fprintf(stderr,")");
+    } else {
+      fprintf(stderr, "NONE");
+    }
+    fprintf(stderr, "\n");
+  }
+  if(options->verbose>2) {
+    fprintf(stderr, "Total blocks: %lu                 \n\n",(unsigned long)numblocks);
+  }
+
 #if _WIN32
   if (!outfilename) _setmode(_fileno(stdout), _O_BINARY);
 #endif
@@ -491,8 +521,21 @@ static void CompressFile(ZopfliOptions* options,
       inAndWindowSize = insize;
     }
     free(in);
-     
+
+    if(options->verbose>0) fprintf(stderr, "Progress: %.1f%%",100.0 * (double)moredata.processed / (double)moredata.fullsize);
+    if(options->verbose>1) {
+      fprintf(stderr, "  ---  Block: %d / %d  ---  Data left: %luKB", (int)(i + 1), (int)(npoints + 1),(unsigned long)((moredata.fullsize - moredata.processed)/1024));
+      if(options->verbose>2) {
+        fprintf(stderr,"\n");
+      } else {
+        fprintf(stderr,"  \r");
+      }
+    } else {
+      fprintf(stderr,"\r");
+    }
+
     DeflateBlock(options,2,final,inAndWindow,WindowSize,inAndWindowSize,&bp,&out,&outsize);
+    moredata.processed+=(inAndWindowSize-WindowSize);
     WindowSize = 0;
     if(inAndWindowSize>ZOPFLI_WINDOW_SIZE) {
       WindowSize = ZOPFLI_WINDOW_SIZE;
@@ -522,8 +565,10 @@ static void CompressFile(ZopfliOptions* options,
   if(output_type == ZOPFLI_FORMAT_GZIP || output_type == ZOPFLI_FORMAT_GZIP_NAME) {
     for(j=0;j<4;++j) ZOPFLI_APPEND_DATA((moredata.checksum >> (j*8)) % 256, &out, &outsize);
     for(j=0;j<4;++j) ZOPFLI_APPEND_DATA((moredata.fullsize >> (j*8)) % 256, &out, &outsize);
+    offset+=8;
   } else if(output_type == ZOPFLI_FORMAT_ZLIB) {
     for(j=0;j<4;++j) ZOPFLI_APPEND_DATA((moredata.checksum >> (j*8)) % 256, &out, &outsize);
+    offset+=4;
   }
   if (!outfilename) {
     for (j = 0; j < outsize; j++) printf("%c", out[j]);
@@ -536,6 +581,17 @@ static void CompressFile(ZopfliOptions* options,
   }
   free(out);
   free(tempfilename);
+
+  if (options->verbose>1) {
+    outsize+=soffset;
+    fprintf(stderr,
+            "Input size: %d (%dK)\n"
+            "Output file size: %d (%dK)\n"
+            "Deflate size: %d (%dK)\n"
+            "Compression ratio: %.3f%%\n",
+            (int)moredata.fullsize,(int)moredata.fullsize/1024, (int)outsize, (int)outsize / 1024, (int)(outsize-offset), (int)(outsize-offset) / 1024,
+            100.0 * (double)outsize / (double)moredata.fullsize);
+  }
 
 }
 
