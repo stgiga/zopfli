@@ -57,6 +57,15 @@ Set this to, for example, 20MB (20000000). Set it to 0 to disable master blocks.
 #define ZOPFLI_MASTER_BLOCK_SIZE 104857600
 
 /*
+Maximum memory to use for output. When this amount is exceeded the already
+compressed blocks will be written to disk while maintaining last byte in memory
+to properly add bits of next block to it. 1MB should be fine since Zopfli
+takes a lot of time to compress anyway.
+*/
+
+#define ZOPFLI_MAX_OUTPUT_MEMORY 1048576
+
+/*
 Used to initialize costs for example
 */
 #define ZOPFLI_LARGE_FLOAT 1e30
