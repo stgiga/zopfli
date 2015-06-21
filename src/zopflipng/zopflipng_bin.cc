@@ -125,23 +125,17 @@ void ShowHelp() {
          " Due to adding extra data, this increases the result size. By default"
          " ZopfliPNG only keeps the following chunks because they are"
          " essential: IHDR, PLTE, tRNS, IDAT and IEND.\n\n"
-         "     CUSTOM ZOPFLI OPTIONS:\n"
+         "     CUSTOM ZOPFLIPNG OPTIONS:\n"
          "--v=[number]:   verbose level for zopfli (0-5, d:2)\n"
          "--mui=[number]: maximum unsuccessful iterations after last best (d: 0)\n"
          "--mb=[number]:  maximum blocks, 0 = unlimited (d: 15)\n"
          "--bsr=[number]: block splitting recursion (min: 2, d: 9)\n"
          "--mls=[number]: maximum length score (d: 1024)\n"
-         "--n=[number]:   number of blocks\n"
-         "--b=[number]:   block size in bytes\n"
          "--rw=[number]:  initial random W for iterations (1-65535, d: 1)\n"
          "--rz=[number]:  initial random Z for iterations (1-65535, d: 2)\n"
          "--lazy:         lazy matching in Greedy LZ77 (d: OFF)\n"
          "--ohh:          optymize huffman header (d: OFF)\n"
-         "     options below should not be used on multiple filters/files:\n"
-         "--cbs=#:        customize block start points and types\n"
-         "--cbsfile=#:    same as above but instead read from file #\n"
-         "--cbd=#:        dump block start points to # file and exit\n"
-         "--aas           additional automatic splitting between manual points\n"
+         "   more options available only in Zopfli\n"
          "\n"
          "Usage examples:\n"
          "Optimize a file and overwrite if smaller: zopflipng infile.png"
@@ -160,38 +154,6 @@ void PrintSize(const char* label, size_t size) {
 void PrintResultSize(const char* label, size_t oldsize, size_t newsize) {
   printf("%s: %d (%dK). Percentage of original: %.3f%%\n",
          label, (int) newsize, (int) newsize / 1024, newsize * 100.0 / oldsize);
-}
-
-static void ParseCustomBlockBoundaries(unsigned long** bs,unsigned short** bt, const char* data) {
-  char buff[2] = {0, 0};
-  int i = 0,j,k = 1;
-  (*bs) = (unsigned long*)malloc(++k * sizeof(unsigned long*));
-  (*bs)[0] = 1;
-  (*bs)[1] = 0;
-  (*bt) = (unsigned short*)malloc(k * sizeof(unsigned short*));
-  (*bt)[0] = 1;
-  (*bt)[1] = 2;
-  for(j=0;data[j]!='\0';j++) {
-    if(data[j]==',') {
-      ++(*bs)[0];
-      (*bs) = (unsigned long*)realloc((*bs), ++k * sizeof(unsigned long*));
-      (*bs)[k-1] = 0;
-      ++(*bt)[0];
-      (*bt) = (unsigned short*)realloc((*bt),k * sizeof(unsigned short*));
-      (*bt)[k-1] = 2;
-    } else if(data[j]=='=') {
-      i=1;
-    } else {
-      buff[0]=data[j];
-      if(i==1) {
-        (*bt)[k-1]=atoi(buff);
-        if((*bt)[k-1]>2) (*bt)[k-1]=2;
-        i=0;
-      } else {
-        (*bs)[k-1] = ((*bs)[k-1]<<4) + strtoul(buff,NULL,16);
-      }
-    }
-  }
 }
 
 int main(int argc, char *argv[]) {
@@ -275,48 +237,12 @@ printf("ZopfliPNG, a Portable Network Graphics (PNG) image optimizer.\n"
       } else if (name == "--v") {
         if (num < 0) num = 1;
         png_options.verbosezopfli = num;
-      } else if (name == "--n") {
-        if (num < 0) num = 0;
-        png_options.numblocks = num;
-      } else if (name == "--b") {
-        if (num < 0) num = 0;
-        png_options.blocksize = num;
       } else if (name == "--rw") {
         if (num < 1) num = 1;
         png_options.ranstatew = num;
       } else if (name == "--rz") {
         if (num < 1) num = 1;
         png_options.ranstatez = num;
-      } else if (name == "--cbs") {
-        const char* data = value.c_str();
-        ParseCustomBlockBoundaries(&png_options.custblocksplit,&png_options.custblocktypes,data);
-      } else if (name == "--cbsfile") {
-        FILE* file = NULL;
-        const char *cbsfile = value.c_str();
-        char* filedata = NULL;
-        int size;
-        file = fopen(cbsfile, "rb");
-        if(file==NULL) {
-          fprintf(stderr,"Error: CBS file %s doesn't exist.\n",cbsfile);
-          exit(EXIT_FAILURE);
-        }
-        fseek(file,0,SEEK_END);
-        size=ftell(file);
-        if(size>0) {
-          filedata = (char *) malloc((size+1) * sizeof(char*));
-          rewind(file);
-          if(fread(filedata,1,size,file)) {}
-          filedata[size]='\0';
-          ParseCustomBlockBoundaries(&png_options.custblocksplit,&png_options.custblocktypes,filedata);
-          free(filedata);
-        } else {
-          fprintf(stderr,"Error: CBS file %s seems empty.\n",cbsfile);
-          exit(EXIT_FAILURE);
-        }
-        fclose(file);
-      } else if (name == "--cbd") {
-        png_options.dumpsplitsfile = (char *)malloc(value.size()+1 * sizeof(char *));
-        strcpy(png_options.dumpsplitsfile,value.c_str());
       } else if (name == "--splitting") {
         if (num < 0 || num > 3) num = 1;
         png_options.block_split_strategy = num;
@@ -358,8 +284,6 @@ printf("ZopfliPNG, a Portable Network Graphics (PNG) image optimizer.\n"
       } else if (name == "--prefix") {
         use_prefix = true;
         if (!value.empty()) prefix = value;
-      } else if (name == "--aas") {
-        png_options.additionalautosplits = 1;
       } else if (name == "--help") {
         ShowHelp();
         return 0;
@@ -534,8 +458,6 @@ printf("ZopfliPNG, a Portable Network Graphics (PNG) image optimizer.\n"
   }
 
   if (dryrun) printf("No files were written because dry run was specified\n");
-
-  if(png_options.custblocksplit != NULL) free(png_options.custblocksplit);
 
   return total_errors;
 }

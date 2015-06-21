@@ -51,7 +51,7 @@ int main(int argc, char* argv[]) {
   char lastblock[1] = {'3'};
   unsigned int outcbssize = 0;
   char *data = NULL;
-  fprintf(stderr,"DefDB Parser v1.01 by Mr_KrzYch00\n\n");
+  fprintf(stderr,"DefDB Parser v1.02 by Mr_KrzYch00\n\n");
   for (i = 1; i < argc; ++i) {
     const char* arg = argv[i];
     if(arg[0]=='-' && arg[1]=='-' && arg[2]=='b' && arg[3]=='=' && arg[4]!='\0') {
@@ -110,9 +110,7 @@ int main(int argc, char* argv[]) {
              outcbs[outcbssize-1]=data[k];
              ++k;
            }
-           outcbs = realloc(outcbs,(outcbssize + 3) * sizeof(char*));
-           outcbs[outcbssize++]='=';
-           outcbs[outcbssize++]=data[j];
+           outcbs = realloc(outcbs,(outcbssize + 1) * sizeof(char*));
            outcbs[outcbssize++]=',';
            lastblock[0]=data[j];
            i=k;

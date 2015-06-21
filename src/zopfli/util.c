@@ -210,14 +210,7 @@ void ZopfliInitOptions(ZopfliOptions* options) {
   options->lazymatching = 0;
   options->optimizehuffmanheader = 0;
   options->maxfailiterations = 0;
-  options->usescandir = 0;
   options->findminimumrec = 9;
-  options->blocksize = 0;
-  options->numblocks = 0;
-  options->custblocksplit = NULL;
-  options->custblocktypes = NULL;
-  options->additionalautosplits = 0;
   options->ranstatew = 1;
   options->ranstatez = 2;
-  options->dumpsplitsfile = NULL;
 }

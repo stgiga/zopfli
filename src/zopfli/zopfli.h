@@ -29,7 +29,7 @@ extern "C" {
 #endif
 
 /*
-Options used throughout the program.
+Options shared by both BIN and LIB.
 */
 typedef struct ZopfliOptions {
   /* How much output to print, verbose level */
@@ -89,46 +89,10 @@ typedef struct ZopfliOptions {
   unsigned int maxfailiterations;
 
   /*
-  Use scandir to get list of files to compress to ZIP. File will be updated
-  on-fly after every file successfully gets compressed. So it should be 
-  posible to copy it at any time while holding already successfully compressed files,
-  or break the operation with CTRL+C and resume it later by manually getting rid
-  of already compressed files in pointed directory.
-  */
-  int usescandir;
-
-  /*
   This has an impact on block splitting model by recursively checking multiple
   split points. Higher values slow down block splitting. Default is 9.
   */
   unsigned int findminimumrec;
-
-  /*
-  Allows to set custom block size. This uses simple block splitting instead
-  of zopfli auto guessing.
-  */
-  unsigned int blocksize;
-
-  /*
-  Allows to set custom number of blocks. This uses simple block splitting instead
-  of zopfli auto guessing.
-  */
-  unsigned int numblocks;
-
-  /*
-  Custom block start points in hexadecimal format comma separated.
-  */
-  unsigned long *custblocksplit;
-
-  /*
-  Block types 0-2, comma separated
-  */
-  unsigned short *custblocktypes;
-
-  /*
-  Runs zopfli splitting between manual/custom start points
-  */
-  int additionalautosplits;
 
   /*
   Initial randomness for iterations.
@@ -137,11 +101,6 @@ typedef struct ZopfliOptions {
   */
   unsigned short ranstatew;
   unsigned short ranstatez;
-
-  /*
-  Save block splits to file and exit zopfli
-  */
-  const char* dumpsplitsfile;
 
 } ZopfliOptions;
 
@@ -153,22 +112,11 @@ typedef struct ZopfliAdditionalData {
 
   unsigned long timestamp;
 
-  unsigned long checksum;
-
-  unsigned long comp_size;
-
-  size_t fullsize;
-
-  size_t processed;
-
-  unsigned short havemoredata;
-
   const char* filename;
 
-  unsigned char bit_pointer;
 } ZopfliAdditionalData;
 
-/* Initializes options with default values. */
+/* Initializes shared options with default values. */
 void ZopfliInitOptions(ZopfliOptions* options);
 
 /* Output format */
@@ -198,4 +146,4 @@ void ZopfliCompress(ZopfliOptions* options, ZopfliFormat output_type,
 }  // extern "C"
 #endif
 
-#endif  /* ZOPFLI_ZOPFLI_H_ */
+#endif  /* ZOPFLI_H_ */

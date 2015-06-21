@@ -32,16 +32,13 @@ void intHandler(int exit_code);
 /* You can use this function in Your own lib calls/applications.
    ZopfliFormat is required but can be passed as simple number.
    ZopfliAdditionalData and ZopfliOptions structures are
-   optional and can be NULL, however in case of ZIP You would
-   need to update FilePK manually by overwritting 0 bytes
-   at correct offsets there with input data size and
-   CRC32 - this information could be copied from Central
-   Directory Structure, however, due to ability to compress
-   data in chunks Zopfli KrzYmod is currently unable to do
-   it through lib alone. Additional time support would
-   need to be deployed for ZIP and GZIP and passed with
-   ZopfliAdditionalData structure or updated manually
-   at correct offsets in output data.
+   optional and can be NULL.
+
+   ZopfliAdditonalData structure can hold 2 variables being
+   file timestamp and name. If timestamp is omitted, lower possible
+   value will be used for GZ and ZIP. If file name is omitted
+   GZ will not store filename and ZIP will use input data CRC32 as
+   file name.
 */
 
 __declspec( dllexport ) void ZopfliCompress(ZopfliOptions* options, ZopfliFormat output_type,
@@ -64,31 +61,15 @@ __declspec( dllexport ) void ZopfliCompress(ZopfliOptions* options, ZopfliFormat
   if (output_type == ZOPFLI_FORMAT_GZIP || output_type == ZOPFLI_FORMAT_GZIP_NAME) {
     ZopfliGzipCompress(optionslib, in, insize, out, outsize, moredata);
   } else if (output_type == ZOPFLI_FORMAT_ZLIB) {
-    ZopfliZlibCompress(optionslib, in, insize, out, outsize, moredata);
+    ZopfliZlibCompress(optionslib, in, insize, out, outsize);
   } else if (output_type == ZOPFLI_FORMAT_ZIP) {
-    ZipCDIR zipcdir;
-    InitCDIR(&zipcdir);
-    zipcdir.rootdir=(char*)realloc(zipcdir.rootdir,3*sizeof(char*));
-    zipcdir.rootdir[0]='.';
-    zipcdir.rootdir[1]='/';
-    zipcdir.rootdir[2]='\0';
-    ZopfliZipCompress(optionslib, in, insize, out, outsize, &zipcdir, moredata);
-    free(zipcdir.rootdir);
-    free(zipcdir.data);
-    free(zipcdir.enddata);
+    ZopfliZipCompress(optionslib, in, insize, out, outsize, moredata);
   } else if (output_type == ZOPFLI_FORMAT_DEFLATE) {
-    short final = 1;
     unsigned char bp = 0;
-    if(moredata != NULL) {
-      if(moredata->fullsize<insize) moredata->fullsize=insize;
-      final = !moredata->havemoredata;
-      bp = moredata->bit_pointer;
-    }
-    ZopfliDeflate(optionslib, 2 /* Dynamic block */, final,
-                  in, insize, &bp, out, outsize, moredata);
-    if(moredata != NULL) moredata->bit_pointer = bp;
+    ZopfliDeflate(optionslib, 2 /* Dynamic block */, 1,
+                  in, insize, &bp, out, outsize);
   } else {
-    fprintf(stderr,"Error: No output format specified\n");
+    fprintf(stderr,"Error: No output format specified.\n");
     exit (EXIT_FAILURE);
   }
 }

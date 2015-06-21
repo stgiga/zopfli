@@ -650,6 +650,7 @@ static void AddLZ77Block(const ZopfliOptions* options, int btype, int final,
   unsigned ll_symbols[288];
   unsigned d_symbols[32];
   size_t detect_block_size = *outsize;
+  size_t treesize = 0;
   size_t compressed_size;
   size_t uncompressed_size = 0;
   size_t i;
@@ -663,22 +664,18 @@ static void AddLZ77Block(const ZopfliOptions* options, int btype, int final,
     GetFixedTree(ll_lengths, d_lengths);
   } else {
     /* Dynamic block. */
-    unsigned detect_tree_size;
     assert(btype == 2);
 
     GetDynamicLengths(litlens, dists, lstart, lend, ll_lengths, d_lengths);
 
-    detect_tree_size = *outsize;
+    treesize = *outsize;
     AddDynamicTree(ll_lengths, d_lengths, bp, out, outsize, options->optimizehuffmanheader);
-    if (options->verbose>3) {
-      fprintf(stderr, "Treesize: %d                           \n", (int)(*outsize - detect_tree_size));
-    }
+    treesize = *outsize - treesize;
   }
 
   ZopfliLengthsToSymbols(ll_lengths, 288, 15, ll_symbols);
   ZopfliLengthsToSymbols(d_lengths, 32, 15, d_symbols);
 
-  detect_block_size = *outsize;
   AddLZ77Data(litlens, dists, lstart, lend, expected_data_size,
               ll_symbols, ll_lengths, d_symbols, d_lengths,
               bp, out, outsize);
@@ -690,9 +687,39 @@ static void AddLZ77Block(const ZopfliOptions* options, int btype, int final,
   }
   compressed_size = *outsize - detect_block_size;
   if (options->verbose>2) {
-    fprintf(stderr, "Compressed block size: %d (%dk) (unc: %d)\n\n",
-           (int)compressed_size, (int)(compressed_size / 1024),
+    fprintf(stderr, "Compressed block size: %d (%dk) [tree: %d] (unc: %d)\n",
+           (int)compressed_size, (int)(compressed_size / 1024), (int)treesize,
            (int)(uncompressed_size));
+  }
+}
+
+static void DeflateNonCompressedBlock(const ZopfliOptions* options, int final,
+                                      const unsigned char* in, size_t instart,
+                                      size_t inend,
+                                      unsigned char* bp,
+                                      unsigned char** out, size_t* outsize) {
+  size_t i;
+  size_t blocksize = inend - instart;
+  unsigned short nlen = ~blocksize;
+
+  (void)options;
+  assert(blocksize < 65536);  /* Non compressed blocks are max this size. */
+
+  AddBit(final, bp, out, outsize);
+  /* BTYPE 00 */
+  AddBit(0, bp, out, outsize);
+  AddBit(0, bp, out, outsize);
+
+  /* Any bits of input up to the next byte boundary are ignored. */
+  *bp = 0;
+
+  ZOPFLI_APPEND_DATA(blocksize % 256, out, outsize);
+  ZOPFLI_APPEND_DATA((blocksize / 256) % 256, out, outsize);
+  ZOPFLI_APPEND_DATA(nlen % 256, out, outsize);
+  ZOPFLI_APPEND_DATA((nlen / 256) % 256, out, outsize);
+
+  for (i = instart; i < inend; i++) {
+    ZOPFLI_APPEND_DATA(in[i], out, outsize);
   }
 }
 
@@ -707,6 +734,10 @@ static void DeflateDynamicBlock(const ZopfliOptions* options, int final,
   int btype = 2;
   double dyncost, fixedcost;
   ZopfliLZ77Store fixedstore;
+  unsigned char* tempout = NULL;
+  unsigned char tempbp = *bp;
+  size_t tempoutsize = 0;
+  size_t uncompressedcost = 0;
 
   ZopfliInitLZ77Store(&store);
 
@@ -747,9 +778,41 @@ static void DeflateDynamicBlock(const ZopfliOptions* options, int final,
 
   if(options->verbose>2) fprintf(stderr," %.0f bit\n\n",dyncost);
 
+
+  ZOPFLI_APPEND_DATA((*out)[*outsize-1],&tempout,&tempoutsize);
+
   AddLZ77Block(s.options, btype, final,
                store.litlens, store.dists, 0, store.size,
-               blocksize, bp, out, outsize);
+               blocksize, &tempbp, &tempout, &tempoutsize);
+
+  if(*bp<6 && *bp>0) ++uncompressedcost;
+  uncompressedcost=blocksize + ceilz((float)blocksize/(float)65535)*5 - uncompressedcost;
+  if(uncompressedcost<tempoutsize-1) {
+    size_t uncblkpos = 0;
+    size_t inend2 = instart;
+    int final2;
+    do {
+      inend2 += (blocksize-uncblkpos)>65535? 65535 : (blocksize-uncblkpos);
+      final2 = (final & (uncblkpos+65535>blocksize));
+      DeflateNonCompressedBlock(options, final2, in, uncblkpos+instart, inend2, bp, out, outsize);
+      uncblkpos+=65535;
+    } while(uncblkpos<blocksize);
+
+    if (options->verbose>2) {
+        fprintf(stderr, "Uncompressed block(s) size %d < %d - using uncompressed block(s)!\n\n",
+           (int)uncompressedcost, (int)(tempoutsize-1) );
+    }
+  } else {
+    size_t i;
+    (*out)[*outsize-1]=tempout[0];
+    for(i=1;i<tempoutsize;++i) {
+      ZOPFLI_APPEND_DATA(tempout[i],out,outsize);
+    }
+    *bp = tempbp;
+    if (options->verbose>2) fprintf(stderr,"\n");
+  }
+
+  free(tempout);
 
   ZopfliCleanLZ77Store(&store);
 }
@@ -785,36 +848,6 @@ static void DeflateFixedBlock(const ZopfliOptions* options, int final,
   ZopfliCleanLZ77Store(&store);
 }
 
-static void DeflateNonCompressedBlock(const ZopfliOptions* options, int final,
-                                      const unsigned char* in, size_t instart,
-                                      size_t inend,
-                                      unsigned char* bp,
-                                      unsigned char** out, size_t* outsize) {
-  size_t i;
-  size_t blocksize = inend - instart;
-  unsigned short nlen = ~blocksize;
-
-  (void)options;
-  assert(blocksize < 65536);  /* Non compressed blocks are max this size. */
-
-  AddBit(final, bp, out, outsize);
-  /* BTYPE 00 */
-  AddBit(0, bp, out, outsize);
-  AddBit(0, bp, out, outsize);
-
-  /* Any bits of input up to the next byte boundary are ignored. */
-  *bp = 0;
-
-  ZOPFLI_APPEND_DATA(blocksize % 256, out, outsize);
-  ZOPFLI_APPEND_DATA((blocksize / 256) % 256, out, outsize);
-  ZOPFLI_APPEND_DATA(nlen % 256, out, outsize);
-  ZOPFLI_APPEND_DATA((nlen / 256) % 256, out, outsize);
-
-  for (i = instart; i < inend; i++) {
-    ZOPFLI_APPEND_DATA(in[i], out, outsize);
-  }
-}
-
 void DeflateBlock(const ZopfliOptions* options,
                          int btype, int final,
                          const unsigned char* in, size_t instart, size_t inend,
@@ -841,52 +874,27 @@ static void DeflateSplittingFirst(const ZopfliOptions* options,
                                   const unsigned char* in,
                                   size_t instart, size_t inend,
                                   unsigned char* bp,
-                                  unsigned char** out, size_t* outsize, const ZopfliAdditionalData* moredata) {
-  int btypeb;
+                                  unsigned char** out, size_t* outsize) {
   size_t i;
   size_t* splitpoints = 0;
   size_t npoints = 0;
-  size_t* blocktypes = 0;
-  size_t ntypes = 0;
   size_t numblocks = 1;
-  size_t processed;
-  size_t fullsize;
-  if(moredata != NULL) {
-    processed = moredata->processed;
-    fullsize = moredata->fullsize;
+  if (btype == 0) {
+    ZopfliBlockSplitSimple(instart, inend, 65535, &splitpoints, &npoints, options->verbose);
+  } else if (btype == 1) {
+    /* If all blocks are fixed tree, splitting into separate blocks only
+    increases the total size. Leave npoints at 0, this represents 1 block. */
   } else {
-    processed = 0;
-    fullsize = inend;
-  }
-  if(options->custblocksplit!=NULL) {
-    ZopfliBlockSplitSimple(in, inend, 0, &splitpoints, &npoints, &blocktypes, &ntypes, options,options->custblocksplit,options->additionalautosplits);
-  } else if(options->numblocks>0) {
-    if(options->numblocks>inend) {
-      i = 1;
-    } else {
-      i = ceilz((float)inend / (float)options->numblocks);
-    }
-    ZopfliBlockSplitSimple(in, inend, i, &splitpoints, &npoints, &blocktypes, &ntypes, options,NULL,options->additionalautosplits);
-  } else if(options->blocksize>0) {
-    ZopfliBlockSplitSimple(in, inend, options->blocksize, &splitpoints, &npoints, &blocktypes, &ntypes, options,NULL,options->additionalautosplits);
-  } else {
-    if (btype == 0) {
-      ZopfliBlockSplitSimple(in, inend, 65535, &splitpoints, &npoints, &blocktypes, &ntypes, options, NULL,0);
-    } else if (btype == 1) {
-      /* If all blocks are fixed tree, splitting into separate blocks only
-      increases the total size. Leave npoints at 0, this represents 1 block. */
-    } else {
-      ZopfliBlockSplit(options, in, instart, inend,
-                       options->blocksplittingmax, &splitpoints, &npoints,&numblocks);
-    }
+    ZopfliBlockSplit(options, in, instart, inend,
+                     options->blocksplittingmax, &splitpoints, &npoints,&numblocks);
   }
   if(options->verbose>0) fprintf(stderr,"                          \r");
   for (i = 0; i <= npoints; i++) {
     size_t start = i == 0 ? instart : splitpoints[i - 1];
     size_t end = i == npoints ? inend : splitpoints[i];
-    if(options->verbose>0) fprintf(stderr, "Progress: %.1f%%",100.0 * (double)(processed+start) / (double)fullsize);
+    if(options->verbose>0) fprintf(stderr, "Progress: %.1f%%",100.0 * (double)start / (double)inend);
     if(options->verbose>1) {
-      fprintf(stderr, "  ---  Block: %d / %d  ---  Data left: %luKB", (int)(i + 1), (int)(npoints + 1),(unsigned long)((fullsize - (processed+start))/1024));
+      fprintf(stderr, "  ---  Block: %d / %d  ---  Data left: %luKB", (int)(i + 1), (int)(npoints + 1),(unsigned long)(inend-start)/1024);
       if(options->verbose>2) {
         fprintf(stderr,"\n");
       } else {
@@ -895,13 +903,7 @@ static void DeflateSplittingFirst(const ZopfliOptions* options,
     } else {
       fprintf(stderr,"\r");
     }
-    if(i<ntypes) {
-      btypeb=blocktypes[i];
-      if(btypeb==0 && (end-start)>65535) btypeb=2;
-    } else {
-      btypeb=btype;
-    }
-    DeflateBlock(options, btypeb, i == npoints && final, in, start, end,
+    DeflateBlock(options, btype, i == npoints && final, in, start, end,
                  bp, out, outsize);
   }
   free(splitpoints);
@@ -930,7 +932,7 @@ static void DeflateSplittingLast(const ZopfliOptions* options,
        supports the special case of noncompressed data. Put it to that one. */
     DeflateSplittingFirst(options, btype, final,
                           in, instart, inend,
-                          bp, out, outsize, NULL);
+                          bp, out, outsize);
   }
   assert(btype == 1 || btype == 2);
 
@@ -956,7 +958,7 @@ static void DeflateSplittingLast(const ZopfliOptions* options,
     increases the total size. Leave npoints at 0, this represents 1 block. */
   } else {
     ZopfliBlockSplitLZ77(options, store.litlens, store.dists, store.size,
-                         options->blocksplittingmax, &splitpoints, &npoints, &numblocks, 0);
+                         options->blocksplittingmax, &splitpoints, &npoints, &numblocks);
   }
 
   for (i = 0; i <= npoints; i++) {
@@ -988,7 +990,7 @@ the final bit will be set on the last block.
 __declspec( dllexport ) void ZopfliDeflatePart(const ZopfliOptions* options, int btype, int final,
                        const unsigned char* in, size_t instart, size_t inend,
                        unsigned char* bp, unsigned char** out,
-                       size_t* outsize, ZopfliAdditionalData* moredata) {
+                       size_t* outsize) {
   if(options == NULL || in == NULL || bp == NULL || out == NULL || outsize == NULL) {
     fprintf(stderr,"Critical Error: one or more required pointers are NULL\n");
     exit(EXIT_FAILURE);
@@ -999,7 +1001,7 @@ __declspec( dllexport ) void ZopfliDeflatePart(const ZopfliOptions* options, int
                            bp, out, outsize);
     } else {
       DeflateSplittingFirst(options, btype, final, in, instart, inend,
-                            bp, out, outsize, moredata);
+                            bp, out, outsize);
     }
   } else {
     DeflateBlock(options, btype, final, in, instart, inend, bp, out, outsize);
@@ -1008,47 +1010,27 @@ __declspec( dllexport ) void ZopfliDeflatePart(const ZopfliOptions* options, int
 
 __declspec( dllexport ) void ZopfliDeflate(const ZopfliOptions* options, int btype, int final,
                    const unsigned char* in, size_t insize,
-                   unsigned char* bp, unsigned char** out, size_t* outsize, ZopfliAdditionalData* moredata) {
+                   unsigned char* bp, unsigned char** out, size_t* outsize) {
   size_t offset=*outsize;
-  size_t i = 0;
-  ZopfliAdditionalData moredatatemp;
-  ZopfliAdditionalData* moredataloc = NULL;
-  if(moredata == NULL) {
-    moredataloc = &moredatatemp;
-    moredataloc->fullsize = insize;
-    moredataloc->processed = 0;
-    moredataloc->havemoredata = 0;
-  } else {
-    moredataloc = moredata;
-  }
-  if(moredataloc->fullsize<insize) moredataloc->fullsize=insize;
 #if ZOPFLI_MASTER_BLOCK_SIZE == 0
-  ZopfliDeflatePart(options, btype, final, in, 0, insize, bp, out, outsize, moredataloc);
+  ZopfliDeflatePart(options, btype, final, in, 0, insize, bp, out);
 #else
+  size_t i = 0;
   while (i < insize) {
     int masterfinal = (i + ZOPFLI_MASTER_BLOCK_SIZE >= insize);
     int final2 = final && masterfinal;
     size_t size = masterfinal ? insize - i : ZOPFLI_MASTER_BLOCK_SIZE;
     ZopfliDeflatePart(options, btype, final2,
-                      in, i, i + size, bp, out, outsize, moredataloc);
+                      in, i, i + size, bp, out, outsize);
     i += size;
-    if(moredataloc->havemoredata == 1) moredataloc->processed+=size; else moredataloc->processed=size;
   }
 #endif
-  if(moredataloc->havemoredata==0) {
-    if(options->verbose>0) {
-      fprintf(stderr,"Progress: 100.0%%                                                  \n\n");
-    }
-    if (options->verbose>1) {
-      fprintf(stderr,
-              "Input size: %d (%dK)\n"
-              "Deflate size: %d (%dK). Compression ratio: %.3f%%\n",
-              (int)moredataloc->fullsize,(int)moredataloc->fullsize/1024, (int)(*outsize-offset), (int)(*outsize-offset) / 1024,
-              100.0 * (double)(*outsize-offset) / (double)moredataloc->fullsize);
-    }
-  } else {
-    if (options->verbose>1) {
-      fprintf(stderr,"Waiting for more data . . .   \r");
-    }
+  if(options->verbose>0) fprintf(stderr,"Progress: 100.0%%                                                  \n\n");
+  if (options->verbose>1) {
+    fprintf(stderr,
+            "Input size: %d (%dK)\n"
+            "Deflate size: %d (%dK). Compression ratio: %.3f%%\n",
+            (int)insize,(int)insize/1024, (int)(*outsize-offset), (int)(*outsize-offset) / 1024,
+            100.0 * (double)(*outsize-offset) / (double)insize);
   }
 }
