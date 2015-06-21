@@ -776,7 +776,7 @@ static void DeflateDynamicBlock(const ZopfliOptions* options, int final,
     if(options->verbose>2) fprintf(stderr,">");
   }
 
-  if(options->verbose>2) fprintf(stderr," %.0f bit\n\n",dyncost);
+  if(options->verbose>2) fprintf(stderr," %.0f bit\n",dyncost);
 
   ZOPFLI_APPEND_DATA((*out)[*outsize-1],&tempout,&tempoutsize);
 

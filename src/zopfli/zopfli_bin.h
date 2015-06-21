@@ -78,6 +78,7 @@ typedef struct ZipCDIR {
   unsigned long size;
   unsigned long offset;
   unsigned short fileid;
+  size_t fullsize;
 } ZipCDIR;
 
 #endif  /* ZOPFLI_BIN_H_ */
