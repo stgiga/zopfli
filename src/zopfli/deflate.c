@@ -778,12 +778,13 @@ static void DeflateDynamicBlock(const ZopfliOptions* options, int final,
 
   if(options->verbose>2) fprintf(stderr," %.0f bit\n\n",dyncost);
 
-
   ZOPFLI_APPEND_DATA((*out)[*outsize-1],&tempout,&tempoutsize);
 
   AddLZ77Block(s.options, btype, final,
                store.litlens, store.dists, 0, store.size,
                blocksize, &tempbp, &tempout, &tempoutsize);
+
+  ZopfliCleanLZ77Store(&store);
 
   if(*bp<6 && *bp>0) ++uncompressedcost;
   uncompressedcost=blocksize + ceilz((float)blocksize/(float)65535)*5 - uncompressedcost;
@@ -814,7 +815,6 @@ static void DeflateDynamicBlock(const ZopfliOptions* options, int final,
 
   free(tempout);
 
-  ZopfliCleanLZ77Store(&store);
 }
 
 static void DeflateFixedBlock(const ZopfliOptions* options, int final,
@@ -878,7 +878,6 @@ static void DeflateSplittingFirst(const ZopfliOptions* options,
   size_t i;
   size_t* splitpoints = 0;
   size_t npoints = 0;
-  size_t numblocks = 1;
   if (btype == 0) {
     ZopfliBlockSplitSimple(instart, inend, 65535, &splitpoints, &npoints, options->verbose);
   } else if (btype == 1) {
@@ -886,7 +885,7 @@ static void DeflateSplittingFirst(const ZopfliOptions* options,
     increases the total size. Leave npoints at 0, this represents 1 block. */
   } else {
     ZopfliBlockSplit(options, in, instart, inend,
-                     options->blocksplittingmax, &splitpoints, &npoints,&numblocks);
+                     options->blocksplittingmax, &splitpoints, &npoints);
   }
   if(options->verbose>0) fprintf(stderr,"                          \r");
   for (i = 0; i <= npoints; i++) {
@@ -925,7 +924,6 @@ static void DeflateSplittingLast(const ZopfliOptions* options,
   ZopfliLZ77Store store;
   size_t* splitpoints = 0;
   size_t npoints = 0;
-  size_t numblocks=1;
 
   if (btype == 0) {
     /* This function only supports LZ77 compression. DeflateSplittingFirst
@@ -958,7 +956,7 @@ static void DeflateSplittingLast(const ZopfliOptions* options,
     increases the total size. Leave npoints at 0, this represents 1 block. */
   } else {
     ZopfliBlockSplitLZ77(options, store.litlens, store.dists, store.size,
-                         options->blocksplittingmax, &splitpoints, &npoints, &numblocks);
+                         options->blocksplittingmax, &splitpoints, &npoints);
   }
 
   for (i = 0; i <= npoints; i++) {

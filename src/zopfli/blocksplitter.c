@@ -238,10 +238,11 @@ void ZopfliBlockSplitLZ77(const ZopfliOptions* options,
                           const unsigned short* litlens,
                           const unsigned short* dists,
                           size_t llsize, size_t maxblocks,
-                          size_t** splitpoints, size_t* npoints, size_t* numblocks) {
+                          size_t** splitpoints, size_t* npoints) {
   size_t lstart, lend;
   size_t i;
   size_t llpos = 0;
+  size_t numblocks = 1;
   unsigned char* done;
   double splitcost, origcost;
 
@@ -256,7 +257,7 @@ void ZopfliBlockSplitLZ77(const ZopfliOptions* options,
   for (;;) {
     SplitCostContext c;
 
-    if (maxblocks > 0 && (*numblocks) >= maxblocks) {
+    if (maxblocks > 0 && numblocks >= maxblocks) {
       break;
     }
 
@@ -280,8 +281,8 @@ void ZopfliBlockSplitLZ77(const ZopfliOptions* options,
       done[lstart] = 1;
     } else {
       AddSorted(llpos, splitpoints, npoints);
-      ++(*numblocks);
-      if(options->verbose>0 && options->verbose<5) fprintf(stderr,"Initializing blocks: %lu    \r",(unsigned long)(*numblocks));
+      ++numblocks;
+      if(options->verbose>0 && options->verbose<5) fprintf(stderr,"Initializing blocks: %lu    \r",(unsigned long)numblocks);
     }
 
     if (!FindLargestSplittableBlock(
@@ -299,7 +300,7 @@ void ZopfliBlockSplitLZ77(const ZopfliOptions* options,
   }
 
   if(options->verbose>2) {
-    fprintf(stderr, "Total blocks: %lu                 \n\n",(unsigned long)(*numblocks));
+    fprintf(stderr, "Total blocks: %lu                 \n\n",(unsigned long)numblocks);
   }
 
 
@@ -308,7 +309,7 @@ void ZopfliBlockSplitLZ77(const ZopfliOptions* options,
 
 void ZopfliBlockSplit(const ZopfliOptions* options,
                       const unsigned char* in, size_t instart, size_t inend,
-                      size_t maxblocks, size_t** splitpoints, size_t* npoints, size_t* numblocks) {
+                      size_t maxblocks, size_t** splitpoints, size_t* npoints) {
   size_t pos = 0;
   size_t i;
   ZopfliBlockState s;
@@ -333,7 +334,7 @@ void ZopfliBlockSplit(const ZopfliOptions* options,
   ZopfliLZ77Greedy(&s, in, instart, inend, &store, options);
   ZopfliBlockSplitLZ77(options,
                        store.litlens, store.dists, store.size, maxblocks,
-                       &lz77splitpoints, &nlz77points, numblocks);
+                       &lz77splitpoints, &nlz77points);
   /* Convert LZ77 positions to positions in the uncompressed input. */
   pos = instart;
   if (nlz77points > 0) {
@@ -351,23 +352,6 @@ void ZopfliBlockSplit(const ZopfliOptions* options,
   free(lz77splitpoints);
   ZopfliCleanLZ77Store(&store);
 }
-
-/*
-static void ZopfliAdditionalAutoSplitting(const ZopfliOptions* options, const unsigned char* in, size_t start, size_t end,
-                                          size_t** splitpoints, size_t* npoints, size_t* numblocks) {
-  size_t* aassplitpoints = 0;
-  size_t aasnpoints = 0;
-  size_t aasnumblocks = *numblocks;
-  size_t k;
-  if(options->verbose>3) fprintf(stderr,"-> Additional Auto Splitting for range [%lu - %lu]:\n",(unsigned long)start,(unsigned long)end);
-  ZopfliBlockSplit(options, in, start, end, 0, &aassplitpoints, &aasnpoints, &aasnumblocks);
-  for(k=0;k<aasnpoints;++k) {
-    ZOPFLI_APPEND_DATA(aassplitpoints[k],splitpoints, npoints);
-    ++(*numblocks);
-  }
-  free(aassplitpoints);
-}
-*/
 
 void ZopfliBlockSplitSimple(size_t instart, size_t inend, size_t blocksize,
                             size_t** splitpoints, size_t* npoints, int verbose) {

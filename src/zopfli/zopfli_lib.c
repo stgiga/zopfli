@@ -41,9 +41,9 @@ void intHandler(int exit_code);
    file name.
 */
 
-__declspec( dllexport ) void ZopfliCompress(ZopfliOptions* options, ZopfliFormat output_type,
+__declspec( dllexport ) void ZopfliCompress(ZopfliOptions* options, const ZopfliFormat output_type,
                     const unsigned char* in, size_t insize,
-                    unsigned char** out, size_t* outsize, ZopfliAdditionalData* moredata) {
+                    unsigned char** out, size_t* outsize, const ZopfliAdditionalData* moredata) {
   ZopfliOptions optionstemp;
   ZopfliOptions* optionslib = NULL;
   if(in == NULL || out == NULL || outsize == NULL) {

@@ -50,6 +50,8 @@ decompressor.
 #include "crc32.h"
 #include "blocksplitter.h"
 
+static const char tempfileext[8] = { '.' , 'z' , 'o' , 'p' , 'f' , 'l' , 'i', 0 };
+
 void intHandler(int exit_code);
 
 static void InitCDIR(ZipCDIR *zipcdir) {
@@ -151,6 +153,18 @@ static void SaveFile(const char* filename,
 
 static char StringsEqual(const char* str1, const char* str2) {
   return strcmp(str1, str2) == 0;
+}
+
+static void ConsoleOutput(const unsigned char* in, size_t insize) {
+  size_t i;
+  /* Windows workaround for stdout output. */
+#if _WIN32
+  _setmode(_fileno(stdout), _O_BINARY);
+#endif
+  for (i = 0; i < insize; i++) printf("%c", in[i]);
+#if _WIN32
+  _setmode(_fileno(stdout), _O_TEXT);
+#endif
 }
 
 /*
@@ -277,10 +291,9 @@ static size_t SplitInput(const ZopfliOptions* options, const unsigned char* in, 
 
   size_t *tempsplitpoints = NULL;
   size_t tempnpoints = 0;
-  size_t tempnumblocks = 1;
   size_t i;
 
-  ZopfliBlockSplit(options,in,0,insize,options->blocksplittingmax,&tempsplitpoints,&tempnpoints,&tempnumblocks);
+  ZopfliBlockSplit(options,in,0,insize,options->blocksplittingmax,&tempsplitpoints,&tempnpoints);
   for(i=0;i<tempnpoints;++i) {
     tempsplitpoints[i]+=offset;
     ZOPFLI_APPEND_DATA(tempsplitpoints[i],splitpoints,npoints);
@@ -288,12 +301,12 @@ static size_t SplitInput(const ZopfliOptions* options, const unsigned char* in, 
   }
   free(tempsplitpoints);
 
-  return tempnumblocks;
+  return ++tempnpoints;
 
 }
 
 static int Compress(ZopfliOptions* options, const ZopfliBinOptions* binoptions,
-                         ZopfliFormat output_type,
+                         const ZopfliFormat output_type,
                          const char* infilename,
                          const char* outfilename, ZipCDIR* zipcdir, size_t initsoffset) {
   ZopfliAdditionalData moredata;
@@ -325,7 +338,7 @@ static int Compress(ZopfliOptions* options, const ZopfliBinOptions* binoptions,
 
   LoadFile(infilename, &in, &insize, &loffset, &fullsize, 1, 1);
   free(in);
-  if (fullsize == 0) {
+  if (fullsize == 0 || insize == 0) {
     if(options->verbose>0) fprintf(stderr, "Error: Invalid filename: %s\n", infilename);
     return 0;
   } else {
@@ -424,7 +437,7 @@ static int Compress(ZopfliOptions* options, const ZopfliBinOptions* binoptions,
     FILE* file = NULL;
     char* tempfilename = NULL;
     if(binoptions->dumpsplitsfile != NULL) {
-      tempfilename = AddStrings(binoptions->dumpsplitsfile,".zopfli");
+      tempfilename = AddStrings(binoptions->dumpsplitsfile,tempfileext);
       file = fopen(tempfilename, "wb");
       fprintf(file,"0");
     }
@@ -470,10 +483,9 @@ static int Compress(ZopfliOptions* options, const ZopfliBinOptions* binoptions,
   }
 
   if(output_type == ZOPFLI_FORMAT_GZIP || output_type == ZOPFLI_FORMAT_GZIP_NAME) {
-
-    ZOPFLI_APPEND_DATA(31, &out, &outsize);
-    ZOPFLI_APPEND_DATA(139, &out, &outsize);
-    ZOPFLI_APPEND_DATA(8, &out, &outsize);
+    static const unsigned char headerstart[3]  = {  31, 139,   8 };
+    static const unsigned char headerend[2]    = {   2,   3 };
+    for(j=0;j<sizeof(headerstart);++j) ZOPFLI_APPEND_DATA(headerstart[j], &out, &outsize);
     if(output_type == ZOPFLI_FORMAT_GZIP) {
       ZOPFLI_APPEND_DATA(0, &out, &outsize);
     } else {
@@ -482,8 +494,7 @@ static int Compress(ZopfliOptions* options, const ZopfliBinOptions* binoptions,
 
     for(j=0;j<4;++j) ZOPFLI_APPEND_DATA((moredata.timestamp >> (j*8)) % 256, &out, &outsize);
 
-    ZOPFLI_APPEND_DATA(2, &out, &outsize);
-    ZOPFLI_APPEND_DATA(3, &out, &outsize);
+    for(j=0;j<sizeof(headerend);++j) ZOPFLI_APPEND_DATA(headerend[j], &out, &outsize);
 
     if(output_type == ZOPFLI_FORMAT_GZIP_NAME) {
       for(j=0;infilename[j] != '\0';j++) ZOPFLI_APPEND_DATA(infilename[j], &out, &outsize);
@@ -497,16 +508,8 @@ static int Compress(ZopfliOptions* options, const ZopfliBinOptions* binoptions,
     ZOPFLI_APPEND_DATA(cmfflg % 256, &out, &outsize);
   } else if(output_type == ZOPFLI_FORMAT_ZIP) {
     unsigned int l;
-    ZOPFLI_APPEND_DATA(80, &out, &outsize);
-    ZOPFLI_APPEND_DATA(75, &out, &outsize);
-    ZOPFLI_APPEND_DATA(3, &out, &outsize);
-    ZOPFLI_APPEND_DATA(4, &out, &outsize);
-    ZOPFLI_APPEND_DATA(20, &out, &outsize);
-    ZOPFLI_APPEND_DATA(0, &out, &outsize);
-    ZOPFLI_APPEND_DATA(2, &out, &outsize);
-    ZOPFLI_APPEND_DATA(0, &out, &outsize);
-    ZOPFLI_APPEND_DATA(8, &out, &outsize);
-    ZOPFLI_APPEND_DATA(0, &out, &outsize);
+    static const unsigned char filePKh[10]     = { 80, 75,  3,  4, 20,  0,  2,  0,  8,  0};
+    for(j=0;j<sizeof(filePKh);++j) ZOPFLI_APPEND_DATA(filePKh[j], &out, &outsize);
     for(j=0;j<4;++j) ZOPFLI_APPEND_DATA((moredata.timestamp >> (j*8)) % 256, &out, &outsize);
     for(j=0;j<8;++j) ZOPFLI_APPEND_DATA(0, &out, &outsize);
     for(j=0;j<4;++j) ZOPFLI_APPEND_DATA((fullsize >> (j*8)) % 256, &out, &outsize);
@@ -524,9 +527,6 @@ static int Compress(ZopfliOptions* options, const ZopfliBinOptions* binoptions,
 
   offset=outsize;
 
-#if _WIN32
-  if (!outfilename) _setmode(_fileno(stdout), _O_BINARY);
-#endif
   for(i=0;i<=npoints;++i) {
     if(i==npoints) {
       final = 1;
@@ -536,7 +536,7 @@ static int Compress(ZopfliOptions* options, const ZopfliBinOptions* binoptions,
     }
     if(outsize>ZOPFLI_MAX_OUTPUT_MEMORY) {
       if (!outfilename) {
-        for (j = 0; j < (outsize-1); j++) printf("%c", out[j]);
+        ConsoleOutput(out,outsize-1);
       } else {
         SaveFile(outfilename, out, outsize,soffset);
       }
@@ -611,6 +611,9 @@ static int Compress(ZopfliOptions* options, const ZopfliBinOptions* binoptions,
     offset+=4;
   } else if(output_type == ZOPFLI_FORMAT_ZIP) {
     size_t l;
+    static const unsigned char CDIRPKh[12]     = { 80, 75,  1,  2, 20,  0, 20,  0,  2,  0,  8,  0};
+    static const unsigned char CDIRPKs[12]     = {  0,  0,  0,  0,  0,  0,  0,  0, 32,  0,  0,  0};
+    static const unsigned char EndCDIRPKh[8]   = { 80, 75,  5,  6,  0,  0,  0,  0 };
     ZipCDIR zipcdirtemp;
     ZipCDIR* zipcdirloc = NULL;
     if(zipcdir == NULL) {
@@ -619,17 +622,7 @@ static int Compress(ZopfliOptions* options, const ZopfliBinOptions* binoptions,
     } else {
       zipcdirloc = zipcdir;
     }
-    ZOPFLI_APPEND_DATA(80,&zipcdirloc->data,&zipcdirloc->size);
-    ZOPFLI_APPEND_DATA(75,&zipcdirloc->data,&zipcdirloc->size);
-    for(j=1;j<3;++j) ZOPFLI_APPEND_DATA(j,&zipcdirloc->data,&zipcdirloc->size);
-    for(j=0;j<2;++j) {
-      ZOPFLI_APPEND_DATA(20,&zipcdirloc->data,&zipcdirloc->size);
-      ZOPFLI_APPEND_DATA(0,&zipcdirloc->data,&zipcdirloc->size);
-    }
-    ZOPFLI_APPEND_DATA(2,&zipcdirloc->data,&zipcdirloc->size);
-    ZOPFLI_APPEND_DATA(0,&zipcdirloc->data,&zipcdirloc->size);
-    ZOPFLI_APPEND_DATA(8,&zipcdirloc->data,&zipcdirloc->size);
-    ZOPFLI_APPEND_DATA(0,&zipcdirloc->data,&zipcdirloc->size);
+    for(j=0;j<sizeof(CDIRPKh);++j) ZOPFLI_APPEND_DATA(CDIRPKh[j],&zipcdirloc->data,&zipcdirloc->size);
     for(j=0;j<4;++j) ZOPFLI_APPEND_DATA((moredata.timestamp >> (j*8)) % 256,&zipcdirloc->data,&zipcdirloc->size);
     for(j=0;j<4;++j) ZOPFLI_APPEND_DATA((checksum >> (j*8)) % 256,&zipcdirloc->data,&zipcdirloc->size);
     for(j=0;j<4;++j) ZOPFLI_APPEND_DATA((comp_size >> (j*8)) % 256,&zipcdirloc->data,&zipcdirloc->size);
@@ -642,20 +635,14 @@ static int Compress(ZopfliOptions* options, const ZopfliBinOptions* binoptions,
     }
     for(i=0;infilename[i] != '\0';i++) {}
     for(j=0;j<2;++j) ZOPFLI_APPEND_DATA(((i-l) >> (j*8)) % 256, &zipcdirloc->data, &zipcdirloc->size);
-    for(j=0;j<8;++j) ZOPFLI_APPEND_DATA(0,&zipcdirloc->data,&zipcdirloc->size);
-    ZOPFLI_APPEND_DATA(32,&zipcdirloc->data,&zipcdirloc->size);
-    for(j=0;j<3;++j) ZOPFLI_APPEND_DATA(0,&zipcdirloc->data,&zipcdirloc->size);
+    for(j=0;j<sizeof(CDIRPKs);++j) ZOPFLI_APPEND_DATA(CDIRPKs[j],&zipcdirloc->data,&zipcdirloc->size);
     for(j=0;j<4;++j) ZOPFLI_APPEND_DATA((zipcdirloc->offset >> (j*8)) % 256,&zipcdirloc->data,&zipcdirloc->size);
     pkoffset = zipcdirloc->offset+14;
     zipcdirloc->offset+=comp_size+30+(i-l);
     for(j=l;j<i;j++) ZOPFLI_APPEND_DATA(infilename[j],&zipcdirloc->data,&zipcdirloc->size);
     for(j=0; j<zipcdirloc->size; ++j) ZOPFLI_APPEND_DATA(zipcdirloc->data[j], &out, &outsize);
     ++zipcdirloc->fileid;
-    ZOPFLI_APPEND_DATA(80, &out, &outsize);
-    ZOPFLI_APPEND_DATA(75, &out, &outsize);
-    ZOPFLI_APPEND_DATA(5, &out, &outsize);
-    ZOPFLI_APPEND_DATA(6, &out, &outsize);
-    for(j=0;j<4;++j) ZOPFLI_APPEND_DATA(0, &out, &outsize);
+    for(j=0;j<sizeof(EndCDIRPKh); ++j) ZOPFLI_APPEND_DATA(EndCDIRPKh[j], &out, &outsize);
     for(j=0;j<2;++j) ZOPFLI_APPEND_DATA((zipcdirloc->fileid >> (j*8)) % 256, &out, &outsize);
     for(j=0;j<2;++j) ZOPFLI_APPEND_DATA((zipcdirloc->fileid >> (j*8)) % 256, &out, &outsize);
     for(j=0;j<4;++j) ZOPFLI_APPEND_DATA((zipcdirloc->size >> (j*8)) % 256, &out, &outsize);
@@ -669,10 +656,7 @@ static int Compress(ZopfliOptions* options, const ZopfliBinOptions* binoptions,
     }
   }
   if (!outfilename) {
-    for (j = 0; j < outsize; j++) printf("%c", out[j]);
-#if _WIN32
-    _setmode(_fileno(stdout), _O_TEXT);
-#endif
+    ConsoleOutput(out,outsize);
   } else {
     SaveFile(outfilename, out, outsize,soffset);
     if(output_type == ZOPFLI_FORMAT_ZIP) {
@@ -705,7 +689,7 @@ static int Compress(ZopfliOptions* options, const ZopfliBinOptions* binoptions,
 }
 
 static void CompressFile(ZopfliOptions* options, const ZopfliBinOptions* binoptions,
-                         ZopfliFormat output_type,
+                         const ZopfliFormat output_type,
                          const char* infilename,
                          const char* outfilename) {
 
@@ -713,18 +697,16 @@ static void CompressFile(ZopfliOptions* options, const ZopfliBinOptions* binopti
 
   mui = options->maxfailiterations;
 
-  if(outfilename) tempfilename = AddStrings(outfilename,".zopfli");
+  if(outfilename) tempfilename = AddStrings(outfilename,tempfileext);
 
-  Compress(options,binoptions,output_type,infilename,tempfilename,NULL,0);
-
-  RemoveIfExists(tempfilename,outfilename);
+  if(Compress(options,binoptions,output_type,infilename,tempfilename,NULL,0)==1) RemoveIfExists(tempfilename,outfilename);
 
   free(tempfilename);
 
 }
 
 static void CompressMultiFile(ZopfliOptions* options, const ZopfliBinOptions* binoptions,
-                         ZopfliFormat output_type,
+                         const ZopfliFormat output_type,
                          const char* infilename,
                          const char* outfilename) {
 
@@ -746,7 +728,7 @@ static void CompressMultiFile(ZopfliOptions* options, const ZopfliBinOptions* bi
 
   mui = options->maxfailiterations;
 
-  if(outfilename) tempfilename = AddStrings(outfilename,".zopfli");
+  if(outfilename) tempfilename = AddStrings(outfilename,tempfileext);
 
   InitCDIR(&zipcdir);
 
@@ -781,12 +763,13 @@ static void CompressFileLegacy(ZopfliOptions* options,
   unsigned char* in;
   size_t insize;
   unsigned char* out = 0;
+  char* tempfilename = NULL;
   size_t outsize = 0;
   size_t loffset = 0;
   size_t fullsize = 0;
 
   LoadFile(infilename, &in, &insize, &loffset, &fullsize, 0, 0);
-  if (insize == 0) {
+  if (fullsize == 0 || insize == 0) {
     fprintf(stderr, "Error: Invalid filename: %s\n", infilename);
     exit(EXIT_FAILURE);
   }
@@ -805,24 +788,17 @@ static void CompressFileLegacy(ZopfliOptions* options,
   mui = options->maxfailiterations;
 
   ZopfliCompress(options, output_type, in, insize, &out, &outsize, &moredata);
-  if (outfilename) {
-    SaveFile(outfilename, out, outsize,0);
-  } else {
-    size_t i;
-    /* Windows workaround for stdout output. */
-#if _WIN32
-    _setmode(_fileno(stdout), _O_BINARY);
-#endif
-    for (i = 0; i < outsize; i++) {
-      printf("%c", out[i]);
-    }
-#if _WIN32
-    _setmode(_fileno(stdout), _O_TEXT);
-#endif
-  }
-
-  free(out);
   free(in);
+  if(outfilename) tempfilename = AddStrings(outfilename,tempfileext);
+  if (tempfilename) {
+    SaveFile(tempfilename, out, outsize,0);
+    free(out);
+    RemoveIfExists(tempfilename,outfilename);
+    free(tempfilename);
+  } else {
+    ConsoleOutput(out, outsize);
+    free(out);
+  }
 
 }
 

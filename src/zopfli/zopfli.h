@@ -138,9 +138,9 @@ out: pointer to the dynamic output array to which the result is appended. Must
   be freed after use
 outsize: pointer to the dynamic output array size
 */
-void ZopfliCompress(ZopfliOptions* options, ZopfliFormat output_type,
+void ZopfliCompress(ZopfliOptions* options, const ZopfliFormat output_type,
                     const unsigned char* in, size_t insize,
-                    unsigned char** out, size_t* outsize, ZopfliAdditionalData* moredata);
+                    unsigned char** out, size_t* outsize, const ZopfliAdditionalData* moredata);
 
 #ifdef __cplusplus
 }  // extern "C"
