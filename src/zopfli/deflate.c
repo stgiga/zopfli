@@ -598,6 +598,17 @@ static void GetDynamicLengths(const unsigned short* litlens,
   PatchDistanceCodesForBuggyDecoders(d_lengths);
 }
 
+static double ZopfliCalculateUncBlockSize(size_t instart, size_t inend, unsigned char* bp) {
+  size_t blocksize = inend - instart;
+  size_t numuncblocks = ceilz((float)blocksize/(float)65535);
+  size_t bits = 8-*bp;
+  if(bits<2) bits+=8;
+
+  bits+=blocksize*8 + numuncblocks*4*8 + (numuncblocks-1)*8;
+
+  return bits;
+}
+
 double ZopfliCalculateBlockSize(const unsigned short* litlens,
                                 const unsigned short* dists,
                                 size_t lstart, size_t lend, int btype, int ohh) {
@@ -732,12 +743,8 @@ static void DeflateDynamicBlock(const ZopfliOptions* options, int final,
   size_t blocksize = inend - instart;
   ZopfliLZ77Store store;
   int btype = 2;
-  double dyncost, fixedcost;
+  double dyncost, fixedcost, unccost;
   ZopfliLZ77Store fixedstore;
-  unsigned char* tempout = NULL;
-  unsigned char tempbp = *bp;
-  size_t tempoutsize = 0;
-  size_t uncompressedcost = 0;
 
   ZopfliInitLZ77Store(&store);
 
@@ -765,55 +772,42 @@ static void DeflateDynamicBlock(const ZopfliOptions* options, int final,
       0, store.size, 2, options->optimizehuffmanheader);
   fixedcost = ZopfliCalculateBlockSize(fixedstore.litlens, fixedstore.dists,
       0, fixedstore.size, 1, options->optimizehuffmanheader);
-  if(options->verbose>2) fprintf(stderr,"Fixed block size: %.0f bit ",fixedcost);
-  if (fixedcost < dyncost) {
-    btype = 1;
-    ZopfliCleanLZ77Store(&store);
-    store = fixedstore;
-    if(options->verbose>2) fprintf(stderr,"<");
-  } else {
-    ZopfliCleanLZ77Store(&fixedstore);
-    if(options->verbose>2) fprintf(stderr,">");
-  }
-
-  if(options->verbose>2) fprintf(stderr," %.0f bit\n",dyncost);
-
-  ZOPFLI_APPEND_DATA((*out)[*outsize-1],&tempout,&tempoutsize);
-
-  AddLZ77Block(s.options, btype, final,
-               store.litlens, store.dists, 0, store.size,
-               blocksize, &tempbp, &tempout, &tempoutsize);
-
-  ZopfliCleanLZ77Store(&store);
-
-  if(*bp<6 && *bp>0) ++uncompressedcost;
-  uncompressedcost=blocksize + ceilz((float)blocksize/(float)65535)*5 - uncompressedcost;
-  if(uncompressedcost<tempoutsize-1) {
+  unccost = ZopfliCalculateUncBlockSize(instart,inend,bp);
+  if(unccost < dyncost && unccost < fixedcost) {
     size_t uncblkpos = 0;
+    size_t compressed_size = *outsize;
     size_t inend2 = instart;
     int final2;
+    fprintf(stderr, "!! Uncompressed block(s) size %d bit < %d bit - using uncompressed block(s)!\n",(int)unccost,(int)dyncost);
     do {
       inend2 += (blocksize-uncblkpos)>65535? 65535 : (blocksize-uncblkpos);
       final2 = (final & (uncblkpos+65535>blocksize));
       DeflateNonCompressedBlock(options, final2, in, uncblkpos+instart, inend2, bp, out, outsize);
       uncblkpos+=65535;
     } while(uncblkpos<blocksize);
-
     if (options->verbose>2) {
-        fprintf(stderr, "Uncompressed block(s) size %d < %d - using uncompressed block(s)!\n\n",
-           (int)uncompressedcost, (int)(tempoutsize-1) );
+      compressed_size=*outsize - compressed_size;
+      fprintf(stderr, "Compressed block size: %d (%dk) (unc: %d)\n",
+             (int)compressed_size, (int)(compressed_size / 1024),
+             (int)blocksize);
     }
   } else {
-    size_t i;
-    (*out)[*outsize-1]=tempout[0];
-    for(i=1;i<tempoutsize;++i) {
-      ZOPFLI_APPEND_DATA(tempout[i],out,outsize);
+    if (fixedcost < dyncost) {
+      fprintf(stderr, "!! Fixed block size: %d bit < %d bit - using fixed block!\n",(int)fixedcost,(int)dyncost);
+      btype = 1;
+      ZopfliCleanLZ77Store(&store);
+      store = fixedstore;
+    } else {
+      ZopfliCleanLZ77Store(&fixedstore);
     }
-    *bp = tempbp;
-    if (options->verbose>2) fprintf(stderr,"\n");
+
+  AddLZ77Block(s.options, btype, final,
+               store.litlens, store.dists, 0, store.size,
+               blocksize, bp, out, outsize);
+
   }
 
-  free(tempout);
+  ZopfliCleanLZ77Store(&store);
 
 }
 

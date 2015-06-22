@@ -37,7 +37,7 @@ context: for your implementation
 typedef double FindMinimumFun(size_t i, void* context);
 
 /*
-Finds minimum of function f(i) where is is of type size_t, f(i) is of type
+Finds minimum of function f(i) where i is of type size_t, f(i) is of type
 double, i is in range start-end (excluding end).
 */
 static size_t FindMinimum(FindMinimumFun f, void* context,
