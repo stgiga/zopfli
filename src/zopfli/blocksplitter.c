@@ -238,7 +238,7 @@ void ZopfliBlockSplitLZ77(const ZopfliOptions* options,
                           const unsigned short* litlens,
                           const unsigned short* dists,
                           size_t llsize, size_t maxblocks,
-                          size_t** splitpoints, size_t* npoints) {
+                          size_t** splitpoints, size_t* npoints, size_t startnpoints) {
   size_t lstart, lend;
   size_t i;
   size_t llpos = 0;
@@ -282,7 +282,7 @@ void ZopfliBlockSplitLZ77(const ZopfliOptions* options,
     } else {
       AddSorted(llpos, splitpoints, npoints);
       ++numblocks;
-      if(options->verbose>0 && options->verbose<5) fprintf(stderr,"Initializing blocks: %lu    \r",(unsigned long)numblocks);
+      if(options->verbose>0 && options->verbose<5) fprintf(stderr,"Initializing blocks: %lu    \r",(unsigned long)(startnpoints+numblocks));
     }
 
     if (!FindLargestSplittableBlock(
@@ -309,7 +309,7 @@ void ZopfliBlockSplitLZ77(const ZopfliOptions* options,
 
 void ZopfliBlockSplit(const ZopfliOptions* options,
                       const unsigned char* in, size_t instart, size_t inend,
-                      size_t maxblocks, size_t** splitpoints, size_t* npoints) {
+                      size_t maxblocks, size_t** splitpoints, size_t* npoints, size_t* startnpoints) {
   size_t pos = 0;
   size_t i;
   ZopfliBlockState s;
@@ -334,7 +334,7 @@ void ZopfliBlockSplit(const ZopfliOptions* options,
   ZopfliLZ77Greedy(&s, in, instart, inend, &store, options);
   ZopfliBlockSplitLZ77(options,
                        store.litlens, store.dists, store.size, maxblocks,
-                       &lz77splitpoints, &nlz77points);
+                       &lz77splitpoints, &nlz77points, *startnpoints);
   /* Convert LZ77 positions to positions in the uncompressed input. */
   pos = instart;
   if (nlz77points > 0) {

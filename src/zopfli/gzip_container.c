@@ -33,6 +33,8 @@ void ZopfliGzipCompress(const ZopfliOptions* options,
                         const unsigned char* in, size_t insize,
                         unsigned char** out, size_t* outsize, const ZopfliAdditionalData* moredata) {
 
+  static const unsigned char headerstart[3]  = {  31, 139,   8 };
+  static const unsigned char headerend[2]    = {   2,   3 };
   static const unsigned long defTimestamp = 0;
 
   unsigned long crcvalue = CRC(in, insize);
@@ -41,9 +43,7 @@ void ZopfliGzipCompress(const ZopfliOptions* options,
   unsigned char bp=0;
   if(moredata!=NULL) infilename = moredata->filename;
 
-  ZOPFLI_APPEND_DATA(31, out, outsize);  /* ID1 */
-  ZOPFLI_APPEND_DATA(139, out, outsize);  /* ID2 */
-  ZOPFLI_APPEND_DATA(8, out, outsize);  /* CM */
+  for(i=0;i<sizeof(headerstart);++i) ZOPFLI_APPEND_DATA(headerstart[i], out, outsize);
 
   if(infilename==NULL) {
     ZOPFLI_APPEND_DATA(0, out, outsize);  /* FLG */
@@ -57,8 +57,7 @@ void ZopfliGzipCompress(const ZopfliOptions* options,
     for(i=0;i<4;++i) ZOPFLI_APPEND_DATA((moredata->timestamp >> (i*8)) % 256, out, outsize);
   }
 
-  ZOPFLI_APPEND_DATA(2, out, outsize);  /* XFL, 2 indicates best compression. */
-  ZOPFLI_APPEND_DATA(3, out, outsize);  /* OS follows Unix conventions. */
+  for(i=0;i<sizeof(headerend);++i) ZOPFLI_APPEND_DATA(headerend[i], out, outsize);
 
   if(infilename!=NULL) {
     for(i=0;infilename[i] != '\0';i++) {

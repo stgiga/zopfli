@@ -290,7 +290,7 @@ static size_t SplitInput(const ZopfliOptions* options, const unsigned char* in, 
   size_t tempnpoints = 0;
   size_t i;
 
-  ZopfliBlockSplit(options,in,0,insize,options->blocksplittingmax,&tempsplitpoints,&tempnpoints);
+  ZopfliBlockSplit(options,in,0,insize,options->blocksplittingmax,&tempsplitpoints,&tempnpoints,npoints);
   for(i=0;i<tempnpoints;++i) {
     tempsplitpoints[i]+=offset;
     ZOPFLI_APPEND_DATA(tempsplitpoints[i],splitpoints,npoints);

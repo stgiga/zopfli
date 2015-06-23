@@ -609,6 +609,14 @@ static double ZopfliCalculateUncBlockSize(size_t instart, size_t inend, unsigned
   return bits;
 }
 
+static void PrintBlockSummary(unsigned long insize, unsigned long outsize, unsigned long tree) {
+
+    fprintf(stderr, "Compressed block size: %lu (%luk) ",outsize, outsize / 1024);
+    if(tree>0) fprintf(stderr, "(tree: %lu) ",tree);
+    fprintf(stderr, "(unc: %lu)\n",insize);
+
+}
+
 double ZopfliCalculateBlockSize(const unsigned short* litlens,
                                 const unsigned short* dists,
                                 size_t lstart, size_t lend, int btype, int ohh) {
@@ -697,11 +705,7 @@ static void AddLZ77Block(const ZopfliOptions* options, int btype, int final,
     uncompressed_size += dists[i] == 0 ? 1 : litlens[i];
   }
   compressed_size = *outsize - detect_block_size;
-  if (options->verbose>2) {
-    fprintf(stderr, "Compressed block size: %d (%dk) [tree: %d] (unc: %d)\n",
-           (int)compressed_size, (int)(compressed_size / 1024), (int)treesize,
-           (int)(uncompressed_size));
-  }
+  if (options->verbose>2) PrintBlockSummary(uncompressed_size,compressed_size,treesize);
 }
 
 static void DeflateNonCompressedBlock(const ZopfliOptions* options, int final,
@@ -778,22 +782,17 @@ static void DeflateDynamicBlock(const ZopfliOptions* options, int final,
     size_t compressed_size = *outsize;
     size_t inend2 = instart;
     int final2;
-    fprintf(stderr, "!! Uncompressed block(s) size %d bit < %d bit - using uncompressed block(s)!\n",(int)unccost,(int)dyncost);
+    if (options->verbose>2) fprintf(stderr, " > Using uncompressed blocks(s): %d bit < %d bit\n",(int)unccost,(int)dyncost);
     do {
       inend2 += (blocksize-uncblkpos)>65535? 65535 : (blocksize-uncblkpos);
       final2 = (final & (uncblkpos+65535>blocksize));
       DeflateNonCompressedBlock(options, final2, in, uncblkpos+instart, inend2, bp, out, outsize);
       uncblkpos+=65535;
     } while(uncblkpos<blocksize);
-    if (options->verbose>2) {
-      compressed_size=*outsize - compressed_size;
-      fprintf(stderr, "Compressed block size: %d (%dk) (unc: %d)\n",
-             (int)compressed_size, (int)(compressed_size / 1024),
-             (int)blocksize);
-    }
+    if (options->verbose>2) PrintBlockSummary(blocksize, compressed_size, 0);
   } else {
     if (fixedcost < dyncost) {
-      fprintf(stderr, "!! Fixed block size: %d bit < %d bit - using fixed block!\n",(int)fixedcost,(int)dyncost);
+      if (options->verbose>2) fprintf(stderr, " > Using Fixed Tree Block: %d bit < %d bit\n",(int)fixedcost,(int)dyncost);
       btype = 1;
       ZopfliCleanLZ77Store(&store);
       store = fixedstore;
@@ -879,7 +878,7 @@ static void DeflateSplittingFirst(const ZopfliOptions* options,
     increases the total size. Leave npoints at 0, this represents 1 block. */
   } else {
     ZopfliBlockSplit(options, in, instart, inend,
-                     options->blocksplittingmax, &splitpoints, &npoints);
+                     options->blocksplittingmax, &splitpoints, &npoints, &npoints);
   }
   if(options->verbose>0) fprintf(stderr,"                          \r");
   for (i = 0; i <= npoints; i++) {
@@ -950,7 +949,7 @@ static void DeflateSplittingLast(const ZopfliOptions* options,
     increases the total size. Leave npoints at 0, this represents 1 block. */
   } else {
     ZopfliBlockSplitLZ77(options, store.litlens, store.dists, store.size,
-                         options->blocksplittingmax, &splitpoints, &npoints);
+                         options->blocksplittingmax, &splitpoints, &npoints, 0);
   }
 
   for (i = 0; i <= npoints; i++) {
