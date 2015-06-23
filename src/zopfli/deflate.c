@@ -612,7 +612,7 @@ static double ZopfliCalculateUncBlockSize(size_t instart, size_t inend, unsigned
 static void PrintBlockSummary(unsigned long insize, unsigned long outsize, unsigned long treesize) {
 
     fprintf(stderr, "Compressed block size: %lu (%luk) ",outsize, outsize / 1024);
-    if(tree>0) fprintf(stderr, "(tree: %lu) ",treesize);
+    if(treesize>0) fprintf(stderr, "(tree: %lu) ",treesize);
     fprintf(stderr, "(unc: %lu)\n",insize);
 
 }
