@@ -609,10 +609,10 @@ static double ZopfliCalculateUncBlockSize(size_t instart, size_t inend, unsigned
   return bits;
 }
 
-static void PrintBlockSummary(unsigned long insize, unsigned long outsize, unsigned long tree) {
+static void PrintBlockSummary(unsigned long insize, unsigned long outsize, unsigned long treesize) {
 
     fprintf(stderr, "Compressed block size: %lu (%luk) ",outsize, outsize / 1024);
-    if(tree>0) fprintf(stderr, "(tree: %lu) ",tree);
+    if(tree>0) fprintf(stderr, "(tree: %lu) ",treesize);
     fprintf(stderr, "(unc: %lu)\n",insize);
 
 }
@@ -782,7 +782,7 @@ static void DeflateDynamicBlock(const ZopfliOptions* options, int final,
     size_t compressed_size = *outsize;
     size_t inend2 = instart;
     int final2;
-    if (options->verbose>2) fprintf(stderr, " > Using uncompressed blocks(s): %d bit < %d bit\n",(int)unccost,(int)dyncost);
+    if (options->verbose>2) fprintf(stderr, " > Using Uncompressed Blocks(s): %d bit < %d bit\n",(int)unccost,(int)dyncost);
     do {
       inend2 += (blocksize-uncblkpos)>65535? 65535 : (blocksize-uncblkpos);
       final2 = (final & (uncblkpos+65535>blocksize));
