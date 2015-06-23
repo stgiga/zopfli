@@ -148,10 +148,7 @@ void ZopfliZipCompress(const ZopfliOptions* options,
 
   if (options->verbose>1) {
     max=(cdiroffset+cdirsize)+22;
-    fprintf(stderr,
-            "ZIP size: %d (%dK). Compression ratio: %.3f%%\n",
-            (int)max, (int)max / 1024,
-            100.0 * (double)max / (double)fullsize);
+    PrintSummary(fullsize,max,0);
   }
 
 }

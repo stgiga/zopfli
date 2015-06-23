@@ -611,9 +611,27 @@ static double ZopfliCalculateUncBlockSize(size_t instart, size_t inend, unsigned
 
 static void PrintBlockSummary(unsigned long insize, unsigned long outsize, unsigned long treesize) {
 
-    fprintf(stderr, "Compressed block size: %lu (%luk) ",outsize, outsize / 1024);
-    if(treesize>0) fprintf(stderr, "(tree: %lu) ",treesize);
-    fprintf(stderr, "(unc: %lu)\n",insize);
+  fprintf(stderr, "Compressed block size: %lu (%luk) ",outsize, outsize / 1024);
+  if(treesize>0) fprintf(stderr, "(tree: %lu) ",treesize);
+  fprintf(stderr, "(unc: %lu)\n",insize);
+
+}
+
+void PrintSummary(unsigned long insize, unsigned long outsize, unsigned long deflsize) {
+
+  if(insize>0) {
+    unsigned long ratio_comp = 0;
+    fprintf(stderr, "Input size: %lu (%luK)\n", insize, insize / 1024);
+    if(outsize>0) {
+      ratio_comp=outsize;
+      fprintf(stderr, "Output size: %lu (%luK)\n", outsize, outsize / 1024);
+    }
+    if(deflsize>0) {
+      if(ratio_comp==0) ratio_comp=deflsize;
+      fprintf(stderr, "Deflate size: %lu (%luK)\n", deflsize, deflsize / 1024);
+    }
+    fprintf(stderr, "Ratio: %.3f%%\n\n", 100.0 * (double)ratio_comp / (double)insize);
+  }
 
 }
 
@@ -1017,11 +1035,5 @@ __declspec( dllexport ) void ZopfliDeflate(const ZopfliOptions* options, int bty
   }
 #endif
   if(options->verbose>0) fprintf(stderr,"Progress: 100.0%%                                                  \n\n");
-  if (options->verbose>1) {
-    fprintf(stderr,
-            "Input size: %d (%dK)\n"
-            "Deflate size: %d (%dK). Compression ratio: %.3f%%\n",
-            (int)insize,(int)insize/1024, (int)(*outsize-offset), (int)(*outsize-offset) / 1024,
-            100.0 * (double)(*outsize-offset) / (double)insize);
-  }
+  if(options->verbose>1) PrintSummary(insize,0,*outsize-offset);
 }

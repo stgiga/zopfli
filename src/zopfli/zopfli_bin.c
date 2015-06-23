@@ -659,15 +659,7 @@ static int Compress(ZopfliOptions* options, const ZopfliBinOptions* binoptions,
 
   if(options->verbose>0) fprintf(stderr,"Progress: 100.0%%                                                  \n");
 
-  if (options->verbose>1) {
-    fprintf(stderr,
-            "Input size: %d (%dK)\n"
-            "Output size: %d (%dK)\n"
-            "Deflate size: %d (%dK)\n"
-            "Compression ratio: %.3f%%\n\n",
-            (int)fullsize,(int)fullsize/1024, (int)outsize, (int)outsize / 1024, (int)(compsize), (int)(compsize) / 1024,
-            100.0 * (double)outsize / (double)fullsize);
-  }
+  if (options->verbose>1) PrintSummary(fullsize,outsize,compsize);
 
   return 1;
 
