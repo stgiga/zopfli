@@ -807,6 +807,7 @@ static void DeflateDynamicBlock(const ZopfliOptions* options, int final,
       DeflateNonCompressedBlock(options, final2, in, uncblkpos+instart, inend2, bp, out, outsize);
       uncblkpos+=65535;
     } while(uncblkpos<blocksize);
+    compressed_size = *outsize - compressed_size;
     if (options->verbose>2) PrintBlockSummary(blocksize, compressed_size, 0);
   } else {
     if (fixedcost < dyncost) {
