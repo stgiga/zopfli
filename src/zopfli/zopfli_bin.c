@@ -588,7 +588,7 @@ static int Compress(ZopfliOptions* options, const ZopfliBinOptions* binoptions,
     for(j=0;j<4;++j) ZOPFLI_APPEND_DATA((fullsize >> (j*8)) % 256, &out, &outsize);
     offset+=8;
   } else if(output_type == ZOPFLI_FORMAT_ZLIB) {
-    for(j=0;j<4;++j) ZOPFLI_APPEND_DATA((checksum >> (j*8)) % 256, &out, &outsize);
+    for(j=4;j!=0;--j) ZOPFLI_APPEND_DATA((checksum >> ((j-1)*8)) % 256, &out, &outsize);
     offset+=4;
   } else if(output_type == ZOPFLI_FORMAT_ZIP) {
     size_t l;

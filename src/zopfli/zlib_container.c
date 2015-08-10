@@ -46,7 +46,7 @@ void ZopfliZlibCompress(const ZopfliOptions* options,
   ZopfliDeflate(options, 2 /* dynamic block */, 1,
                 in, insize, &bp, out, outsize);
 
-  for(bp=4;bp!=0;--bp) ZOPFLI_APPEND_DATA((checksum >> (bp*8)) % 256, out, outsize);
+  for(bp=4;bp!=0;--bp) ZOPFLI_APPEND_DATA((checksum >> ((bp-1)*8)) % 256, out, outsize);
 
   if (options->verbose>1) PrintSummary(insize,*outsize,0);
 
