@@ -25,6 +25,7 @@ Author: jyrki.alakuijala@gmail.com (Jyrki Alakuijala)
 #include "zip_container.h"
 #include "zlib_container.h"
 #include "inthandler.h"
+#include "dllspec.h"
 #include <stdio.h>
 
 void intHandler(int exit_code);
@@ -41,7 +42,7 @@ void intHandler(int exit_code);
    file name.
 */
 
-__declspec( dllexport ) void ZopfliCompress(ZopfliOptions* options, const ZopfliFormat output_type,
+DLL_PUBLIC void ZopfliCompress(ZopfliOptions* options, const ZopfliFormat output_type,
                     const unsigned char* in, size_t insize,
                     unsigned char** out, size_t* outsize, const ZopfliAdditionalData* moredata) {
   ZopfliOptions optionstemp;

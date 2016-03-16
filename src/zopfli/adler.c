@@ -18,6 +18,7 @@ Author: jyrki.alakuijala@gmail.com (Jyrki Alakuijala)
 */
 
 #include "adler.h"
+#include "dllspec.h"
 #include <stdio.h>
 
 /* Calculates the adler32 checksum of the data */
@@ -41,6 +42,6 @@ static unsigned long adler32(const unsigned char* data, size_t size, unsigned lo
   return (s2 << 16) | s1;
 }
 
-__declspec( dllexport ) void adler32u(const unsigned char* data, size_t size, unsigned long* adler) {
+DLL_PUBLIC void adler32u(const unsigned char* data, size_t size, unsigned long* adler) {
   *adler=adler32(data,size,*adler);
 }

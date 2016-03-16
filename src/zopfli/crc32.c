@@ -19,6 +19,7 @@ Author: jyrki.alakuijala@gmail.com (Jyrki Alakuijala)
 
 #include "crc32.h"
 #include "util.h"
+#include "dllspec.h"
 #include <stdio.h>
 
 /* Table of CRCs of all 8-bit messages. */
@@ -77,7 +78,7 @@ unsigned long CRC(const unsigned char* buf, size_t len) {
   return cur_crc;
 }
 
-__declspec( dllexport ) void CRCu(const unsigned char* buf, size_t len, unsigned long* crc) {
+DLL_PUBLIC void CRCu(const unsigned char* buf, size_t len, unsigned long* crc) {
   if(crc==NULL) {
     *crc=0L;
   }

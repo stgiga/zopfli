@@ -28,6 +28,7 @@ Author: jyrki.alakuijala@gmail.com (Jyrki Alakuijala)
 #include "blocksplitter.h"
 #include "squeeze.h"
 #include "tree.h"
+#include "dllspec.h"
 
 /*
 bp = bitpointer, always in range [0, 7].
@@ -851,7 +852,7 @@ static void AddLZ77BlockAutoType(const ZopfliOptions* options, int final,
   ZopfliCleanLZ77Store(&fixedstore);
 }
 
-__declspec( dllexport ) void ZopfliDeflatePart(const ZopfliOptions* options, int btype, int final,
+DLL_PUBLIC void ZopfliDeflatePart(const ZopfliOptions* options, int btype, int final,
                           const unsigned char* in, size_t instart, size_t inend,
                           unsigned char* bp, unsigned char** out,
                           size_t* outsize) {
@@ -948,7 +949,7 @@ __declspec( dllexport ) void ZopfliDeflatePart(const ZopfliOptions* options, int
   free(splitpoints_uncompressed);
 }
 
-__declspec( dllexport ) void ZopfliDeflate(const ZopfliOptions* options, int btype, int final,
+DLL_PUBLIC void ZopfliDeflate(const ZopfliOptions* options, int btype, int final,
                    const unsigned char* in, size_t insize,
                    unsigned char* bp, unsigned char** out, size_t* outsize) {
   size_t offset=*outsize;
