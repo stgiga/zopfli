@@ -41,6 +41,6 @@ static unsigned long adler32(const unsigned char* data, size_t size, unsigned lo
   return (s2 << 16) | s1;
 }
 
-void adler32u(const unsigned char* data, size_t size, unsigned long* adler) {
+__declspec( dllexport ) void adler32u(const unsigned char* data, size_t size, unsigned long* adler) {
   *adler=adler32(data,size,*adler);
 }

@@ -28,6 +28,7 @@ ones that enhance it.
 #ifndef ZOPFLI_BLOCKSPLITTER_H_
 #define ZOPFLI_BLOCKSPLITTER_H_
 
+#include "lz77.h"
 #include "zopfli.h"
 
 
@@ -40,9 +41,7 @@ llsize: size of litlens and dists
 maxblocks: set a limit to the amount of blocks. Set to 0 to mean no limit.
 */
 void ZopfliBlockSplitLZ77(const ZopfliOptions* options,
-                          const unsigned short* litlens,
-                          const unsigned short* dists,
-                          size_t llsize, size_t maxblocks,
+                          const ZopfliLZ77Store* lz77, size_t maxblocks,
                           size_t** splitpoints, size_t* npoints, size_t startnpoints);
 
 /*

@@ -37,7 +37,7 @@ void ZopfliZlibCompress(const ZopfliOptions* options,
 
   adler32u(in, insize,&checksum);
 
-  cmfflg = 256 * cmf;
+  cmfflg = 256 * cmf + 192;
   fcheck = 31 - cmfflg % 31;
   cmfflg += fcheck;
   ZOPFLI_APPEND_DATA(cmfflg / 256, out, outsize);

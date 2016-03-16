@@ -77,7 +77,7 @@ unsigned long CRC(const unsigned char* buf, size_t len) {
   return cur_crc;
 }
 
-void CRCu(const unsigned char* buf, size_t len, unsigned long* crc) {
+__declspec( dllexport ) void CRCu(const unsigned char* buf, size_t len, unsigned long* crc) {
   if(crc==NULL) {
     *crc=0L;
   }

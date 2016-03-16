@@ -80,8 +80,7 @@ void ShowHelp() {
          " previous run and not overwritten if its filesize is smaller.\n"
          "\n"
          "Options:\n"
-         "-m: compress more: use more iterations (depending on file size) and"
-         " use block split strategy 3\n"
+         "-m: compress more: use more iterations (depending on file size)\n"
          "--prefix=[fileprefix]: Adds a prefix to output filenames. May also"
          " contain a directory path. When using a prefix, multiple input files"
          " can be given and the output filenames are generated with the"
@@ -105,8 +104,7 @@ void ShowHelp() {
          "--iterations=[number]: number of iterations, more iterations makes it"
          " slower but provides slightly better compression. Default: 15 for"
          " small files, 5 for large files.\n"
-         "--splitting=[0-3]: block split strategy:"
-         " 0=none, 1=first, 2=last, 3=try both and take the best\n"
+         "--splitting=[0-3]: ignored, left for backwards compatibility\n"
          "--filters=[types]: filter strategies to try:\n"
          " 0-4: give all scanlines PNG filter type 0-4\n"
          " m: minimum sum\n"
@@ -143,8 +141,8 @@ void ShowHelp() {
          "Compress more: zopflipng -m infile.png outfile.png\n"
          "Optimize multiple files: zopflipng --prefix a.png b.png c.png\n"
          "Compress really good and trying all filter strategies: zopflipng"
-         " --iterations=500 --splitting=3 --filters=01234mepb"
-         " --lossy_8bit --lossy_transparent infile.png outfile.png\n");
+         " --iterations=500 --filters=01234mepb --lossy_8bit"
+         " --lossy_transparent infile.png outfile.png\n");
 }
 
 void PrintSize(const char* label, size_t size) {
@@ -192,7 +190,6 @@ printf("ZopfliPNG, a Portable Network Graphics (PNG) image optimizer.\n"
         } else if (c == 'm') {
           png_options.num_iterations *= 4;
           png_options.num_iterations_large *= 4;
-          png_options.block_split_strategy = 3;
         } else if (c == 'q') {
           png_options.use_zopfli = false;
         } else if (c == 'h') {
@@ -244,8 +241,7 @@ printf("ZopfliPNG, a Portable Network Graphics (PNG) image optimizer.\n"
         if (num < 1) num = 1;
         png_options.ranstatez = num;
       } else if (name == "--splitting") {
-        if (num < 0 || num > 3) num = 1;
-        png_options.block_split_strategy = num;
+        // ignored
       } else if (name == "--filters") {
         for (size_t j = 0; j < value.size(); j++) {
           ZopfliPNGFilterStrategy strategy = kStrategyZero;

@@ -480,7 +480,7 @@ static int Compress(ZopfliOptions* options, const ZopfliBinOptions* binoptions,
       ZOPFLI_APPEND_DATA(0, &out, &outsize);
     }
   } else if(output_type == ZOPFLI_FORMAT_ZLIB) {
-    unsigned cmfflg = 30720;
+    unsigned cmfflg = 30912;
     unsigned fcheck = 31 - cmfflg % 31;
     cmfflg += fcheck;
     ZOPFLI_APPEND_DATA(cmfflg / 256, &out, &outsize);
@@ -821,10 +821,7 @@ int main(int argc, char* argv[]) {
     else if (StringsEqual(arg, "--gzip")) output_type = ZOPFLI_FORMAT_GZIP;
     else if (StringsEqual(arg, "--gzipname")) output_type = ZOPFLI_FORMAT_GZIP_NAME;
     else if (StringsEqual(arg, "--zip")) output_type = ZOPFLI_FORMAT_ZIP;
-    else if (StringsEqual(arg, "--splitlast")) {
-      binoptions.legacy = 1;
-      options.blocksplittinglast = 1;
-    }
+    else if (StringsEqual(arg, "--splitlast")) /* Ignored */;
     else if (StringsEqual(arg, "--legacy")) binoptions.legacy = 1;
     else if (StringsEqual(arg, "--lazy")) options.lazymatching = 1;
     else if (StringsEqual(arg, "--ohh")) options.optimizehuffmanheader = 1;
@@ -906,7 +903,7 @@ int main(int argc, char* argv[]) {
           "  --mb#         maximum blocks, 0 = unlimited (d: 15)\n"
           "  --bsr#        block splitting recursion (min: 2, d: 9)\n"
           "  --mls#        maximum length score (d: 1024)\n"
-          "  --splitlast   do block splitting last instead of first (forces legacy mode)\n\n");
+          "  --splitlast   ignored, left for backwards compatibility\n\n");
       fprintf(stderr,
           "      MANUAL BLOCK SPLITTING CONTROL (doesn't work with --legacy or --dir):\n"
           "  --n#          number of blocks\n"
