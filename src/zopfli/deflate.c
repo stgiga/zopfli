@@ -597,7 +597,11 @@ unsigned OptimizeHuffmanForRleBrotli(size_t length, size_t* counts) {
   unsigned char* good_for_rle;
   /* 1) Let's make the Huffman code more compatible with rle encoding. */
   size_t i;
-  for (i = 0; i < length; i++) if (counts[i]) ++nonzero_count;
+  for (i = 0; i < length; i++) {
+    if (counts[i]) {
+      ++nonzero_count;
+    }
+  }
   if (nonzero_count < 16) {
     return 1;
   }
@@ -637,8 +641,8 @@ unsigned OptimizeHuffmanForRleBrotli(size_t length, size_t* counts) {
     }
     if (nonzeros < 28) {
       return 1;
-      }
     }
+  }
     /* 2) Let's mark all population counts that already can be encoded
   with an rle code. */
   good_for_rle = (unsigned char*)calloc(length, 1);
