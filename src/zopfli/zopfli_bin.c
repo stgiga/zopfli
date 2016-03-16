@@ -844,6 +844,7 @@ int main(int argc, char* argv[]) {
     else if (StringsEqual(arg, "--gzipname")) output_type = ZOPFLI_FORMAT_GZIP_NAME;
     else if (StringsEqual(arg, "--zip")) output_type = ZOPFLI_FORMAT_ZIP;
     else if (StringsEqual(arg, "--splitlast")) /* Ignored */;
+    else if (StringsEqual(arg, "--brotli")) options.usebrotli = 1;
     else if (StringsEqual(arg, "--legacy")) binoptions.legacy = 1;
     else if (StringsEqual(arg, "--lazy")) options.lazymatching = 1;
     else if (StringsEqual(arg, "--ohh")) options.optimizehuffmanheader = 1;
@@ -946,6 +947,7 @@ int main(int argc, char* argv[]) {
           "  --deflate     output to deflate format\n\n");
       fprintf(stderr,
           "      MISCELLANEOUS:\n"
+          "  --brotli      use Brotli Huffman optimization\n"
           "  --legacy      use legacy mode when compressing data\n"
           "  --lazy        lazy matching in Greedy LZ77 (d: OFF)\n"
           "  --ohh         optymize huffman header (d: OFF)\n"

@@ -99,6 +99,10 @@ typedef struct ZopfliOptions {
   unsigned short ranstatew;
   unsigned short ranstatez;
 
+  /*
+  If to use Brotli RLE.
+  */
+  int usebrotli;
 } ZopfliOptions;
 
 typedef struct ZopfliAdditionalData {

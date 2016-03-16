@@ -588,6 +588,140 @@ void OptimizeHuffmanForRle(int length, size_t* counts) {
   free(good_for_rle);
 }
 
+unsigned OptimizeHuffmanForRleBrotli(size_t length, size_t* counts) {
+  size_t nonzero_count = 0;
+  size_t stride;
+  size_t limit;
+  size_t sum;
+  const size_t streak_limit = 1240;
+  unsigned char* good_for_rle;
+  /* 1) Let's make the Huffman code more compatible with rle encoding. */
+  size_t i;
+  for (i = 0; i < length; i++) if (counts[i]) ++nonzero_count;
+  if (nonzero_count < 16) {
+    return 1;
+  }
+  while (length != 0 && counts[length - 1] == 0) {
+    --length;
+  }
+  if (length == 0) {
+    return 1;  /* All zeros. */
+  }
+  /* Now counts[0..length - 1] does not have trailing zeros. */
+  {
+    size_t nonzeros = 0;
+    size_t smallest_nonzero = 1 << 30;
+    for (i = 0; i < length; ++i) {
+      if (counts[i] != 0) {
+        ++nonzeros;
+        if (smallest_nonzero > counts[i]) {
+          smallest_nonzero = counts[i];
+        }
+      }
+    }
+    if (nonzeros < 5) {
+      /* Small histogram will model it well. */
+      return 1;
+    }
+    {
+      size_t zeros = length - nonzeros;
+      if (smallest_nonzero < 4) {
+        if (zeros < 6) {
+          for (i = 1; i < length - 1; ++i) {
+            if (counts[i - 1] != 0 && counts[i] == 0 && counts[i + 1] != 0) {
+              counts[i] = 1;
+            }
+          }
+        }
+      }
+    }
+    if (nonzeros < 28) {
+      return 1;
+      }
+    }
+    /* 2) Let's mark all population counts that already can be encoded
+  with an rle code. */
+  good_for_rle = (unsigned char*)calloc(length, 1);
+  if (good_for_rle == NULL) {
+    return 0;
+  }
+  {
+    /* Let's not spoil any of the existing good rle codes.
+    Mark any seq of 0's that is longer as 5 as a good_for_rle.
+    Mark any seq of non-0's that is longer as 7 as a good_for_rle. */
+    size_t symbol = counts[0];
+    size_t step = 0;
+    for (i = 0; i <= length; ++i) {
+      if (i == length || counts[i] != symbol) {
+        if ((symbol == 0 && step >= 5) ||
+            (symbol != 0 && step >= 7)) {
+          size_t k;
+          for (k = 0; k < step; ++k) {
+            good_for_rle[i - k - 1] = 1;
+          }
+        }
+        step = 1;
+        if (i != length) {
+          symbol = counts[i];
+        }
+      } else {
+        ++step;
+      }
+    }
+  }
+  /* 3) Let's replace those population counts that lead to more rle codes.
+  Math here is in 24.8 fixed point representation. */
+  stride = 0;
+  limit = 256 * (counts[0] + counts[1] + counts[2]) / 3 + 420;
+  sum = 0;
+  for (i = 0; i <= length; ++i) {
+    if (i == length || good_for_rle[i] ||
+        (i != 0 && good_for_rle[i - 1]) ||
+        (256 * counts[i] - limit + streak_limit) >= 2 * streak_limit) {
+      if (stride >= 4 || (stride >= 3 && sum == 0)) {
+        size_t k;
+        /* The stride must end, collapse what we have, if we have enough (4). */
+        size_t count = (sum + stride / 2) / stride;
+        if (count == 0) {
+          count = 1;
+        }
+        if (sum == 0) {
+          /* Don't make an all zeros stride to be upgraded to ones. */
+          count = 0;
+        }
+        for (k = 0; k < stride; ++k) {
+          /* We don't want to change value at counts[i],
+          that is already belonging to the next stride. Thus - 1. */
+          counts[i - k - 1] = count;
+        }
+      }
+      stride = 0;
+      sum = 0;
+      if (i < length - 2) {
+        /* All interesting strides have a count of at least 4,
+        at least when non-zeros. */
+        limit = 256 * (counts[i] + counts[i + 1] + counts[i + 2]) / 3 + 420;
+      } else if (i < length) {
+        limit = 256 * counts[i];
+      } else {
+        limit = 0;
+      }
+    }
+    ++stride;
+    if (i != length) {
+      sum += counts[i];
+      if (stride >= 4) {
+        limit = (256 * sum + stride / 2) / stride;
+      }
+      if (stride == 4) {
+        limit += 120;
+      }
+    }
+  }
+  free(good_for_rle);
+  return 1;
+}
+
 /*
 Calculates the bit lengths for the symbols for dynamic blocks. Chooses bit
 lengths that give the smallest size of tree encoding + encoding of all the
@@ -596,14 +730,19 @@ bit lengths.
 */
 static void GetDynamicLengths(const ZopfliLZ77Store* lz77,
                               size_t lstart, size_t lend,
-                              unsigned* ll_lengths, unsigned* d_lengths) {
+                              unsigned* ll_lengths, unsigned* d_lengths, int usebrotli) {
   size_t ll_counts[ZOPFLI_NUM_LL];
   size_t d_counts[ZOPFLI_NUM_D];
 
   ZopfliLZ77GetHistogram(lz77, lstart, lend, ll_counts, d_counts);
   ll_counts[256] = 1;  /* End symbol. */
-  OptimizeHuffmanForRle(ZOPFLI_NUM_LL, ll_counts);
-  OptimizeHuffmanForRle(ZOPFLI_NUM_D, d_counts);
+  if(usebrotli==1) {
+    OptimizeHuffmanForRleBrotli(ZOPFLI_NUM_LL, ll_counts);
+    OptimizeHuffmanForRleBrotli(ZOPFLI_NUM_D, d_counts);
+  } else {
+    OptimizeHuffmanForRle(ZOPFLI_NUM_LL, ll_counts);
+    OptimizeHuffmanForRle(ZOPFLI_NUM_D, d_counts);
+  }
   ZopfliCalculateBitLengths(ll_counts, ZOPFLI_NUM_LL, 15, ll_lengths);
   ZopfliCalculateBitLengths(d_counts, ZOPFLI_NUM_D, 15, d_lengths);
   PatchDistanceCodesForBuggyDecoders(d_lengths);
@@ -636,7 +775,7 @@ void PrintSummary(unsigned long insize, unsigned long outsize, unsigned long def
 }
 
 double ZopfliCalculateBlockSize(const ZopfliLZ77Store* lz77,
-                                size_t lstart, size_t lend, int btype, int ohh) {
+                                size_t lstart, size_t lend, int btype, int ohh, int usebrotli) {
   unsigned ll_lengths[ZOPFLI_NUM_LL];
   unsigned d_lengths[ZOPFLI_NUM_D];
 
@@ -653,7 +792,7 @@ double ZopfliCalculateBlockSize(const ZopfliLZ77Store* lz77,
   } else if(btype == 1) {
     GetFixedTree(ll_lengths, d_lengths);
   } else {
-    GetDynamicLengths(lz77, lstart, lend, ll_lengths, d_lengths);
+    GetDynamicLengths(lz77, lstart, lend, ll_lengths, d_lengths, usebrotli);
     result += CalculateTreeSize(ll_lengths, d_lengths, ohh);
   }
 
@@ -664,12 +803,12 @@ double ZopfliCalculateBlockSize(const ZopfliLZ77Store* lz77,
 }
 
 double ZopfliCalculateBlockSizeAutoType(const ZopfliLZ77Store* lz77,
-                                        size_t lstart, size_t lend, int ohh) {
-  double uncompressedcost = ZopfliCalculateBlockSize(lz77, lstart, lend, 0, ohh);
+                                        size_t lstart, size_t lend, int ohh, int usebrotli) {
+  double uncompressedcost = ZopfliCalculateBlockSize(lz77, lstart, lend, 0, ohh, usebrotli);
   /* Don't do the expensive fixed cost calculation for larger blocks that are
      unlikely to use it. */
-  double fixedcost = ZopfliCalculateBlockSize(lz77, lstart, lend, 1, ohh);
-  double dyncost = ZopfliCalculateBlockSize(lz77, lstart, lend, 2, ohh);
+  double fixedcost = ZopfliCalculateBlockSize(lz77, lstart, lend, 1, ohh, usebrotli);
+  double dyncost = ZopfliCalculateBlockSize(lz77, lstart, lend, 2, ohh, usebrotli);
   return (uncompressedcost < fixedcost && uncompressedcost < dyncost)
       ? uncompressedcost
       : (fixedcost < dyncost ? fixedcost : dyncost);
@@ -769,7 +908,7 @@ static void AddLZ77Block(const ZopfliOptions* options, int btype, int final,
     /* Dynamic block. */
     assert(btype == 2);
 
-    GetDynamicLengths(lz77, lstart, lend, ll_lengths, d_lengths);
+    GetDynamicLengths(lz77, lstart, lend, ll_lengths, d_lengths, options->usebrotli);
 
     treesize = *outsize;
     AddDynamicTree(ll_lengths, d_lengths, bp, out, outsize, options->optimizehuffmanheader);
@@ -798,9 +937,9 @@ static void AddLZ77BlockAutoType(const ZopfliOptions* options, int final,
                                  size_t expected_data_size,
                                  unsigned char* bp,
                                  unsigned char** out, size_t* outsize) {
-  double uncompressedcost = ZopfliCalculateBlockSize(lz77, lstart, lend, 0, options->optimizehuffmanheader);
-  double fixedcost = ZopfliCalculateBlockSize(lz77, lstart, lend, 1, options->optimizehuffmanheader);
-  double dyncost = ZopfliCalculateBlockSize(lz77, lstart, lend, 2, options->optimizehuffmanheader);
+  double uncompressedcost = ZopfliCalculateBlockSize(lz77, lstart, lend, 0, options->optimizehuffmanheader, options->usebrotli);
+  double fixedcost = ZopfliCalculateBlockSize(lz77, lstart, lend, 1, options->optimizehuffmanheader, options->usebrotli);
+  double dyncost = ZopfliCalculateBlockSize(lz77, lstart, lend, 2, options->optimizehuffmanheader, options->usebrotli);
 
   /* Whether to perform the expensive calculation of creating an optimal block
   with fixed huffman tree to check if smaller. Only do this for small blocks or
@@ -830,7 +969,7 @@ static void AddLZ77BlockAutoType(const ZopfliOptions* options, int final,
     ZopfliBlockState s;
     ZopfliInitBlockState(options, instart, inend, 1, &s);
     ZopfliLZ77OptimalFixed(&s, lz77->data, instart, inend, &fixedstore);
-    fixedcost = ZopfliCalculateBlockSize(&fixedstore, 0, fixedstore.size, 1, options->optimizehuffmanheader);
+    fixedcost = ZopfliCalculateBlockSize(&fixedstore, 0, fixedstore.size, 1, options->optimizehuffmanheader, options->usebrotli);
     ZopfliCleanBlockState(&s);
   }
   if (uncompressedcost < fixedcost && uncompressedcost < dyncost) {
@@ -903,7 +1042,7 @@ DLL_PUBLIC void ZopfliDeflatePart(const ZopfliOptions* options, int btype, int f
     ZopfliInitLZ77Store(in, &store);
     ZopfliInitBlockState(options, start, end, 1, &s);
     ZopfliLZ77Optimal(&s, in, start, end, &store, options);
-    totalcost += ZopfliCalculateBlockSizeAutoType(&store, 0, store.size, options->optimizehuffmanheader);
+    totalcost += ZopfliCalculateBlockSizeAutoType(&store, 0, store.size, options->optimizehuffmanheader, options->usebrotli);
 
     ZopfliAppendLZ77Store(&store, &lz77);
     if (i < npoints) splitpoints[i] = lz77.size;
@@ -924,7 +1063,7 @@ DLL_PUBLIC void ZopfliDeflatePart(const ZopfliOptions* options, int btype, int f
     for (i = 0; i <= npoints2; i++) {
       size_t start = i == 0 ? 0 : splitpoints2[i - 1];
       size_t end = i == npoints2 ? lz77.size : splitpoints2[i];
-      totalcost2 += ZopfliCalculateBlockSizeAutoType(&lz77, start, end, options->optimizehuffmanheader);
+      totalcost2 += ZopfliCalculateBlockSizeAutoType(&lz77, start, end, options->optimizehuffmanheader, options->usebrotli);
     }
 
     if (totalcost2 < totalcost) {

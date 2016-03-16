@@ -487,7 +487,7 @@ void ZopfliLZ77Optimal(ZopfliBlockState *s,
                    length_array, GetCostStat, (void*)&stats,
                    &currentstore);
     cost = ZopfliCalculateBlockSize(&currentstore, 0, currentstore.size,
-                                    2, s->options->optimizehuffmanheader);
+                                    2, s->options->optimizehuffmanheader, s->options->usebrotli);
     if (s->options->verbose>4 || (s->options->verbose>2 && cost < bestcost)) {
       fprintf(stderr, "Iteration %d: %d bit      \r", i, (int) cost);
     }

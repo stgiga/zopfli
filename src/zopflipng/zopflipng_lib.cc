@@ -53,7 +53,8 @@ ZopfliPNGOptions::ZopfliPNGOptions()
   , maxfailiterations(0)
   , findminimumrec(9)
   , ranstatew(1)
-  , ranstatez(2) {
+  , ranstatez(2)
+  , usebrotli(0) {
 }
 
 // Deflate compressor passed as fuction pointer to LodePNG to have it use Zopfli
@@ -79,6 +80,7 @@ unsigned CustomPNGDeflate(unsigned char** out, size_t* outsize,
   options.findminimumrec        = png_options->findminimumrec;
   options.ranstatew             = png_options->ranstatew;
   options.ranstatez             = png_options->ranstatez;
+  options.usebrotli             = png_options->usebrotli;
 
   ZopfliDeflate(&options, 2 /* Dynamic */, 1, in, insize, &bp, out, outsize);
 
@@ -480,6 +482,7 @@ extern "C" int CZopfliPNGOptimize(const unsigned char* origpng,
   opts.findminimumrec        = png_options->findminimumrec;
   opts.ranstatew             = png_options->ranstatew;
   opts.ranstatez             = png_options->ranstatez;
+  opts.usebrotli             = png_options->usebrotli;
 
   for (int i = 0; i < png_options->num_filter_strategies; i++) {
     opts.filter_strategies.push_back(png_options->filter_strategies[i]);

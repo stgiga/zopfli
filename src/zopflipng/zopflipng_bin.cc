@@ -131,6 +131,7 @@ void ShowHelp() {
          "--mls=[number]: maximum length score (d: 1024)\n"
          "--rw=[number]:  initial random W for iterations (1-65535, d: 1)\n"
          "--rz=[number]:  initial random Z for iterations (1-65535, d: 2)\n"
+         "--brotli:       use Brotli Huffman optimization\n"
          "--lazy:         lazy matching in Greedy LZ77 (d: OFF)\n"
          "--ohh:          optymize huffman header (d: OFF)\n"
          "   more options available only in Zopfli\n"
@@ -211,6 +212,8 @@ printf("ZopfliPNG, a Portable Network Graphics (PNG) image optimizer.\n"
         png_options.lossy_transparent = true;
       } else if (name == "--lossy_8bit") {
         png_options.lossy_8bit = true;
+      } else if (name == "--brotli") {
+        png_options.usebrotli = 1;
       } else if (name == "--lazy") {
         png_options.lazymatching = 1;
       } else if (name == "--ohh") {

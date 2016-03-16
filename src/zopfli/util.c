@@ -229,4 +229,5 @@ void ZopfliInitOptions(ZopfliOptions* options) {
   options->findminimumrec = 9;
   options->ranstatew = 1;
   options->ranstatez = 2;
+  options->usebrotli = 0;
 }

@@ -87,6 +87,7 @@ typedef struct CZopfliPNGOptions {
 
   unsigned short ranstatew;
   unsigned short ranstatez;
+  int usebrotli;
 } CZopfliPNGOptions;
 
 // Sets the default options
@@ -179,6 +180,11 @@ struct ZopfliPNGOptions {
   */
   unsigned short ranstatew;
   unsigned short ranstatez;
+
+  /*
+  If to use Brotli RLE.
+  */
+  int usebrotli;
 
 };
 

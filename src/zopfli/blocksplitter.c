@@ -111,8 +111,8 @@ lstart: start of block
 lend: end of block (not inclusive)
 */
 static double EstimateCost(const ZopfliLZ77Store* lz77,
-                           size_t lstart, size_t lend, int ohh) {
-  return ZopfliCalculateBlockSizeAutoType(lz77, lstart, lend, ohh);
+                           size_t lstart, size_t lend, int ohh, int usebrotli) {
+  return ZopfliCalculateBlockSizeAutoType(lz77, lstart, lend, ohh, usebrotli);
 }
 
 typedef struct SplitCostContext {
@@ -120,6 +120,7 @@ typedef struct SplitCostContext {
   size_t start;
   size_t end;
   int ohh;
+  int usebrotli;
 } SplitCostContext;
 
 
@@ -130,8 +131,8 @@ type: FindMinimumFun
 */
 static double SplitCost(size_t i, void* context) {
   SplitCostContext* c = (SplitCostContext*)context;
-  return EstimateCost(c->lz77, c->start, i, c->ohh) +
-      EstimateCost(c->lz77, i, c->end, c->ohh);
+  return EstimateCost(c->lz77, c->start, i, c->ohh, c->usebrotli) +
+      EstimateCost(c->lz77, i, c->end, c->ohh, c->usebrotli);
 }
 
 static void AddSorted(size_t value, size_t** out, size_t* outsize) {
@@ -262,13 +263,14 @@ void ZopfliBlockSplitLZ77(const ZopfliOptions* options,
     c.start = lstart;
     c.end = lend;
     c.ohh = options->optimizehuffmanheader;
+    c.usebrotli = options->usebrotli;
     assert(lstart < lend);
     llpos = FindMinimum(SplitCost, &c, lstart + 1, lend, options, &splitcost);
 
     assert(llpos > lstart);
     assert(llpos < lend);
 
-    origcost = EstimateCost(lz77, lstart, lend, c.ohh);
+    origcost = EstimateCost(lz77, lstart, lend, c.ohh, c.usebrotli);
 
     if (splitcost > origcost || llpos == lstart + 1 || llpos == lend) {
       done[lstart] = 1;
