@@ -810,36 +810,6 @@ static void AddLZ77Block(const ZopfliOptions* options, int btype, int final,
   if (options->verbose>2) PrintBlockSummary(uncompressed_size,compressed_size,treesize);
 }
 
-static void DeflateNonCompressedBlock(const ZopfliOptions* options, int final,
-                                      const unsigned char* in, size_t instart,
-                                      size_t inend,
-                                      unsigned char* bp,
-                                      unsigned char** out, size_t* outsize) {
-  size_t i;
-  size_t blocksize = inend - instart;
-  unsigned short nlen = ~blocksize;
-
-  (void)options;
-  assert(blocksize < 65536);  /* Non compressed blocks are max this size. */
-
-  AddBit(final, bp, out, outsize);
-  /* BTYPE 00 */
-  AddBit(0, bp, out, outsize);
-  AddBit(0, bp, out, outsize);
-
-  /* Any bits of input up to the next byte boundary are ignored. */
-  *bp = 0;
-
-  ZOPFLI_APPEND_DATA(blocksize % 256, out, outsize);
-  ZOPFLI_APPEND_DATA((blocksize / 256) % 256, out, outsize);
-  ZOPFLI_APPEND_DATA(nlen % 256, out, outsize);
-  ZOPFLI_APPEND_DATA((nlen / 256) % 256, out, outsize);
-
-  for (i = instart; i < inend; i++) {
-    ZOPFLI_APPEND_DATA(in[i], out, outsize);
-  }
-}
-
 static void DeflateDynamicBlock(const ZopfliOptions* options, int final,
                                 const unsigned char* in,
                                 size_t instart, size_t inend,
@@ -880,19 +850,14 @@ static void DeflateDynamicBlock(const ZopfliOptions* options, int final,
       0, fixedstore.size, 1, options->optimizehuffmanheader);
   unccost = ZopfliCalculateUncBlockSize(instart,inend,bp);
   if(unccost < dyncost && unccost < fixedcost) {
-    size_t uncblkpos = 0;
     size_t compressed_size = *outsize;
-    size_t inend2 = instart;
-    int final2;
-    if (options->verbose>2) fprintf(stderr, " > Using Uncompressed Blocks(s): %d bit < %d bit\n",(int)unccost,(int)dyncost);
-    do {
-      inend2 += (blocksize-uncblkpos)>65535? 65535 : (blocksize-uncblkpos);
-      final2 = (final & (uncblkpos+65535>blocksize));
-      DeflateNonCompressedBlock(options, final2, in, uncblkpos+instart, inend2, bp, out, outsize);
-      uncblkpos+=65535;
-    } while(uncblkpos<blocksize);
+    AddNonCompressedBlock(options, final,
+                          in, instart, inend, bp, out, outsize);
     compressed_size = *outsize - compressed_size;
-    if (options->verbose>2) PrintBlockSummary(blocksize, compressed_size, 0);
+    if (options->verbose>2) {
+     fprintf(stderr, " > Using Uncompressed Blocks(s): %d bit < %d bit\n",(int)unccost,(int)dyncost);
+     PrintBlockSummary(blocksize, compressed_size, 0);
+    }
   } else {
     if (fixedcost < dyncost) {
       if (options->verbose>2) fprintf(stderr, " > Using Fixed Tree Block: %d bit < %d bit\n",(int)fixedcost,(int)dyncost);
@@ -950,7 +915,7 @@ void DeflateBlock(const ZopfliOptions* options,
                          unsigned char* bp,
                          unsigned char** out, size_t* outsize) {
   if (btype == 0) {
-    DeflateNonCompressedBlock(
+    AddNonCompressedBlock(
         options, final, in, instart, inend, bp, out, outsize);
   } else if (btype == 1) {
      DeflateFixedBlock(options, final, in, instart, inend, bp, out, outsize);
