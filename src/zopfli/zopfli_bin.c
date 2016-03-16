@@ -345,117 +345,120 @@ static int Compress(ZopfliOptions* options, const ZopfliBinOptions* binoptions,
 
   loffset = 0;
 
-  if(options->verbose>0) {
-    j = options->verbose;
-    options->verbose = 1;
-  }
+  if(binoptions->legacy==0) {
 
-  if(binoptions->custblocksplit != NULL) {
-    i=2;
-    while(i<=binoptions->custblocksplit[0]) {
-      if(binoptions->custblocksplit[i]<fullsize && binoptions->custblocksplit[i]>binoptions->custblocksplit[i-1]) {
-        if(binoptions->additionalautosplits==1) {
-          size_t oldloffset;
-          do {
-            size_t tempnumblocks;
-            size_t amount = binoptions->custblocksplit[i] - loffset;
-            oldloffset=loffset;
-            LoadFile(infilename, &in, &insize, &loffset, &fullsize, amount, 1);
-            tempnumblocks = SplitInput(options,in,insize,oldloffset,&splitpoints,&npoints);
-            free(in);
-            if(amount > ZOPFLI_MASTER_BLOCK_SIZE || (loffset<fullsize && tempnumblocks>1)) {
-              loffset=splitpoints[npoints-1];
-            }
-          } while(loffset<binoptions->custblocksplit[i] && loffset<fullsize);
-        }
-        ZOPFLI_APPEND_DATA(binoptions->custblocksplit[i],&splitpoints,&npoints);
-        if(i==binoptions->custblocksplit[0] && binoptions->additionalautosplits==1) {
-          size_t oldloffset;
-          do {
-            size_t tempnumblocks;
-            oldloffset=loffset;
-            LoadFile(infilename, &in, &insize, &loffset, &fullsize, 0, 1);
-            tempnumblocks = SplitInput(options,in,insize,oldloffset,&splitpoints,&npoints);
-            free(in);
-            if(loffset<fullsize && tempnumblocks>1) {
-              loffset=splitpoints[npoints-1];
-            }
-          } while(loffset<fullsize);
-        }
-      }
-      ++i;
+    if(options->verbose>0) {
+      j = options->verbose;
+      options->verbose = 1;
     }
-  } else if(binoptions->numblocks>0) {
-    if(binoptions->numblocks>1) {
-      size_t l;
-      if(binoptions->numblocks>fullsize) {
-        i = 1;
-      } else {
-        i = ceilz((float)fullsize / (float)binoptions->numblocks);
+
+    if(binoptions->custblocksplit != NULL) {
+      i=2;
+      while(i<=binoptions->custblocksplit[0]) {
+        if(binoptions->custblocksplit[i]<fullsize && binoptions->custblocksplit[i]>binoptions->custblocksplit[i-1]) {
+          if(binoptions->additionalautosplits==1) {
+            size_t oldloffset;
+            do {
+              size_t tempnumblocks;
+              size_t amount = binoptions->custblocksplit[i] - loffset;
+              oldloffset=loffset;
+              LoadFile(infilename, &in, &insize, &loffset, &fullsize, amount, 1);
+              tempnumblocks = SplitInput(options,in,insize,oldloffset,&splitpoints,&npoints);
+              free(in);
+              if(amount > ZOPFLI_MASTER_BLOCK_SIZE || (loffset<fullsize && tempnumblocks>1)) {
+                loffset=splitpoints[npoints-1];
+              }
+            } while(loffset<binoptions->custblocksplit[i] && loffset<fullsize);
+          }
+          ZOPFLI_APPEND_DATA(binoptions->custblocksplit[i],&splitpoints,&npoints);
+          if(i==binoptions->custblocksplit[0] && binoptions->additionalautosplits==1) {
+            size_t oldloffset;
+            do {
+              size_t tempnumblocks;
+              oldloffset=loffset;
+              LoadFile(infilename, &in, &insize, &loffset, &fullsize, 0, 1);
+              tempnumblocks = SplitInput(options,in,insize,oldloffset,&splitpoints,&npoints);
+              free(in);
+              if(loffset<fullsize && tempnumblocks>1) {
+                loffset=splitpoints[npoints-1];
+              }
+            } while(loffset<fullsize);
+          }
+        }
+        ++i;
       }
+    } else if(binoptions->numblocks>0) {
+      if(binoptions->numblocks>1) {
+        size_t l;
+        if(binoptions->numblocks>fullsize) {
+          i = 1;
+        } else {
+          i = ceilz((float)fullsize / (float)binoptions->numblocks);
+        }
+        l=i;
+        do {
+          ZOPFLI_APPEND_DATA(l,&splitpoints,&npoints);
+          l+=i;
+        } while(l<fullsize);
+      }
+    } else if(binoptions->blocksize>0 && binoptions->blocksize<fullsize) {
+      size_t l;
+      i = binoptions->blocksize;
       l=i;
       do {
         ZOPFLI_APPEND_DATA(l,&splitpoints,&npoints);
         l+=i;
       } while(l<fullsize);
-    }
-  } else if(binoptions->blocksize>0 && binoptions->blocksize<fullsize) {
-    size_t l;
-    i = binoptions->blocksize;
-    l=i;
-    do {
-      ZOPFLI_APPEND_DATA(l,&splitpoints,&npoints);
-      l+=i;
-    } while(l<fullsize);
-  } else {
-    size_t oldloffset;
-    do {
-      size_t tempnumblocks;
-      oldloffset=loffset;
-      LoadFile(infilename, &in, &insize, &loffset, &fullsize, 0, 1);
-      tempnumblocks = SplitInput(options,in,insize,oldloffset,&splitpoints,&npoints);
-      free(in);
-      if(loffset<fullsize && tempnumblocks>1) {
-        loffset=splitpoints[npoints-1];
-      }
-    } while(loffset<fullsize);
-  }
-  if(j>0) options->verbose = j;
-
-  if(options->verbose>3 || binoptions->dumpsplitsfile != NULL) {
-    FILE* file = NULL;
-    char* tempfilename = NULL;
-    if(binoptions->dumpsplitsfile != NULL) {
-      tempfilename = AddStrings(binoptions->dumpsplitsfile,tempfileext);
-      file = fopen(tempfilename, "wb");
-      fprintf(file,"0");
-    }
-    fprintf(stderr, "Block split points: ");
-    if(npoints>0) {
-      for (j = 0; j < npoints; j++) {
-        fprintf(stderr, "%d ", (int)splitpoints[j]);
-      }
-      fprintf(stderr, "(hex:");
-      for (j = 0; j < npoints; j++) {
-        if(j==0) fprintf(stderr," "); else fprintf(stderr,",");
-        fprintf(stderr, "%x", (int)splitpoints[j]);
-        if(binoptions->dumpsplitsfile != NULL) fprintf(file, ",%x", (int)splitpoints[j]);
-     }
-      fprintf(stderr,")");
     } else {
-      fprintf(stderr, "NONE");
+      size_t oldloffset;
+      do {
+        size_t tempnumblocks;
+        oldloffset=loffset;
+        LoadFile(infilename, &in, &insize, &loffset, &fullsize, 0, 1);
+        tempnumblocks = SplitInput(options,in,insize,oldloffset,&splitpoints,&npoints);
+        free(in);
+        if(loffset<fullsize && tempnumblocks>1) {
+          loffset=splitpoints[npoints-1];
+        }
+      } while(loffset<fullsize);
     }
-    fprintf(stderr, "\n");
-    if(binoptions->dumpsplitsfile != NULL) {
-      fclose(file);
-      RemoveIfExists(tempfilename,binoptions->dumpsplitsfile);
-      fprintf(stderr,"Hex split points successfully saved to file: %s\n",binoptions->dumpsplitsfile);
-      free(tempfilename);
-      exit(EXIT_SUCCESS);
+    if(j>0) options->verbose = j;
+
+    if(options->verbose>3 || binoptions->dumpsplitsfile != NULL) {
+      FILE* file = NULL;
+      char* tempfilename = NULL;
+      if(binoptions->dumpsplitsfile != NULL) {
+        tempfilename = AddStrings(binoptions->dumpsplitsfile,tempfileext);
+        file = fopen(tempfilename, "wb");
+        fprintf(file,"0");
+      }
+      fprintf(stderr, "Block split points: ");
+      if(npoints>0) {
+        for (j = 0; j < npoints; j++) {
+          fprintf(stderr, "%d ", (int)splitpoints[j]);
+        }
+        fprintf(stderr, "(hex:");
+        for (j = 0; j < npoints; j++) {
+          if(j==0) fprintf(stderr," "); else fprintf(stderr,",");
+          fprintf(stderr, "%x", (int)splitpoints[j]);
+          if(binoptions->dumpsplitsfile != NULL) fprintf(file, ",%x", (int)splitpoints[j]);
+       }
+        fprintf(stderr,")");
+      } else {
+        fprintf(stderr, "NONE");
+      }
+      fprintf(stderr, "\n");
+      if(binoptions->dumpsplitsfile != NULL) {
+        fclose(file);
+        RemoveIfExists(tempfilename,binoptions->dumpsplitsfile);
+        fprintf(stderr,"Hex split points successfully saved to file: %s\n",binoptions->dumpsplitsfile);
+        free(tempfilename);
+        exit(EXIT_SUCCESS);
+      }
     }
-  }
-  if(options->verbose>2) {
-    fprintf(stderr, "Total blocks: %lu                 \n",(unsigned long)(npoints+1));
+    if(options->verbose>2) {
+      fprintf(stderr, "Total blocks: %lu                 \n",(unsigned long)(npoints+1));
+    }
   }
 
   loffset=0;
@@ -506,79 +509,96 @@ static int Compress(ZopfliOptions* options, const ZopfliBinOptions* binoptions,
   }
 
   offset=outsize;
-  options->blocksplitting = 0;
-  for(i=0;i<=npoints;++i) {
-    size_t oldloffset;
-    int final = 0;
-    if(i==npoints) {
-      final = 1;
-      oldloffset=fullsize-loffset;
-    } else {
-      oldloffset = splitpoints[i]-loffset;
-    }
-    if(outsize>ZOPFLI_MAX_OUTPUT_MEMORY) {
-      unsigned char tempbyte = out[outsize-1];
-      if (!outfilename) {
-        ConsoleOutput(out,outsize-1);
-      } else {
-        SaveFile(outfilename, out, outsize,soffset);
-      }
-      soffset+=outsize-1;
-      free(out);
-      out = (unsigned char*)malloc(sizeof(unsigned char*));
-      out[0] = tempbyte;
-      outsize = 1;
-    }
 
-    LoadFile(infilename, &in, &insize, &loffset, &fullsize, oldloffset, 1);
+  if(binoptions->legacy==0) {
+    options->blocksplitting = 0;
+    for(i=0;i<=npoints;++i) {
+      size_t oldloffset;
+      int final = 0;
+      if(i==npoints) {
+        final = 1;
+        oldloffset=fullsize-loffset;
+      } else {
+        oldloffset = splitpoints[i]-loffset;
+      }
+      if(outsize>ZOPFLI_MAX_OUTPUT_MEMORY) {
+        unsigned char tempbyte = out[outsize-1];
+        if (!outfilename) {
+          ConsoleOutput(out,outsize-1);
+        } else {
+          SaveFile(outfilename, out, outsize,soffset);
+        }
+        soffset+=outsize-1;
+        free(out);
+        out = (unsigned char*)malloc(sizeof(unsigned char*));
+        out[0] = tempbyte;
+        outsize = 1;
+      }
+
+      LoadFile(infilename, &in, &insize, &loffset, &fullsize, oldloffset, 1);
+      if(output_type == ZOPFLI_FORMAT_GZIP || output_type == ZOPFLI_FORMAT_GZIP_NAME || output_type == ZOPFLI_FORMAT_ZIP) {
+        CRCu(in,insize,&checksum);
+      } else if(output_type == ZOPFLI_FORMAT_ZLIB) {
+        adler32u(in,insize,&checksum);
+      }
+      if(WindowSize>0) {
+        for(j=0;j<WindowSize;++j) {
+          ZOPFLI_APPEND_DATA(WindowData[j], &inAndWindow, &inAndWindowSize);
+        }
+        free(WindowData);
+        for(j=0;j<insize;++j) {
+          ZOPFLI_APPEND_DATA(in[j], &inAndWindow, &inAndWindowSize);
+        }
+      } else {
+        inAndWindow = malloc(insize * sizeof(unsigned char*));
+        memcpy(inAndWindow,in,insize);
+        inAndWindowSize = insize;
+      }
+      free(in);
+
+      if(options->verbose==1) fprintf(stderr,"                                     \r");
+      if(options->verbose>0) fprintf(stderr, "Progress: %.1f%%",100.0 * (double)processed / (double)fullsize);
+      if(options->verbose>1) {
+        fprintf(stderr, "  ---  Block: %d / %d  ---  Data left: %luKB", (int)(i + 1), (int)(npoints + 1),(unsigned long)((fullsize - processed)/1024));
+        if(options->verbose>2) {
+          fprintf(stderr,"\n");
+        } else {
+          fprintf(stderr,"  \r");
+        }
+      } else {
+        fprintf(stderr,"\r");
+      }
+      ZopfliDeflatePart(options,2,final,inAndWindow,WindowSize,inAndWindowSize,&bp,&out,&outsize);
+      processed+=(inAndWindowSize-WindowSize);
+      if(i<npoints) {
+        if(inAndWindowSize>ZOPFLI_WINDOW_SIZE) {
+          WindowSize = ZOPFLI_WINDOW_SIZE;
+          WindowData = malloc(ZOPFLI_WINDOW_SIZE * sizeof(unsigned char*));
+          memcpy(WindowData,inAndWindow+(inAndWindowSize-ZOPFLI_WINDOW_SIZE),ZOPFLI_WINDOW_SIZE);
+        } else {
+          WindowSize = 0;
+          for(j=0;j<inAndWindowSize;++j) {
+           ZOPFLI_APPEND_DATA(inAndWindow[j], &WindowData, &WindowSize);
+          }
+        }
+      }
+      free(inAndWindow);
+      inAndWindowSize = 0;
+    }
+  } else {
+    int final = 1;
+    LoadFile(infilename, &in, &insize, &loffset, &fullsize, 0, 0);
     if(output_type == ZOPFLI_FORMAT_GZIP || output_type == ZOPFLI_FORMAT_GZIP_NAME || output_type == ZOPFLI_FORMAT_ZIP) {
       CRCu(in,insize,&checksum);
     } else if(output_type == ZOPFLI_FORMAT_ZLIB) {
       adler32u(in,insize,&checksum);
     }
-    if(WindowSize>0) {
-      for(j=0;j<WindowSize;++j) {
-        ZOPFLI_APPEND_DATA(WindowData[j], &inAndWindow, &inAndWindowSize);
-      }
-      free(WindowData);
-      for(j=0;j<insize;++j) {
-        ZOPFLI_APPEND_DATA(in[j], &inAndWindow, &inAndWindowSize);
-      }
+    ZopfliDeflate(options, 2, final, in, insize, &bp, &out, &outsize);
+    if (!outfilename) {
+      ConsoleOutput(out,outsize-1);
     } else {
-      inAndWindow = malloc(insize * sizeof(unsigned char*));
-      memcpy(inAndWindow,in,insize);
-      inAndWindowSize = insize;
+      SaveFile(outfilename, out, outsize,soffset);
     }
-    free(in);
-
-    if(options->verbose==1) fprintf(stderr,"                                     \r");
-    if(options->verbose>0) fprintf(stderr, "Progress: %.1f%%",100.0 * (double)processed / (double)fullsize);
-    if(options->verbose>1) {
-      fprintf(stderr, "  ---  Block: %d / %d  ---  Data left: %luKB", (int)(i + 1), (int)(npoints + 1),(unsigned long)((fullsize - processed)/1024));
-      if(options->verbose>2) {
-        fprintf(stderr,"\n");
-      } else {
-        fprintf(stderr,"  \r");
-      }
-    } else {
-      fprintf(stderr,"\r");
-    }
-    ZopfliDeflatePart(options,2,final,inAndWindow,WindowSize,inAndWindowSize,&bp,&out,&outsize);
-    processed+=(inAndWindowSize-WindowSize);
-    if(i<npoints) {
-      if(inAndWindowSize>ZOPFLI_WINDOW_SIZE) {
-        WindowSize = ZOPFLI_WINDOW_SIZE;
-        WindowData = malloc(ZOPFLI_WINDOW_SIZE * sizeof(unsigned char*));
-        memcpy(WindowData,inAndWindow+(inAndWindowSize-ZOPFLI_WINDOW_SIZE),ZOPFLI_WINDOW_SIZE);
-      } else {
-        WindowSize = 0;
-        for(j=0;j<inAndWindowSize;++j) {
-         ZOPFLI_APPEND_DATA(inAndWindow[j], &WindowData, &WindowSize);
-        }
-      }
-    }
-    free(inAndWindow);
-    inAndWindowSize = 0;
   }
 
   compsize = outsize+soffset-offset-initsoffset;
@@ -995,7 +1015,7 @@ int main(int argc, char* argv[]) {
           return EXIT_FAILURE;
         }
       } else if(binoptions.legacy == 1) {
-        if(options.verbose>0) fprintf(stderr, "Info: Using Legacy compression mode.\n  This mode is automatically enabled with --splitlast.\n"
+        if(options.verbose>0) fprintf(stderr, "Info: Using Legacy compression mode.\n"
                               "  Timestamps will be supported only when compressing to ZIP or GZIP with filename.\n\n");
         CompressFileLegacy(&options, output_type, filename, outfilename);
       } else {
