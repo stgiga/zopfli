@@ -37,14 +37,6 @@ is not simply bytesize * 8 + bp because even representing one bit requires a
 whole byte. It is: (bp == 0) ? (bytesize * 8) : ((bytesize - 1) * 8 + bp)
 */
 
-static size_t ceilz(float num) {
-    size_t inum = (size_t)num;
-    if (num == (float)inum) {
-        return inum;
-    }
-    return inum + 1;
-}
-
 static void AddBit(int bit,
                    unsigned char* bp, unsigned char** out, size_t* outsize) {
   if (*bp == 0) ZOPFLI_APPEND_DATA(0, out, outsize);
@@ -616,17 +608,6 @@ static void GetDynamicLengths(const ZopfliLZ77Store* lz77,
   PatchDistanceCodesForBuggyDecoders(d_lengths);
 }
 
-static double ZopfliCalculateUncBlockSize(size_t instart, size_t inend, unsigned char* bp) {
-  size_t blocksize = inend - instart;
-  size_t numuncblocks = ceilz((float)blocksize/(float)65535);
-  size_t bits = 8-*bp;
-  if(bits<2) bits+=8;
-
-  bits+=blocksize*8 + numuncblocks*4*8 + (numuncblocks-1)*8;
-
-  return bits;
-}
-
 static void PrintBlockSummary(unsigned long insize, unsigned long outsize, unsigned long treesize) {
 
   fprintf(stderr, "Compressed block size: %lu (%luk) ",outsize, outsize / 1024);
@@ -810,121 +791,6 @@ static void AddLZ77Block(const ZopfliOptions* options, int btype, int final,
   if (options->verbose>2) PrintBlockSummary(uncompressed_size,compressed_size,treesize);
 }
 
-static void DeflateDynamicBlock(const ZopfliOptions* options, int final,
-                                const unsigned char* in,
-                                size_t instart, size_t inend,
-                                unsigned char* bp,
-                                unsigned char** out, size_t* outsize) {
-  ZopfliBlockState s;
-  size_t blocksize = inend - instart;
-  ZopfliLZ77Store store;
-  int btype = 2;
-  double dyncost, fixedcost, unccost;
-  ZopfliLZ77Store fixedstore;
-
-  ZopfliInitLZ77Store(in, &store);
-
-  s.options = options;
-  s.blockstart = instart;
-  s.blockend = inend;
-#ifdef ZOPFLI_LONGEST_MATCH_CACHE
-  s.lmc = (ZopfliLongestMatchCache*)malloc(sizeof(ZopfliLongestMatchCache));
-  ZopfliInitCache(blocksize, s.lmc);
-#endif
-
-  ZopfliLZ77Optimal(&s, in, instart, inend, &store, options);
-
-  /* This test is nothing compared to running zopfli with a lot of iterations,
-     so let's do it always. */
-  ZopfliInitLZ77Store(in, &fixedstore);
-  ZopfliLZ77OptimalFixed(&s, in, instart, inend, &fixedstore);
-
-#ifdef ZOPFLI_LONGEST_MATCH_CACHE
-  ZopfliCleanCache(s.lmc);
-  free(s.lmc);
-#endif
-
-  dyncost = ZopfliCalculateBlockSize(&store,
-      0, store.size, 2, options->optimizehuffmanheader);
-  fixedcost = ZopfliCalculateBlockSize(&fixedstore,
-      0, fixedstore.size, 1, options->optimizehuffmanheader);
-  unccost = ZopfliCalculateUncBlockSize(instart,inend,bp);
-  if(unccost < dyncost && unccost < fixedcost) {
-    size_t compressed_size = *outsize;
-    AddNonCompressedBlock(options, final,
-                          in, instart, inend, bp, out, outsize);
-    compressed_size = *outsize - compressed_size;
-    if (options->verbose>2) {
-     fprintf(stderr, " > Using Uncompressed Blocks(s): %d bit < %d bit\n",(int)unccost,(int)dyncost);
-     PrintBlockSummary(blocksize, compressed_size, 0);
-    }
-  } else {
-    if (fixedcost < dyncost) {
-      if (options->verbose>2) fprintf(stderr, " > Using Fixed Tree Block: %d bit < %d bit\n",(int)fixedcost,(int)dyncost);
-      btype = 1;
-      ZopfliCleanLZ77Store(&store);
-      store = fixedstore;
-    } else {
-      ZopfliCleanLZ77Store(&fixedstore);
-    }
-
-  AddLZ77Block(s.options, btype, final,
-               &store, 0, store.size,
-               blocksize, bp, out, outsize);
-
-  }
-
-  ZopfliCleanLZ77Store(&store);
-
-}
-
-static void DeflateFixedBlock(const ZopfliOptions* options, int final,
-                              const unsigned char* in,
-                              size_t instart, size_t inend,
-                              unsigned char* bp,
-                              unsigned char** out, size_t* outsize) {
-  ZopfliBlockState s;
-  size_t blocksize = inend - instart;
-  ZopfliLZ77Store store;
-
-  ZopfliInitLZ77Store(in, &store);
-
-  s.options = options;
-  s.blockstart = instart;
-  s.blockend = inend;
-#ifdef ZOPFLI_LONGEST_MATCH_CACHE
-  s.lmc = (ZopfliLongestMatchCache*)malloc(sizeof(ZopfliLongestMatchCache));
-  ZopfliInitCache(blocksize, s.lmc);
-#endif
-
-  ZopfliLZ77OptimalFixed(&s, in, instart, inend, &store);
-
-  AddLZ77Block(s.options, 1, final, &store, 0, store.size,
-               blocksize, bp, out, outsize);
-
-#ifdef ZOPFLI_LONGEST_MATCH_CACHE
-  ZopfliCleanCache(s.lmc);
-  free(s.lmc);
-#endif
-  ZopfliCleanLZ77Store(&store);
-}
-
-void DeflateBlock(const ZopfliOptions* options,
-                         int btype, int final,
-                         const unsigned char* in, size_t instart, size_t inend,
-                         unsigned char* bp,
-                         unsigned char** out, size_t* outsize) {
-  if (btype == 0) {
-    AddNonCompressedBlock(
-        options, final, in, instart, inend, bp, out, outsize);
-  } else if (btype == 1) {
-     DeflateFixedBlock(options, final, in, instart, inend, bp, out, outsize);
-  } else {
-    assert (btype == 2);
-    DeflateDynamicBlock(options, final, in, instart, inend, bp, out, outsize);
-  }
-}
-
 static void AddLZ77BlockAutoType(const ZopfliOptions* options, int final,
                                  const ZopfliLZ77Store* lz77,
                                  size_t lstart, size_t lend,
@@ -937,8 +803,14 @@ static void AddLZ77BlockAutoType(const ZopfliOptions* options, int final,
 
   /* Whether to perform the expensive calculation of creating an optimal block
   with fixed huffman tree to check if smaller. Only do this for small blocks or
-  blocks which already are pretty good with fixed huffman tree. */
+  blocks which already are pretty good with fixed huffman tree.
   int expensivefixed = (lz77->size < 1000) || fixedcost <= dyncost * 1.1;
+
+  Mr_KrzYch00's note: always use Fixed block test in KrzYmod, the overhead
+  is pretty low compared to iterations and yet maybe we will get better
+  result at times.
+  */
+  int expensivefixed = 1;
 
   ZopfliLZ77Store fixedstore;
   if (lstart == lend) {

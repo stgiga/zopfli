@@ -326,6 +326,7 @@ static int Compress(ZopfliOptions* options, const ZopfliBinOptions* binoptions,
   size_t npoints = 0;
   size_t offset = 0;
   size_t i, j = 0;
+  int blocksplitting = options->blocksplitting;
 
   LoadFile(infilename, &in, &insize, &loffset, &fullsize, 1, 1);
   free(in);
@@ -505,7 +506,7 @@ static int Compress(ZopfliOptions* options, const ZopfliBinOptions* binoptions,
   }
 
   offset=outsize;
-
+  options->blocksplitting = 0;
   for(i=0;i<=npoints;++i) {
     size_t oldloffset;
     int final = 0;
@@ -562,8 +563,7 @@ static int Compress(ZopfliOptions* options, const ZopfliBinOptions* binoptions,
     } else {
       fprintf(stderr,"\r");
     }
-
-    DeflateBlock(options,2,final,inAndWindow,WindowSize,inAndWindowSize,&bp,&out,&outsize);
+    ZopfliDeflatePart(options,2,final,inAndWindow,WindowSize,inAndWindowSize,&bp,&out,&outsize);
     processed+=(inAndWindowSize-WindowSize);
     if(i<npoints) {
       if(inAndWindowSize>ZOPFLI_WINDOW_SIZE) {
@@ -660,6 +660,8 @@ static int Compress(ZopfliOptions* options, const ZopfliBinOptions* binoptions,
   if(options->verbose>0) fprintf(stderr,"Progress: 100.0%%                                                  \n");
 
   if (options->verbose>1) PrintSummary(fullsize,outsize,compsize);
+
+  options->blocksplitting = blocksplitting;
 
   return 1;
 
