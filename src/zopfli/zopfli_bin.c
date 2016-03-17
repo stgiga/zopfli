@@ -1,6 +1,6 @@
 /*
 Copyright 2011 Google Inc. All Rights Reserved.
-Copyright 2015 Mr_KrzYch00. All Rights Reserved.
+Copyright 2016 Mr_KrzYch00. All Rights Reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -801,7 +801,7 @@ static void CompressFileLegacy(ZopfliOptions* options,
 static void VersionInfo() {
   fprintf(stderr,
   "Zopfli, a Compression Algorithm to produce Deflate streams.\n"
-  "KrzYmod extends Zopfli functionality - version TEST\n\n");
+  "KrzYmod extends Zopfli functionality - version 15\n\n");
 }
 
 static void ParseCustomBlockBoundaries(unsigned long** bs, const char* data) {

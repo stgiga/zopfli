@@ -157,7 +157,7 @@ void PrintResultSize(const char* label, size_t oldsize, size_t newsize) {
 
 int main(int argc, char *argv[]) {
 printf("ZopfliPNG, a Portable Network Graphics (PNG) image optimizer.\n"
-         "KrzYmod extends ZopfliPNG functionality - version TEST\n\n");
+         "KrzYmod extends ZopfliPNG functionality - version 15\n\n");
   if (argc < 2) {
     ShowHelp();
     return 0;
@@ -340,10 +340,15 @@ printf("ZopfliPNG, a Portable Network Graphics (PNG) image optimizer.\n"
     std::vector<unsigned char> resultpng;
 
     lodepng::load_file(origpng, files[i]);
-    error = ZopfliPNGOptimize(origpng, png_options, true, &resultpng);
+    error = ZopfliPNGOptimize(origpng, png_options,
+                              (png_options.verbosezopfli!=0), &resultpng);
 
     if (error) {
-      printf("Decoding error %i: %s\n", error, lodepng_error_text(error));
+      if (error == 1) {
+        printf("Decoding error\n");
+      } else {
+        printf("Decoding error %u: %s\n", error, lodepng_error_text(error));
+      }
     }
 
     // Verify result, check that the result causes no decoding errors
@@ -353,7 +358,6 @@ printf("ZopfliPNG, a Portable Network Graphics (PNG) image optimizer.\n"
     }
 
     if (error) {
-      printf("There was an error\n");
       total_errors++;
     } else {
       size_t origsize = GetFileSize(files[i]);
