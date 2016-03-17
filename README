@@ -173,6 +173,20 @@ next to the switch = sign is required.
    1 bit reduction when changing these parameters on --mui999 when previously
    the file was created doing as many as 99,999 unsucessful iteration.
 
+18. --legacy
+   Use legacy compression mode which is as much as possible compatible with original
+   Zopfli while maintaining Zopfli KrzYmod special switches. This switch works with
+   single and multi-file mode but opposed to KrzYmod algorithm keeps whole input
+   and output in memory until compression finishes. Since last Zopfli algorithm changes
+   this mode is required for Zopfli to perform additional splitting last after compression
+   and is recommended to use to get final block splitting for later test runs 
+   with --cbs switch.
+
+19. --brotli
+
+   Use Optmized Huffman for Rle algotihm from Brotli. This impacts block split points
+   and compression. May or may not result in smaller files.
+
 
 Additionally to mentioned above options KrzYmod Zopfli version also fix few issues found
 in original release, for example incorrect Deflate stream size being raported.
