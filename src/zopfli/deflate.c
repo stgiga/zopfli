@@ -977,7 +977,7 @@ static void AddLZ77BlockAutoType(const ZopfliOptions* options, int final,
     ZopfliCleanBlockState(&s);
   }
   if (uncompressedcost < fixedcost && uncompressedcost < dyncost) {
-    if (options->verbose>2) fprintf(stderr, " > Using Uncompressed Blocks(s): %d bit < %d bit\n",(int)uncompressedcost,(int)dyncost);
+    if (options->verbose>2) fprintf(stderr, " > Using Uncompressed Block(s): %d bit < %d bit\n",(int)uncompressedcost,(int)dyncost);
     AddLZ77Block(options, 0, final, lz77, lstart, lend,
                  expected_data_size, bp, out, outsize);
   } else if (fixedcost < dyncost) {
