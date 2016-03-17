@@ -950,9 +950,9 @@ static void AddLZ77BlockAutoType(const ZopfliOptions* options, int final,
   blocks which already are pretty good with fixed huffman tree.
   int expensivefixed = (lz77->size < 1000) || fixedcost <= dyncost * 1.1;
 
-  Mr_KrzYch00's note: always use Fixed block test in KrzYmod, the overhead
+  Mr_KrzYch00's note: always use expensive calculation in KrzYmod, the overhead
   is pretty low compared to iterations and yet maybe we will get better
-  result at times.
+  results.
   */
   int expensivefixed = 1;
 
@@ -977,9 +977,11 @@ static void AddLZ77BlockAutoType(const ZopfliOptions* options, int final,
     ZopfliCleanBlockState(&s);
   }
   if (uncompressedcost < fixedcost && uncompressedcost < dyncost) {
+    if (options->verbose>2) fprintf(stderr, " > Using Uncompressed Blocks(s): %d bit < %d bit\n",(int)uncompressedcost,(int)dyncost);
     AddLZ77Block(options, 0, final, lz77, lstart, lend,
                  expected_data_size, bp, out, outsize);
   } else if (fixedcost < dyncost) {
+    if (options->verbose>2) fprintf(stderr, " > Using Fixed Tree Block: %d bit < %d bit\n",(int)fixedcost,(int)dyncost);
     if (expensivefixed) {
       AddLZ77Block(options, 1, final, &fixedstore, 0, fixedstore.size,
                    expected_data_size, bp, out, outsize);
