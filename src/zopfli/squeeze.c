@@ -1,6 +1,6 @@
 /*
 Copyright 2011 Google Inc. All Rights Reserved.
-Copyright 2015 Mr_KrzYch00. All Rights Reserved.
+Copyright 2016 Mr_KrzYch00. All Rights Reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -35,8 +35,10 @@ typedef struct SymbolStats {
   /* The 32 unique dist symbols, not the 32768 possible dists. */
   size_t dists[ZOPFLI_NUM_D];
 
-  double ll_symbols[ZOPFLI_NUM_LL];  /* Length of each lit/len symbol in bits. */
-  double d_symbols[ZOPFLI_NUM_D];  /* Length of each dist symbol in bits. */
+  /* Length of each lit/len symbol in bits. */
+  double ll_symbols[ZOPFLI_NUM_LL];
+  /* Length of each dist symbol in bits. */
+  double d_symbols[ZOPFLI_NUM_D];
 } SymbolStats;
 
 /* Sets everything to 0. */
@@ -49,19 +51,22 @@ static void InitStats(SymbolStats* stats) {
 }
 
 static void CopyStats(SymbolStats* source, SymbolStats* dest) {
-  memcpy(dest->litlens, source->litlens, ZOPFLI_NUM_LL * sizeof(dest->litlens[0]));
-  memcpy(dest->dists, source->dists, ZOPFLI_NUM_D * sizeof(dest->dists[0]));
+  memcpy(dest->litlens, source->litlens,
+         ZOPFLI_NUM_LL * sizeof(dest->litlens[0]));
+  memcpy(dest->dists, source->dists,
+         ZOPFLI_NUM_D * sizeof(dest->dists[0]));
 
   memcpy(dest->ll_symbols, source->ll_symbols,
          ZOPFLI_NUM_LL * sizeof(dest->ll_symbols[0]));
-  memcpy(dest->d_symbols, source->d_symbols, ZOPFLI_NUM_D * sizeof(dest->d_symbols[0]));
+  memcpy(dest->d_symbols, source->d_symbols,
+         ZOPFLI_NUM_D * sizeof(dest->d_symbols[0]));
 }
 
 /* Adds the bit lengths. */
 static void AddWeighedStatFreqs(const SymbolStats* stats1, double w1,
                                 const SymbolStats* stats2, double w2,
                                 SymbolStats* result) {
-  unsigned short i;
+  size_t i;
   for (i = 0; i < ZOPFLI_NUM_LL; i++) {
     result->litlens[i] =
         (size_t) (stats1->litlens[i] * w1 + stats2->litlens[i] * w2);
@@ -103,7 +108,7 @@ static void RandomizeStatFreqs(RanState* state, SymbolStats* stats) {
 }
 
 static void ClearStatFreqs(SymbolStats* stats) {
-  unsigned short i;
+  size_t i;
   for (i = 0; i < ZOPFLI_NUM_LL; i++) stats->litlens[i] = 0;
   for (i = 0; i < ZOPFLI_NUM_D; i++) stats->dists[i] = 0;
 }
@@ -213,7 +218,7 @@ static double GetBestLengths(ZopfliBlockState *s,
                              unsigned short* length_array) {
   /* Best cost to get here so far. */
   size_t blocksize = inend - instart;
-  float* costs;
+  double* costs;
   size_t i = 0, k;
   unsigned short leng;
   unsigned short dist;
@@ -227,7 +232,7 @@ static double GetBestLengths(ZopfliBlockState *s,
 
   if (instart == inend) return 0;
 
-  costs = (float*)malloc(sizeof(float) * (blocksize + 1));
+  costs = (double*)malloc(sizeof(double) * (blocksize + 1));
   if (!costs) exit(-1); /* Allocation failed. */
 
   ZopfliInitHash(ZOPFLI_WINDOW_SIZE, h);
@@ -422,7 +427,7 @@ instart: where to start
 inend: where to stop (not inclusive)
 path: pointer to dynamically allocated memory to store the path
 pathsize: pointer to the size of the dynamic path array
-length_array: array if size (inend - instart) used to store lengths
+length_array: array of size (inend - instart) used to store lengths
 costmodel: function to use as the cost model for this squeeze run
 costcontext: abstract context for the costmodel function
 store: place to output the LZ77 data

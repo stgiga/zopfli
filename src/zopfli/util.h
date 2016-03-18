@@ -143,28 +143,28 @@ varies from file to file. Moved, to be used as command line option.
 Gets the symbol for the given length, cfr. the DEFLATE spec.
 Returns the symbol in the range [257-285] (inclusive)
 */
-int ZopfliGetLengthSymbol(int l);
+int ZopfliGetLengthSymbol(int l) __attribute__((const));
 
 /* Gets the amount of extra bits for the given length, cfr. the DEFLATE spec. */
-int ZopfliGetLengthExtraBits(int l);
+int ZopfliGetLengthExtraBits(int l) __attribute__((const));
 
 /* Gets value of the extra bits for the given length, cfr. the DEFLATE spec. */
-int ZopfliGetLengthExtraBitsValue(int l);
+int ZopfliGetLengthExtraBitsValue(int l) __attribute__((const));
 
 /* Gets the symbol for the given dist, cfr. the DEFLATE spec. */
-int ZopfliGetDistSymbol(int dist);
+int ZopfliGetDistSymbol(int dist) __attribute__((const));
 
 /* Gets the amount of extra bits for the given dist, cfr. the DEFLATE spec. */
-int ZopfliGetDistExtraBits(int dist);
+int ZopfliGetDistExtraBits(int dist) __attribute__((const));
 
 /* Gets value of the extra bits for the given dist, cfr. the DEFLATE spec. */
-int ZopfliGetDistExtraBitsValue(int dist);
+int ZopfliGetDistExtraBitsValue(int dist) __attribute__((const));
 
 /* Gets the amount of extra bits for the given length symbol. */
-int ZopfliGetLengthSymbolExtraBits(int s);
+int ZopfliGetLengthSymbolExtraBits(int s) __attribute__((const));
 
 /* Gets the amount of extra bits for the given distance symbol. */
-int ZopfliGetDistSymbolExtraBits(int s);
+int ZopfliGetDistSymbolExtraBits(int s) __attribute__((const));
 
 /*
 Appends value to dynamically allocated memory, doubling its allocation size

@@ -22,7 +22,6 @@ Author: jyrki.alakuijala@gmail.com (Jyrki Alakuijala)
 
 #include <stdio.h>
 
-
 #ifdef __cplusplus
 extern "C" {
 #endif

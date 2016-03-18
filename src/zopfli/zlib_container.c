@@ -21,8 +21,6 @@ Author: jyrki.alakuijala@gmail.com (Jyrki Alakuijala)
 #include "util.h"
 #include "adler.h"
 
-#include <stdio.h>
-
 #include "deflate.h"
 
 

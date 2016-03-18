@@ -22,8 +22,6 @@ Author: jyrki.alakuijala@gmail.com (Jyrki Alakuijala)
 #include "util.h"
 #include "crc32.h"
 
-#include <stdio.h>
-
 #include "deflate.h"
 
 /*

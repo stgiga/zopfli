@@ -121,13 +121,13 @@ void ZopfliCacheToSublen(const ZopfliLongestMatchCache* lmc,
   if (length < 3) return;
   cache = &lmc->sublen[lmc->cache_length * pos * 3];
   for (j = 0; j < lmc->cache_length; j++) {
-    unsigned length = cache[j * 3] + 3;
+    unsigned length2 = cache[j * 3] + 3;
     unsigned dist = cache[j * 3 + 1] + 256 * cache[j * 3 + 2];
-    for (i = prevlength; i <= length; i++) {
+    for (i = prevlength; i <= length2; i++) {
       sublen[i] = dist;
     }
-    if (length == maxlength) break;
-    prevlength = length + 1;
+    if (length2 == maxlength) break;
+    prevlength = length2 + 1;
   }
 }
 

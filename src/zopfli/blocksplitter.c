@@ -69,6 +69,7 @@ static size_t FindMinimum(FindMinimumFun f, void* context,
 
     for (;;) {
       if (end - start <= options->findminimumrec) break;
+
       for (i = 0; i < options->findminimumrec; i++) {
         p[i] = start + (i + 1) * ((end - start) / (options->findminimumrec + 1));
         vp[i] = f(p[i], context);
@@ -93,9 +94,9 @@ static size_t FindMinimum(FindMinimumFun f, void* context,
       lastbest = best;
       if(options->verbose>4) fprintf(stderr," [%lu - %lu] Best: %.0f\n",(unsigned long)start,(unsigned long)end,best);
     }
+    *smallest = lastbest;
     free(p);
     free(vp);
-    *smallest = lastbest;
     return pos;
   }
 }

@@ -20,7 +20,6 @@ Author: jyrki.alakuijala@gmail.com (Jyrki Alakuijala)
 #include "crc32.h"
 #include "util.h"
 #include "dllspec.h"
-#include <stdio.h>
 
 /* Table of CRCs of all 8-bit messages. */
 static unsigned long crc_table[256];
@@ -29,7 +28,7 @@ static unsigned long crc_table[256];
 static int crc_table_computed = 0;
 
 /* Makes the table for a fast CRC. */
-static void MakeCRCTable() {
+static void MakeCRCTable(void) {
   unsigned long c;
   int n, k;
   for (n = 0; n < 256; n++) {

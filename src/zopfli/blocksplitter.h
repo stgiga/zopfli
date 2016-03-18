@@ -35,9 +35,6 @@ ones that enhance it.
 /*
 Does blocksplitting on LZ77 data.
 The output splitpoints are indices in the LZ77 data.
-litlens: lz77 lit/lengths
-dists: lz77 distances
-llsize: size of litlens and dists
 maxblocks: set a limit to the amount of blocks. Set to 0 to mean no limit.
 */
 void ZopfliBlockSplitLZ77(const ZopfliOptions* options,

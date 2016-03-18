@@ -33,18 +33,18 @@ Nodes forming chains. Also used to represent leaves.
 */
 struct Node {
   size_t weight;  /* Total weight (symbol count) of this chain. */
-  Node* tail;  /* Previous node(s) of this chain, or 0 if none. */
   int count;  /* Leaf symbol index, or number of leaves before this chain. */
   char inuse;  /* Tracking for garbage collection. */
+  Node* tail;  /* Previous node(s) of this chain, or 0 if none. */
 };
 
 /*
 Memory pool for nodes.
 */
 typedef struct NodePool {
+  int size;  /* Size of the memory pool. */
   Node* nodes;  /* The pool. */
   Node* next;  /* Pointer to a possibly free node in the pool. */
-  int size;  /* Size of the memory pool. */
 } NodePool;
 
 /*

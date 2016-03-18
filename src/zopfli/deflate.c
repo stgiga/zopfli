@@ -37,7 +37,6 @@ Given the value of bp and the amount of bytes, the amount of bits represented
 is not simply bytesize * 8 + bp because even representing one bit requires a
 whole byte. It is: (bp == 0) ? (bytesize * 8) : ((bytesize - 1) * 8 + bp)
 */
-
 static void AddBit(int bit,
                    unsigned char* bp, unsigned char** out, size_t* outsize) {
   if (*bp == 0) ZOPFLI_APPEND_DATA(0, out, outsize);
@@ -498,18 +497,18 @@ static size_t AbsDiff(size_t x, size_t y) {
 }
 
 /*
-Change the population counts in a way that the consequent Hufmann tree
+Change the population counts in a way that the consequent Huffman tree
 compression, especially its rle-part will be more likely to compress this data
 more efficiently. length containts the size of the histogram.
 */
-void OptimizeHuffmanForRle(int length, size_t* counts) {
-  int i, k, stride;
+static void OptimizeHuffmanForRle(unsigned int length, size_t* counts) {
+  unsigned int i, k, stride;
   size_t symbol, sum, limit;
   int* good_for_rle;
 
   /* 1) We don't want to touch the trailing zeros. We may break the
   rules of the format by adding more data in the distance codes. */
-  for (; length >= 0; --length) {
+  for (;; --length) {
     if (length == 0) {
       return;
     }
@@ -588,7 +587,7 @@ void OptimizeHuffmanForRle(int length, size_t* counts) {
   free(good_for_rle);
 }
 
-unsigned OptimizeHuffmanForRleBrotli(size_t length, size_t* counts) {
+static unsigned OptimizeHuffmanForRleBrotli(size_t length, size_t* counts) {
   size_t nonzero_count = 0;
   size_t stride;
   size_t limit;
@@ -810,7 +809,8 @@ double ZopfliCalculateBlockSizeAutoType(const ZopfliLZ77Store* lz77,
                                         size_t lstart, size_t lend, int ohh, int usebrotli) {
   double uncompressedcost = ZopfliCalculateBlockSize(lz77, lstart, lend, 0, ohh, usebrotli);
   /* Don't do the expensive fixed cost calculation for larger blocks that are
-     unlikely to use it. */
+     unlikely to use it.
+     Mr_KrzYch00's note: we will run fixed calculation every time */
   double fixedcost = ZopfliCalculateBlockSize(lz77, lstart, lend, 1, ohh, usebrotli);
   double dyncost = ZopfliCalculateBlockSize(lz77, lstart, lend, 2, ohh, usebrotli);
   return (uncompressedcost < fixedcost && uncompressedcost < dyncost)
@@ -997,6 +997,15 @@ static void AddLZ77BlockAutoType(const ZopfliOptions* options, int final,
   ZopfliCleanLZ77Store(&fixedstore);
 }
 
+/*
+Deflate a part, to allow ZopfliDeflate() to use multiple master blocks if
+needed.
+It is possible to call this function multiple times in a row, shifting
+instart and inend to next bytes of the data. If instart is larger than 0, then
+previous bytes are used as the initial dictionary for LZ77.
+This function will usually output multiple deflate blocks. If final is 1, then
+the final bit will be set on the last block.
+*/
 DLL_PUBLIC void ZopfliDeflatePart(const ZopfliOptions* options, int btype, int final,
                           const unsigned char* in, size_t instart, size_t inend,
                           unsigned char* bp, unsigned char** out,
@@ -1097,9 +1106,9 @@ DLL_PUBLIC void ZopfliDeflatePart(const ZopfliOptions* options, int btype, int f
 DLL_PUBLIC void ZopfliDeflate(const ZopfliOptions* options, int btype, int final,
                    const unsigned char* in, size_t insize,
                    unsigned char* bp, unsigned char** out, size_t* outsize) {
-  size_t offset=*outsize;
+ size_t offset = *outsize;
 #if ZOPFLI_MASTER_BLOCK_SIZE == 0
-  ZopfliDeflatePart(options, btype, final, in, 0, insize, bp, out);
+  ZopfliDeflatePart(options, btype, final, in, 0, insize, bp, out, outsize);
 #else
   size_t i = 0;
   while (i < insize) {

@@ -69,7 +69,13 @@ void ZopfliAppendLZ77Store(const ZopfliLZ77Store* store,
                            ZopfliLZ77Store* target);
 /* Gets the amount of raw bytes that this range of LZ77 symbols spans. */
 size_t ZopfliLZ77GetByteRange(const ZopfliLZ77Store* lz77,
-                              size_t lstart, size_t lend);
+                              size_t lstart, size_t lend) __attribute__((pure));
+/* Gets the histogram of lit/len and dist symbols in the given range, using the
+cumulative histograms, so faster than adding one by one for large range. Does
+not add the one end symbol of value 256. */
+void ZopfliLZ77GetHistogram(const ZopfliLZ77Store* lz77,
+                            size_t lstart, size_t lend,
+                            size_t* ll_counts, size_t* d_counts);
 
 /*
 Some state information for compressing a block.
@@ -88,6 +94,11 @@ typedef struct ZopfliBlockState {
   size_t blockstart;
   size_t blockend;
 } ZopfliBlockState;
+
+void ZopfliInitBlockState(const ZopfliOptions* options,
+                          size_t blockstart, size_t blockend, int add_lmc,
+                          ZopfliBlockState* s);
+void ZopfliCleanBlockState(ZopfliBlockState* s);
 
 /*
 Finds the longest match (length and corresponding distance) for LZ77
@@ -110,37 +121,11 @@ void ZopfliFindLongestMatch(
     size_t pos, size_t size, size_t limit,
     unsigned short* sublen, unsigned short* distance, unsigned short* length);
 
-void ZopfliInitBlockState(const ZopfliOptions* options,
-                          size_t blockstart, size_t blockend, int add_lmc,
-                          ZopfliBlockState* s);
-void ZopfliCleanBlockState(ZopfliBlockState* s);
-
-
 /*
 Verifies if length and dist are indeed valid, only used for assertion.
 */
 void ZopfliVerifyLenDist(const unsigned char* data, size_t datasize, size_t pos,
                          unsigned short dist, unsigned short length);
-
-/* Gets the histogram of lit/len and dist symbols in the given range, using the
-cumulative histograms, so faster than adding one by one for large range. Does
-not add the one end symbol of value 256. */
-void ZopfliLZ77GetHistogram(const ZopfliLZ77Store* lz77,
-                            size_t lstart, size_t lend,
-                            size_t* ll_counts, size_t* d_counts);
-
-/*
-Counts the number of literal, length and distance symbols in the given lz77
-arrays.
-start: where to begin counting in litlens and dists
-end: where to stop counting in litlens and dists (not inclusive)
-ll_count: count of each lit/len symbol, must have size 288 (see deflate
-    standard)
-d_count: count of each dist symbol, must have size 32 (see deflate standard)
-*/
-void ZopfliLZ77Counts(const ZopfliLZ77Store* lz77,
-                      size_t start, size_t end,
-                      size_t* ll_count, size_t* d_count);
 
 /*
 Does LZ77 using an algorithm similar to gzip, with lazy matching, rather than

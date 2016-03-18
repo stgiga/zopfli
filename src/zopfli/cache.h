@@ -39,8 +39,8 @@ to every possible shorter-than-the-best length (the so called "sublen" array).
 typedef struct ZopfliLongestMatchCache {
   unsigned short* length;
   unsigned short* dist;
-  unsigned char* sublen;
   unsigned long cache_length;
+  unsigned char* sublen;
 } ZopfliLongestMatchCache;
 
 /* Initializes the ZopfliLongestMatchCache. */
@@ -60,7 +60,7 @@ void ZopfliCacheToSublen(const ZopfliLongestMatchCache* lmc,
                          unsigned short* sublen);
 /* Returns the length up to which could be stored in the cache. */
 size_t ZopfliMaxCachedSublen(const ZopfliLongestMatchCache* lmc,
-                               size_t pos, size_t length);
+                               size_t pos, size_t length) __attribute__((pure));
 
 #endif  /* ZOPFLI_LONGEST_MATCH_CACHE */
 

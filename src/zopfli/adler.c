@@ -19,10 +19,10 @@ Author: jyrki.alakuijala@gmail.com (Jyrki Alakuijala)
 
 #include "adler.h"
 #include "dllspec.h"
-#include <stdio.h>
 
 /* Calculates the adler32 checksum of the data */
 
+static unsigned long adler32(const unsigned char* data, size_t size, unsigned long adler) __attribute__((pure));
 static unsigned long adler32(const unsigned char* data, size_t size, unsigned long adler) {
   static const unsigned sums_overflow = 5550;
   unsigned s1 = adler & 0xffff;

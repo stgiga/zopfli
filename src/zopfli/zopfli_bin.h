@@ -58,11 +58,6 @@ typedef struct ZopfliBinOptions {
   int additionalautosplits;
 
   /*
-  Save block splits to file and exit zopfli
-  */
-  const char* dumpsplitsfile;
-
-  /*
   If to use legacy compression mode when compressing data.
   Will result in old behaviour of loading whole file into memory
   and keeping output data in memory until compression finishes.
@@ -70,6 +65,11 @@ typedef struct ZopfliBinOptions {
   */
 
   unsigned short legacy;
+
+  /*
+  Save block splits to file and exit zopfli
+  */
+  const char* dumpsplitsfile;
 
 } ZopfliBinOptions;
 

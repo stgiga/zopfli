@@ -28,11 +28,11 @@ decompressor.
 #define _XOPEN_SOURCE 500
 #define _FILE_OFFSET_BITS 64
 
+#include <stdio.h>
 #include <errno.h>
 #include <signal.h>
 #include <dirent.h>
 #include <sys/stat.h>
-#include <stdio.h>
 #include <string.h>
 #include <time.h>
 /* Windows workaround for stdout output. */
@@ -798,7 +798,7 @@ static void CompressFileLegacy(ZopfliOptions* options,
 
 }
 
-static void VersionInfo() {
+static void VersionInfo(void) {
   fprintf(stderr,
   "Zopfli, a Compression Algorithm to produce Deflate streams.\n"
   "KrzYmod extends Zopfli functionality - version 15\n\n");

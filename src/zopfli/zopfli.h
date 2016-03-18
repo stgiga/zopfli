@@ -22,7 +22,6 @@ Author: jyrki.alakuijala@gmail.com (Jyrki Alakuijala)
 #define ZOPFLI_ZOPFLI_H_
 
 #include <stddef.h>
-#include <stdlib.h> /* for size_t */
 
 #ifdef __cplusplus
 extern "C" {
