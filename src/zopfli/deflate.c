@@ -109,7 +109,7 @@ static size_t EncodeTree(const unsigned* ll_lengths,
                          int use_16, int use_17, int use_18, int fuse_8, int fuse_7,
                          /* TODO replace those by single int */
                          unsigned char* bp,
-                         unsigned char** out, size_t* outsize, int ohh) {
+                         unsigned char** out, size_t* outsize, int ohh, int revcounts) {
   unsigned lld_total;  /* Total amount of literal, length, distance codes. */
   /* Runlength encoded version of lengths of litlen and dist trees. */
   unsigned* rle = 0;
@@ -238,7 +238,7 @@ static size_t EncodeTree(const unsigned* ll_lengths,
     }
   }
 
-  ZopfliCalculateBitLengths(clcounts, 19, 7, clcl);
+  ZopfliCalculateBitLengths(clcounts, 19, 7, clcl, revcounts);
   if (!size_only) ZopfliLengthsToSymbols(clcl, 19, 7, clsymbols);
 
   hclen = 15;
@@ -284,7 +284,7 @@ static size_t EncodeTree(const unsigned* ll_lengths,
 static void AddDynamicTree(const unsigned* ll_lengths,
                            const unsigned* d_lengths,
                            unsigned char* bp,
-                           unsigned char** out, size_t* outsize, int ohh) {
+                           unsigned char** out, size_t* outsize, int ohh, int revcounts) {
   int i;
   int j = 1;
   int k = 4;
@@ -301,7 +301,7 @@ static void AddDynamicTree(const unsigned* ll_lengths,
   for(i = 0; i < 8; i++) {
     size_t size = EncodeTree(ll_lengths, d_lengths,
                              i & j, i & 2, i & k, 0, 0,
-                             0, 0, 0, ohh);
+                             0, 0, 0, ohh, revcounts);
     if (bestsize == 0 || size < bestsize) {
       bestsize = size;
       best = i;
@@ -312,7 +312,7 @@ static void AddDynamicTree(const unsigned* ll_lengths,
     for(i = 4; i < 8; i++) {
       size_t size = EncodeTree(ll_lengths, d_lengths,
                                i & 4, i & 2, i & 1, 1, 0,
-                               0, 0, 0, ohh);
+                               0, 0, 0, ohh, revcounts);
       if (size < bestsize) {
         bestsize = size;
         best = 8+i;
@@ -321,7 +321,7 @@ static void AddDynamicTree(const unsigned* ll_lengths,
     for(i = 4; i < 8; i++) {
       size_t size = EncodeTree(ll_lengths, d_lengths,
                                i & 4, i & 2, i & 1, 0, 1,
-                               0, 0, 0, ohh);
+                               0, 0, 0, ohh, revcounts);
       if (size < bestsize) {
         bestsize = size;
         best = 16+i;
@@ -331,7 +331,7 @@ static void AddDynamicTree(const unsigned* ll_lengths,
     for(i = 4; i < 8; i++) {
       size_t size = EncodeTree(ll_lengths, d_lengths,
                                i & 4, i & 2, i & 1, 1, 1,
-                               0, 0, 0, ohh);
+                               0, 0, 0, ohh, revcounts);
       if (size < bestsize) {
         bestsize = size;
         best = 24+i;
@@ -343,7 +343,7 @@ static void AddDynamicTree(const unsigned* ll_lengths,
 
   EncodeTree(ll_lengths, d_lengths,
              best & j, best & 2, best & k, l, m,
-             bp, out, outsize, ohh);
+             bp, out, outsize, ohh, revcounts);
 
 }
 
@@ -351,7 +351,7 @@ static void AddDynamicTree(const unsigned* ll_lengths,
 Gives the exact size of the tree, in bits, as it will be encoded in DEFLATE.
 */
 static size_t CalculateTreeSize(const unsigned* ll_lengths,
-                                const unsigned* d_lengths, int ohh) {
+                                const unsigned* d_lengths, int ohh, int revcounts) {
   size_t result = 0;
   int i;
   int j = 1;
@@ -365,7 +365,7 @@ static size_t CalculateTreeSize(const unsigned* ll_lengths,
   for(i = 0; i < 8; i++) {
     size_t size = EncodeTree(ll_lengths, d_lengths,
                              i & j, i & 2, i & k, 0, 0,
-                             0, 0, 0, ohh);
+                             0, 0, 0, ohh, revcounts);
     if (result == 0 || size < result) result = size;
   }
 
@@ -373,19 +373,19 @@ static size_t CalculateTreeSize(const unsigned* ll_lengths,
     for(i = 4; i < 8; i++) {
       size_t size = EncodeTree(ll_lengths, d_lengths,
                                i & 4, i & 2, i & 1, 1, 0,
-                               0, 0, 0, ohh);
+                               0, 0, 0, ohh, revcounts);
       if (size < result) result = size;
     }
     for(i = 4; i < 8; i++) {
       size_t size = EncodeTree(ll_lengths, d_lengths,
                                i & 4, i & 2, i & 1, 0, 1,
-                               0, 0, 0, ohh);
+                               0, 0, 0, ohh, revcounts);
       if (size < result) result = size;
     }
     for(i = 4; i < 8; i++) {
       size_t size = EncodeTree(ll_lengths, d_lengths,
                                i & 4, i & 2, i & 1, 1, 1,
-                               0, 0, 0, ohh);
+                               0, 0, 0, ohh, revcounts);
       if (size < result) result = size;
     }
   }
@@ -733,7 +733,7 @@ bit lengths.
 */
 static void GetDynamicLengths(const ZopfliLZ77Store* lz77,
                               size_t lstart, size_t lend,
-                              unsigned* ll_lengths, unsigned* d_lengths, int usebrotli) {
+                              unsigned* ll_lengths, unsigned* d_lengths, int usebrotli, int revcounts) {
   size_t ll_counts[ZOPFLI_NUM_LL];
   size_t d_counts[ZOPFLI_NUM_D];
 
@@ -746,8 +746,8 @@ static void GetDynamicLengths(const ZopfliLZ77Store* lz77,
     OptimizeHuffmanForRle(ZOPFLI_NUM_LL, ll_counts);
     OptimizeHuffmanForRle(ZOPFLI_NUM_D, d_counts);
   }
-  ZopfliCalculateBitLengths(ll_counts, ZOPFLI_NUM_LL, 15, ll_lengths);
-  ZopfliCalculateBitLengths(d_counts, ZOPFLI_NUM_D, 15, d_lengths);
+  ZopfliCalculateBitLengths(ll_counts, ZOPFLI_NUM_LL, 15, ll_lengths, revcounts);
+  ZopfliCalculateBitLengths(d_counts, ZOPFLI_NUM_D, 15, d_lengths, revcounts);
   PatchDistanceCodesForBuggyDecoders(d_lengths);
 }
 
@@ -778,7 +778,7 @@ void PrintSummary(unsigned long insize, unsigned long outsize, unsigned long def
 }
 
 double ZopfliCalculateBlockSize(const ZopfliLZ77Store* lz77,
-                                size_t lstart, size_t lend, int btype, int ohh, int usebrotli) {
+                                size_t lstart, size_t lend, int btype, int ohh, int usebrotli, int revcounts) {
   unsigned ll_lengths[ZOPFLI_NUM_LL];
   unsigned d_lengths[ZOPFLI_NUM_D];
 
@@ -795,8 +795,8 @@ double ZopfliCalculateBlockSize(const ZopfliLZ77Store* lz77,
   } else if(btype == 1) {
     GetFixedTree(ll_lengths, d_lengths);
   } else {
-    GetDynamicLengths(lz77, lstart, lend, ll_lengths, d_lengths, usebrotli);
-    result += CalculateTreeSize(ll_lengths, d_lengths, ohh);
+    GetDynamicLengths(lz77, lstart, lend, ll_lengths, d_lengths, usebrotli, revcounts);
+    result += CalculateTreeSize(ll_lengths, d_lengths, ohh, revcounts);
   }
 
   result += CalculateBlockSymbolSize(
@@ -806,13 +806,13 @@ double ZopfliCalculateBlockSize(const ZopfliLZ77Store* lz77,
 }
 
 double ZopfliCalculateBlockSizeAutoType(const ZopfliLZ77Store* lz77,
-                                        size_t lstart, size_t lend, int ohh, int usebrotli) {
-  double uncompressedcost = ZopfliCalculateBlockSize(lz77, lstart, lend, 0, ohh, usebrotli);
+                                        size_t lstart, size_t lend, int ohh, int usebrotli, int revcounts) {
+  double uncompressedcost = ZopfliCalculateBlockSize(lz77, lstart, lend, 0, ohh, usebrotli, revcounts);
   /* Don't do the expensive fixed cost calculation for larger blocks that are
      unlikely to use it.
      Mr_KrzYch00's note: we will run fixed calculation every time */
-  double fixedcost = ZopfliCalculateBlockSize(lz77, lstart, lend, 1, ohh, usebrotli);
-  double dyncost = ZopfliCalculateBlockSize(lz77, lstart, lend, 2, ohh, usebrotli);
+  double fixedcost = ZopfliCalculateBlockSize(lz77, lstart, lend, 1, ohh, usebrotli, revcounts);
+  double dyncost = ZopfliCalculateBlockSize(lz77, lstart, lend, 2, ohh, usebrotli, revcounts);
   return (uncompressedcost < fixedcost && uncompressedcost < dyncost)
       ? uncompressedcost
       : (fixedcost < dyncost ? fixedcost : dyncost);
@@ -912,10 +912,10 @@ static void AddLZ77Block(const ZopfliOptions* options, int btype, int final,
     /* Dynamic block. */
     assert(btype == 2);
 
-    GetDynamicLengths(lz77, lstart, lend, ll_lengths, d_lengths, options->usebrotli);
+    GetDynamicLengths(lz77, lstart, lend, ll_lengths, d_lengths, options->usebrotli, options->revcounts);
 
     treesize = *outsize;
-    AddDynamicTree(ll_lengths, d_lengths, bp, out, outsize, options->optimizehuffmanheader);
+    AddDynamicTree(ll_lengths, d_lengths, bp, out, outsize, options->optimizehuffmanheader, options->revcounts);
     treesize = *outsize - treesize;
   }
 
@@ -941,9 +941,9 @@ static void AddLZ77BlockAutoType(const ZopfliOptions* options, int final,
                                  size_t expected_data_size,
                                  unsigned char* bp,
                                  unsigned char** out, size_t* outsize) {
-  double uncompressedcost = ZopfliCalculateBlockSize(lz77, lstart, lend, 0, options->optimizehuffmanheader, options->usebrotli);
-  double fixedcost = ZopfliCalculateBlockSize(lz77, lstart, lend, 1, options->optimizehuffmanheader, options->usebrotli);
-  double dyncost = ZopfliCalculateBlockSize(lz77, lstart, lend, 2, options->optimizehuffmanheader, options->usebrotli);
+  double uncompressedcost = ZopfliCalculateBlockSize(lz77, lstart, lend, 0, options->optimizehuffmanheader, options->usebrotli, options->revcounts);
+  double fixedcost = ZopfliCalculateBlockSize(lz77, lstart, lend, 1, options->optimizehuffmanheader, options->usebrotli, options->revcounts);
+  double dyncost = ZopfliCalculateBlockSize(lz77, lstart, lend, 2, options->optimizehuffmanheader, options->usebrotli, options->revcounts);
 
   /* Whether to perform the expensive calculation of creating an optimal block
   with fixed huffman tree to check if smaller. Only do this for small blocks or
@@ -973,7 +973,7 @@ static void AddLZ77BlockAutoType(const ZopfliOptions* options, int final,
     ZopfliBlockState s;
     ZopfliInitBlockState(options, instart, inend, 1, &s);
     ZopfliLZ77OptimalFixed(&s, lz77->data, instart, inend, &fixedstore);
-    fixedcost = ZopfliCalculateBlockSize(&fixedstore, 0, fixedstore.size, 1, options->optimizehuffmanheader, options->usebrotli);
+    fixedcost = ZopfliCalculateBlockSize(&fixedstore, 0, fixedstore.size, 1, options->optimizehuffmanheader, options->usebrotli, options->revcounts);
     ZopfliCleanBlockState(&s);
   }
   if (uncompressedcost < fixedcost && uncompressedcost < dyncost) {
@@ -1057,7 +1057,7 @@ DLL_PUBLIC void ZopfliDeflatePart(const ZopfliOptions* options, int btype, int f
     ZopfliInitLZ77Store(in, &store);
     ZopfliInitBlockState(options, start, end, 1, &s);
     ZopfliLZ77Optimal(&s, in, start, end, &store, options);
-    totalcost += ZopfliCalculateBlockSizeAutoType(&store, 0, store.size, options->optimizehuffmanheader, options->usebrotli);
+    totalcost += ZopfliCalculateBlockSizeAutoType(&store, 0, store.size, options->optimizehuffmanheader, options->usebrotli, options->revcounts);
 
     ZopfliAppendLZ77Store(&store, &lz77);
     if (i < npoints) splitpoints[i] = lz77.size;
@@ -1078,7 +1078,7 @@ DLL_PUBLIC void ZopfliDeflatePart(const ZopfliOptions* options, int btype, int f
     for (i = 0; i <= npoints2; i++) {
       size_t start = i == 0 ? 0 : splitpoints2[i - 1];
       size_t end = i == npoints2 ? lz77.size : splitpoints2[i];
-      totalcost2 += ZopfliCalculateBlockSizeAutoType(&lz77, start, end, options->optimizehuffmanheader, options->usebrotli);
+      totalcost2 += ZopfliCalculateBlockSizeAutoType(&lz77, start, end, options->optimizehuffmanheader, options->usebrotli, options->revcounts);
     }
 
     if (totalcost2 < totalcost) {

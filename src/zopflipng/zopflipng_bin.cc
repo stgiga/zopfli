@@ -61,7 +61,17 @@ void GetFileNameParts(const std::string& filename,
   }
 }
 
-// Returns the size of the file
+// Returns whether the file exists and we have read permissions.
+bool FileExists(const std::string& filename) {
+  FILE* file = fopen(filename.c_str(), "rb");
+  if (file) {
+    fclose(file);
+    return true;
+  }
+  return false;
+}
+
+// Returns the size of the file, if it exists and we have read permissions.
 size_t GetFileSize(const std::string& filename) {
   size_t size;
   FILE* file = fopen(filename.c_str(), "rb");
@@ -134,6 +144,7 @@ void ShowHelp() {
          "--brotli:       use Brotli Huffman optimization\n"
          "--lazy:         lazy matching in Greedy LZ77 (d: OFF)\n"
          "--ohh:          optymize huffman header (d: OFF)\n"
+         "--rc:           reverse counts ordering in bit length calculations\n"
          "   more options available only in Zopfli\n"
          "\n"
          "Usage examples:\n"
@@ -216,6 +227,8 @@ printf("ZopfliPNG, a Portable Network Graphics (PNG) image optimizer.\n"
         png_options.usebrotli = 1;
       } else if (name == "--lazy") {
         png_options.lazymatching = 1;
+      } else if (name == "--rc") {
+        png_options.revcounts = 1;
       } else if (name == "--ohh") {
         png_options.optimizehuffmanheader = 1;
       } else if (name == "--iterations") {
@@ -339,9 +352,11 @@ printf("ZopfliPNG, a Portable Network Graphics (PNG) image optimizer.\n"
     lodepng::State inputstate;
     std::vector<unsigned char> resultpng;
 
-    lodepng::load_file(origpng, files[i]);
-    error = ZopfliPNGOptimize(origpng, png_options,
-                              (png_options.verbosezopfli!=0), &resultpng);
+    error = lodepng::load_file(origpng, files[i]);
+    if (!error) {
+      error = ZopfliPNGOptimize(origpng, png_options,
+                                (png_options.verbosezopfli!=0), &resultpng);
+    }
 
     if (error) {
       if (error == 1) {
@@ -360,9 +375,11 @@ printf("ZopfliPNG, a Portable Network Graphics (PNG) image optimizer.\n"
     if (error) {
       total_errors++;
     } else {
-      size_t origsize = GetFileSize(files[i]);
+      size_t origsize = origpng.size();
       size_t resultsize = resultpng.size();
 
+      PrintSize("Input size", origsize);
+      PrintResultSize("Result size", origsize, resultsize);
       if (resultsize < origsize) {
         printf("Result is smaller\n");
       } else if (resultsize == origsize) {
@@ -372,8 +389,6 @@ printf("ZopfliPNG, a Portable Network Graphics (PNG) image optimizer.\n"
             ? "Original was smaller\n"
             : "Preserving original PNG since it was smaller\n");
       }
-      PrintSize("Input size", origsize);
-      PrintResultSize("Result size", origsize, resultsize);
 
       std::string out_filename = user_out_filename;
       if (use_prefix) {
@@ -391,28 +406,29 @@ printf("ZopfliPNG, a Portable Network Graphics (PNG) image optimizer.\n"
       if (resultpng.size() < origsize) total_files_smaller++;
       else if (resultpng.size() == origsize) total_files_equal++;
 
-      if (!always_zopflify && resultpng.size() > origsize) {
-        // Set output file to input since input was smaller.
+      if (!always_zopflify && resultpng.size() >= origsize) {
+        // Set output file to input since zopfli didn't improve it.
         resultpng = origpng;
       }
 
+      bool already_exists = FileExists(out_filename);
       size_t origoutfilesize = GetFileSize(out_filename);
-      bool already_exists = true;
-      if (origoutfilesize == 0) already_exists = false;
 
       // When using a prefix, and the output file already exist, assume it's
       // from a previous run. If that file is smaller, it may represent a
       // previous run with different parameters that gave a smaller PNG image.
+      // This also applies when not using prefix but same input as output file.
       // In that case, do not overwrite it. This behaviour can be removed by
       // adding the always_zopflify flag.
       bool keep_earlier_output_file = already_exists &&
-          resultpng.size() >= origoutfilesize && !always_zopflify && use_prefix;
+          resultpng.size() >= origoutfilesize && !always_zopflify &&
+          (use_prefix || !different_output_name);
 
       if (keep_earlier_output_file) {
         // An output file from a previous run is kept, add that files' size
         // to the output size statistics.
         total_out_size += origoutfilesize;
-        if (different_output_name) {
+        if (use_prefix) {
           printf(resultpng.size() == origoutfilesize
               ? "File not written because a previous run was as good.\n"
               : "File not written because a previous run was better.\n");
@@ -431,8 +447,11 @@ printf("ZopfliPNG, a Portable Network Graphics (PNG) image optimizer.\n"
         }
         if (confirmed) {
           if (!dryrun) {
-            lodepng::save_file(resultpng, out_filename);
-            total_files_saved++;
+            if (lodepng::save_file(resultpng, out_filename) != 0) {
+              printf("Failed to write to file %s\n", out_filename.c_str());
+            } else {
+              total_files_saved++;
+            }
           }
           total_out_size += resultpng.size();
         } else {

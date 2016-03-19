@@ -81,13 +81,13 @@ lstart: start of block
 lend: end of block (not inclusive)
 */
 double ZopfliCalculateBlockSize(const ZopfliLZ77Store* lz77,
-                                size_t lstart, size_t lend, int btype, int ohh, int usebrotli);
+                                size_t lstart, size_t lend, int btype, int ohh, int usebrotli, int revcounts);
 
 /*
 Calculates block size in bits, automatically using the best btype.
 */
 double ZopfliCalculateBlockSizeAutoType(const ZopfliLZ77Store* lz77,
-                                        size_t lstart, size_t lend, int ohh, int usebrotli);
+                                        size_t lstart, size_t lend, int ohh, int usebrotli, int revcounts);
 
 void DeflateBlock(const ZopfliOptions* options,
                          int btype, int final,

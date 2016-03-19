@@ -190,8 +190,27 @@ static int LeafComparator(const void* a, const void* b) {
    return 0;
 }
 
+/*
+Added to achieve GCC 5.3 qsort default behavior which reverses
+the order of counts. Used for testing.
+*/
+static int LeafComparatorRev(const void* a, const void* b) {
+  const Node *aa = ((const Node*)a);
+  const Node *bb = ((const Node*)b);
+  if(aa->weight < bb->weight)
+   return -1;
+  else if(aa->weight > bb->weight)
+   return 1;
+  else if(aa->count < bb->count)
+   return 1;
+  else if(aa->count > bb->count)
+   return -1;
+  else
+   return 0;
+}
+
 int ZopfliLengthLimitedCodeLengths(
-    const size_t* frequencies, int n, int maxbits, unsigned* bitlengths) {
+    const size_t* frequencies, int n, int maxbits, unsigned* bitlengths, int revcounts) {
   NodePool pool;
   int i;
   int numsymbols = 0;  /* Amount of symbols with frequency > 0. */
@@ -234,7 +253,11 @@ int ZopfliLengthLimitedCodeLengths(
   }
 
   /* Sort the leaves from lightest to heaviest. */
-  qsort(leaves, numsymbols, sizeof(Node), LeafComparator);
+  if(revcounts==0) {
+   qsort(leaves, numsymbols, sizeof(Node), LeafComparator);
+  } else {
+   qsort(leaves, numsymbols, sizeof(Node), LeafComparatorRev);
+  }
 
   /* Initialize node memory pool. */
   pool.size = 2 * maxbits * (maxbits + 1);

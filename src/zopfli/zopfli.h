@@ -102,6 +102,15 @@ typedef struct ZopfliOptions {
   If to use Brotli RLE.
   */
   int usebrotli;
+
+  /*
+  Used to make reverse ordering of counts when weights are equal
+  in bit length calculations as per GCC 5.3 defaults. Provides
+  different results on block split points as well as iteration
+  progress.
+  */
+  int revcounts;
+
 } ZopfliOptions;
 
 typedef struct ZopfliAdditionalData {

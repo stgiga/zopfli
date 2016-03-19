@@ -92,8 +92,8 @@ void ZopfliCalculateEntropy(const size_t* count, size_t n, double* bitlengths) {
 }
 
 void ZopfliCalculateBitLengths(const size_t* count, size_t n, int maxbits,
-                               unsigned* bitlengths) {
-  int error = ZopfliLengthLimitedCodeLengths(count, n, maxbits, bitlengths);
+                               unsigned* bitlengths, int revcounts) {
+  int error = ZopfliLengthLimitedCodeLengths(count, n, maxbits, bitlengths, revcounts);
   (void) error;
   assert(!error);
 }

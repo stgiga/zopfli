@@ -848,6 +848,7 @@ int main(int argc, char* argv[]) {
     else if (StringsEqual(arg, "--legacy")) binoptions.legacy = 1;
     else if (StringsEqual(arg, "--lazy")) options.lazymatching = 1;
     else if (StringsEqual(arg, "--ohh")) options.optimizehuffmanheader = 1;
+    else if (StringsEqual(arg, "--rc")) options.revcounts = 1;
     else if (StringsEqual(arg, "--dir")) binoptions.usescandir = 1;
     else if (StringsEqual(arg, "--aas")) binoptions.additionalautosplits = 1;
     else if (arg[0] == '-' && arg[1] == '-' && arg[2] == 'i'
@@ -951,6 +952,7 @@ int main(int argc, char* argv[]) {
           "  --legacy      use legacy mode when compressing data\n"
           "  --lazy        lazy matching in Greedy LZ77 (d: OFF)\n"
           "  --ohh         optymize huffman header (d: OFF)\n"
+          "  --rc          reverse counts ordering in bit length calculations\n"
           "  --rw#         initial random W for iterations (1-65535, d: 1)\n"
           "  --rz#         initial random Z for iterations (1-65535, d: 2)\n\n"
           " Pressing CTRL+C will set maximum unsuccessful iterations to 1.\n"
