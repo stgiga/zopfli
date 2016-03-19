@@ -171,9 +171,23 @@ static void ExtractBitLengths(Node* chain, Node* leaves, unsigned* bitlengths) {
 
 /*
 Comparator for sorting the leaves. Has the function signature for qsort.
+Make sure we are using correct ascending order for counts when weights
+are equal. This makes qsort work the same on GCC 5.3 as it did on GCC 4.8.
+This should fix Zopfli producing different results with various compilers.
 */
 static int LeafComparator(const void* a, const void* b) {
-  return ((const Node*)a)->weight - ((const Node*)b)->weight;
+  const Node *aa = ((const Node*)a);
+  const Node *bb = ((const Node*)b);
+  if(aa->weight < bb->weight)
+   return -1;
+  else if(aa->weight > bb->weight)
+   return 1;
+  else if(aa->count < bb->count)
+   return -1;
+  else if(aa->count > bb->count)
+   return 1;
+  else
+   return 0;
 }
 
 int ZopfliLengthLimitedCodeLengths(
