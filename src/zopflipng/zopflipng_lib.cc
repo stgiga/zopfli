@@ -724,7 +724,7 @@ int ZopfliPNGOptimize(const std::vector<unsigned char>& origpng,
         printf("Less than 256 colors, will try paletted version.\n");
       }
       if (oversizedcolortype == 1 && verbose) printf("Full alpha not needed.\n");
-      if ((oversizedcolortype == 0) && (png_options.lossy_transparent > 0)) {
+      if ((oversizedcolortype == 0) && (png_options.alpha_cleaner > 0)) {
         printf("Starting alpha cleaning, with ");
         char numcleaners = 0;
         char bestcleaner = 0;
@@ -735,13 +735,13 @@ int ZopfliPNGOptimize(const std::vector<unsigned char>& origpng,
         size_t tempsize = 0;
         size_t bestsize = 0;
         size_t secondbestsize = 0;
-        if (png_options.lossy_transparent & 1) numcleaners++;
-        if (png_options.lossy_transparent & 2) numcleaners++;
-        if (png_options.lossy_transparent & 4) numcleaners++;
-        if (png_options.lossy_transparent & 8) numcleaners++;
-        if (png_options.lossy_transparent & 16) numcleaners++;
+        if (png_options.alpha_cleaner & 1) numcleaners++;
+        if (png_options.alpha_cleaner & 2) numcleaners++;
+        if (png_options.alpha_cleaner & 4) numcleaners++;
+        if (png_options.alpha_cleaner & 8) numcleaners++;
+        if (png_options.alpha_cleaner & 16) numcleaners++;
         printf("%d cleaners\n", numcleaners);
-        if (png_options.lossy_transparent & 1) {
+        if (png_options.alpha_cleaner & 1) {
           if (verbose) printf("Cleaning alpha using method 0\n");
           LossyOptimizeTransparentCryo(&image[0], w, h, (png_options.alpha_cleaner & 1));
           if (png_options.auto_filter_strategy) {
@@ -790,7 +790,7 @@ int ZopfliPNGOptimize(const std::vector<unsigned char>& origpng,
             }
           }
         }
-        if (png_options.lossy_transparent & 2) {
+        if (png_options.alpha_cleaner & 2) {
           if (verbose) {
             printf ("Cleaning alpha using method 1\n");
           }
@@ -841,7 +841,7 @@ int ZopfliPNGOptimize(const std::vector<unsigned char>& origpng,
             }
           }
         }
-        if (png_options.lossy_transparent & 4) {
+        if (png_options.alpha_cleaner & 4) {
           if (verbose) printf("Cleaning alpha using method 2\n");
           LossyOptimizeTransparentCryo(&image[0], w, h, (png_options.alpha_cleaner & 4));
           if (png_options.auto_filter_strategy) {
@@ -890,7 +890,7 @@ int ZopfliPNGOptimize(const std::vector<unsigned char>& origpng,
             }
           }
         }
-        if (png_options.lossy_transparent & 8) {
+        if (png_options.alpha_cleaner & 8) {
           if (verbose) printf("Cleaning alpha using method 3\n");
           LossyOptimizeTransparentCryo(&image[0], w, h, (png_options.alpha_cleaner & 8));
           if (png_options.auto_filter_strategy) {
@@ -939,7 +939,7 @@ int ZopfliPNGOptimize(const std::vector<unsigned char>& origpng,
             }
           }
         }
-        if (png_options.lossy_transparent & 16) {
+        if (png_options.alpha_cleaner & 16) {
           if (verbose) printf("Cleaning alpha using method 4\n");
           LossyOptimizeTransparentCryo(&image[0], w, h, (png_options.alpha_cleaner & 16));
           if (png_options.auto_filter_strategy) {
@@ -1089,6 +1089,7 @@ extern "C" void CZopfliPNGSetDefaults(CZopfliPNGOptions* png_options) {
   png_options->lossy_8bit            = opts.lossy_8bit;
   png_options->auto_filter_strategy  = opts.auto_filter_strategy;
   png_options->use_zopfli            = opts.use_zopfli;
+  png_options->alpha_cleaner         = opts.alpha_cleaner;
   png_options->num_iterations        = opts.num_iterations;
   png_options->num_iterations_large  = opts.num_iterations_large;
   png_options->block_split_strategy  = opts.block_split_strategy;
@@ -1116,6 +1117,7 @@ extern "C" int CZopfliPNGOptimize(const unsigned char* origpng,
   opts.lossy_8bit            = !!png_options->lossy_8bit;
   opts.auto_filter_strategy  = !!png_options->auto_filter_strategy;
   opts.use_zopfli            = !!png_options->use_zopfli;
+  opts.alpha_cleaner         = png_options->alpha_cleaner;
   opts.num_iterations        = png_options->num_iterations;
   opts.num_iterations_large  = png_options->num_iterations_large;
   opts.block_split_strategy  = png_options->block_split_strategy;
