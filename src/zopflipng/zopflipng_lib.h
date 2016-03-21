@@ -51,6 +51,9 @@ enum ZopfliPNGFilterStrategy {
 
 typedef struct CZopfliPNGOptions {
   int lossy_transparent;
+
+  int alpha_cleaner;
+
   int lossy_8bit;
 
   enum ZopfliPNGFilterStrategy* filter_strategies;
@@ -118,6 +121,11 @@ struct ZopfliPNGOptions {
 
   // Allow altering hidden colors of fully transparent pixels
   bool lossy_transparent;
+
+  // Keep above for backwards compatibility and expose Cryopng
+  // cleaner separatelly.
+  int alpha_cleaner;
+
   // Convert 16-bit per channel images to 8-bit per channel
   bool lossy_8bit;
 

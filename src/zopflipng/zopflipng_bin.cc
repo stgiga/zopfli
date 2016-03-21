@@ -102,6 +102,7 @@ void ShowHelp() {
          "-y: do not ask about overwriting files.\n"
          "--lossy_transparent: remove colors behind alpha channel 0. No visual"
          " difference, removes hidden information.\n"
+         "--alpha_cleaner=[0-4vh]: same as above but based on CryoPNG\n"
          "--lossy_8bit: convert 16-bit per channel image to 8-bit per"
          " channel.\n"
          "-d: dry run: don't save any files, just see the console output"
@@ -221,6 +222,22 @@ printf("ZopfliPNG, a Portable Network Graphics (PNG) image optimizer.\n"
         always_zopflify = true;
       } else if (name == "--lossy_transparent") {
         png_options.lossy_transparent = true;
+      } else if (name == "--alpha_cleaner") {
+        for (size_t j = 0; j < value.size(); j++) {
+          char f = value[j];
+          switch (f) {
+            case '0': png_options.alpha_cleaner |= 1; break;
+            case '1': png_options.alpha_cleaner |= 2; break;
+            case '2': png_options.alpha_cleaner |= 4; break;
+            case '3': png_options.alpha_cleaner |= 8; break;
+            case '4': png_options.alpha_cleaner |= 16; break;
+            case 'v': png_options.alpha_cleaner |= 32; break;
+            case 'h': png_options.alpha_cleaner |= 64; break;
+            default:
+              printf("Unknown alpha cleaning method: %c\n", f);
+              return 1;
+          }
+        }
       } else if (name == "--lossy_8bit") {
         png_options.lossy_8bit = true;
       } else if (name == "--brotli") {
