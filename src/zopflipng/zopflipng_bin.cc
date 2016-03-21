@@ -102,7 +102,7 @@ void ShowHelp() {
          "-y: do not ask about overwriting files.\n"
          "--lossy_transparent: remove colors behind alpha channel 0. No visual"
          " difference, removes hidden information.\n"
-         "--alpha_cleaner=[0-4vh]: same as above but based on CryoPNG\n"
+         "--alpha_cleaner=[0-4]: same as above but based on CryoPNG\n"
          "--lossy_8bit: convert 16-bit per channel image to 8-bit per"
          " channel.\n"
          "-d: dry run: don't save any files, just see the console output"

@@ -732,261 +732,68 @@ int ZopfliPNGOptimize(const std::vector<unsigned char>& origpng,
         unsigned int bestfilter = 0;
         unsigned int secondbestfilter = 0;
         unsigned int tempfilter;
+        int mode = 1;
+        int maxcleaners = 5;
         size_t tempsize = 0;
         size_t bestsize = 0;
         size_t secondbestsize = 0;
-        if (png_options.alpha_cleaner & 1) numcleaners++;
-        if (png_options.alpha_cleaner & 2) numcleaners++;
-        if (png_options.alpha_cleaner & 4) numcleaners++;
-        if (png_options.alpha_cleaner & 8) numcleaners++;
-        if (png_options.alpha_cleaner & 16) numcleaners++;
+        for(int i = 0; i<maxcleaners; ++i) {
+          if (png_options.alpha_cleaner & mode) numcleaners++;
+          mode <<= 1;
+        }
         printf("%d cleaners\n", numcleaners);
-        if (png_options.alpha_cleaner & 1) {
-          if (verbose) printf("Cleaning alpha using method 0\n");
-          LossyOptimizeTransparentCryo(&image[0], w, h, (png_options.alpha_cleaner & 1));
-          if (png_options.auto_filter_strategy) {
-            tempfilter = strategy_enable_cryo;
-            error = AutoChooseFilterStrategyCryo(image, w, h, inputstate, bit16,
-                                             origpng,
-                                             /* Don't try brute force and predefined */
-                                             kNumFilterStrategies - 2,
-                                             filterstrategies, &tempfilter, &tempsize);
-            if (!error) {
-              if (verbose) {
-                printf("Best filter:%d, size:%d\n", CountTrailingZeros(tempfilter),
-                       (unsigned int)tempsize);
-              }
-              if (bestsize == 0 || tempsize < bestsize) {
-                secondbestsize = bestsize;
-                secondbestfilter = bestfilter;
-                secondbestcleaner = bestcleaner;
-                bestsize = tempsize;
-                bestfilter = tempfilter;
-                bestcleaner = 1;
-              } else if (secondbestsize == 0 || tempsize < secondbestsize) {
-                secondbestsize = tempsize;
-                secondbestfilter = tempfilter;
-                secondbestcleaner = 1;
-              }
-            }
-          } else {
-            for (int i = 0; i < kNumFilterStrategies; i++) {
-              if (!(strategy_enable_cryo & (1<<i))) continue;
-
-              std::vector<unsigned char> temp;
-              error = TryOptimize(image, w, h, inputstate, bit16, origpng,
-                          filterstrategies[i], true /* use_zopfli */,
-                          windowsize, &png_options, &temp);
+        mode = 1;
+        for(int i = 0; i<maxcleaners; ++i) {
+          if (png_options.alpha_cleaner & mode) {
+            if (verbose) printf("Cleaning alpha using method %i\n",i);
+            LossyOptimizeTransparentCryo(&image[0], w, h, (png_options.alpha_cleaner & mode));
+            if (png_options.auto_filter_strategy) {
+              tempfilter = strategy_enable_cryo;
+              error = AutoChooseFilterStrategyCryo(image, w, h, inputstate, bit16,
+                                               origpng,
+                                               /* Don't try brute force and predefined */
+                                               kNumFilterStrategies - 2,
+                                               filterstrategies, &tempfilter, &tempsize);
               if (!error) {
                 if (verbose) {
-                  printf("Filter strategy %s: %d bytes\n",
-                          strategy_name[i].c_str(), (int) temp.size());
+                  printf("Best filter:%d, size:%d\n", CountTrailingZeros(tempfilter),
+                         (unsigned int)tempsize);
                 }
-                if (bestsize == 0 || temp.size() < bestsize) {
-                  bestsize = temp.size();
-                  (*resultpng).swap(temp);  // Store best result so far in the output.
+                if (bestsize == 0 || tempsize < bestsize) {
+                  secondbestsize = bestsize;
+                  secondbestfilter = bestfilter;
+                  secondbestcleaner = bestcleaner;
+                  bestsize = tempsize;
+                  bestfilter = tempfilter;
+                  bestcleaner = mode;
+                } else if (secondbestsize == 0 || tempsize < secondbestsize) {
+                  secondbestsize = tempsize;
+                  secondbestfilter = tempfilter;
+                  secondbestcleaner = mode;
                 }
               }
-            }
-          }
-        }
-        if (png_options.alpha_cleaner & 2) {
-          if (verbose) {
-            printf ("Cleaning alpha using method 1\n");
-          }
-          LossyOptimizeTransparentCryo(&image[0], w, h, (png_options.alpha_cleaner & 2));
-          if (png_options.auto_filter_strategy) {
-            tempfilter = strategy_enable_cryo;
-            error = AutoChooseFilterStrategyCryo(image, w, h, inputstate, bit16,
-                                             origpng,
-                                             /* Don't try brute force and predefined */
-                                             kNumFilterStrategies - 2,
-                                             filterstrategies, &tempfilter, &tempsize);
-            if (!error) {
-              if (verbose) {
-                printf("Best filter:%d, size:%d\n", CountTrailingZeros(tempfilter),
-                       (unsigned int)tempsize);
-              }
-              if (bestsize == 0 || tempsize < bestsize) {
-                secondbestsize = bestsize;
-                secondbestfilter = bestfilter;
-                secondbestcleaner = bestcleaner;
-                bestsize = tempsize;
-                bestfilter = tempfilter;
-                bestcleaner = 2;
-              } else if (secondbestsize == 0 || tempsize < secondbestsize) {
-                secondbestsize = tempsize;
-                secondbestfilter = tempfilter;
-                secondbestcleaner = 2;
-              }
-            }
-          } else {
-            for (int i = 0; i < kNumFilterStrategies; i++) {
-              if (!(strategy_enable_cryo & (1<<i))) continue;
+            } else {
+              for (int i = 0; i < kNumFilterStrategies; i++) {
+                if (!(strategy_enable_cryo & (1<<i))) continue;
 
-              std::vector<unsigned char> temp;
-              error = TryOptimize(image, w, h, inputstate, bit16, origpng,
-                          filterstrategies[i], true /* use_zopfli */,
-                          windowsize, &png_options, &temp);
-              if (!error) {
-                if (verbose) {
-                  printf("Filter strategy %s: %d bytes\n",
-                          strategy_name[i].c_str(), (int) temp.size());
-                }
-                if (bestsize == 0 || temp.size() < bestsize) {
-                  bestsize = temp.size();
-                  (*resultpng).swap(temp);  // Store best result so far in the output.
-                }
-              }
-            }
-          }
-        }
-        if (png_options.alpha_cleaner & 4) {
-          if (verbose) printf("Cleaning alpha using method 2\n");
-          LossyOptimizeTransparentCryo(&image[0], w, h, (png_options.alpha_cleaner & 4));
-          if (png_options.auto_filter_strategy) {
-            tempfilter = strategy_enable_cryo;
-            error = AutoChooseFilterStrategyCryo(image, w, h, inputstate, bit16,
-                                             origpng,
-                                             /* Don't try brute force and predefined */
-                                             kNumFilterStrategies - 2,
-                                             filterstrategies, &tempfilter, &tempsize);
-            if (!error) {
-              if (verbose) {
-                printf("Best filter:%d, size:%d\n", CountTrailingZeros(tempfilter),
-                       (unsigned int)tempsize);
-              }
-              if (bestsize == 0 || tempsize < bestsize) {
-                secondbestsize = bestsize;
-                secondbestfilter = bestfilter;
-                secondbestcleaner = bestcleaner;
-                bestsize = tempsize;
-                bestfilter = tempfilter;
-                bestcleaner = 4;
-              } else if (secondbestsize == 0 || tempsize < secondbestsize) {
-                secondbestsize = tempsize;
-                secondbestfilter = tempfilter;
-                secondbestcleaner = 4;
-              }
-            }
-          } else {
-            for (int i = 0; i < kNumFilterStrategies; i++) {
-              if (!(strategy_enable_cryo & (1<<i))) continue;
-
-              std::vector<unsigned char> temp;
-              error = TryOptimize(image, w, h, inputstate, bit16, origpng,
-                          filterstrategies[i], true /* use_zopfli */,
-                          windowsize, &png_options, &temp);
-              if (!error) {
-                if (verbose) {
-                  printf("Filter strategy %s: %d bytes\n",
-                          strategy_name[i].c_str(), (int) temp.size());
-                }
-                if (bestsize == 0 || temp.size() < bestsize) {
-                  bestsize = temp.size();
-                  (*resultpng).swap(temp);  // Store best result so far in the output.
+                std::vector<unsigned char> temp;
+                error = TryOptimize(image, w, h, inputstate, bit16, origpng,
+                            filterstrategies[i], true /* use_zopfli */,
+                            windowsize, &png_options, &temp);
+                if (!error) {
+                  if (verbose) {
+                    printf("Filter strategy %s: %d bytes\n",
+                            strategy_name[i].c_str(), (int) temp.size());
+                  }
+                  if (bestsize == 0 || temp.size() < bestsize) {
+                    bestsize = temp.size();
+                    (*resultpng).swap(temp);  // Store best result so far in the output.
+                  }
                 }
               }
             }
           }
-        }
-        if (png_options.alpha_cleaner & 8) {
-          if (verbose) printf("Cleaning alpha using method 3\n");
-          LossyOptimizeTransparentCryo(&image[0], w, h, (png_options.alpha_cleaner & 8));
-          if (png_options.auto_filter_strategy) {
-            tempfilter = strategy_enable_cryo;
-            error = AutoChooseFilterStrategyCryo(image, w, h, inputstate, bit16,
-                                             origpng,
-                                             /* Don't try brute force and predefined */
-                                             kNumFilterStrategies - 2,
-                                             filterstrategies, &tempfilter, &tempsize);
-            if (!error) {
-              if (verbose) {
-                printf("Best filter:%d, size:%d\n", CountTrailingZeros(tempfilter),
-                       (unsigned int)tempsize);
-              }
-              if (bestsize == 0 || tempsize < bestsize) {
-                secondbestsize = bestsize;
-                secondbestfilter = bestfilter;
-                secondbestcleaner = bestcleaner;
-                bestsize = tempsize;
-                bestfilter = tempfilter;
-                bestcleaner = 8;
-              } else if (secondbestsize == 0 || tempsize < secondbestsize) {
-                secondbestsize = tempsize;
-                secondbestfilter = tempfilter;
-                secondbestcleaner = 8;
-              }
-            }
-          } else {
-            for (int i = 0; i < kNumFilterStrategies; i++) {
-              if (!(strategy_enable_cryo & (1<<i))) continue;
-
-              std::vector<unsigned char> temp;
-              error = TryOptimize(image, w, h, inputstate, bit16, origpng,
-                          filterstrategies[i], true /* use_zopfli */,
-                          windowsize, &png_options, &temp);
-              if (!error) {
-                if (verbose) {
-                  printf("Filter strategy %s: %d bytes\n",
-                          strategy_name[i].c_str(), (int) temp.size());
-                }
-                if (bestsize == 0 || temp.size() < bestsize) {
-                  bestsize = temp.size();
-                  (*resultpng).swap(temp);  // Store best result so far in the output.
-                }
-              }
-            }
-          }
-        }
-        if (png_options.alpha_cleaner & 16) {
-          if (verbose) printf("Cleaning alpha using method 4\n");
-          LossyOptimizeTransparentCryo(&image[0], w, h, (png_options.alpha_cleaner & 16));
-          if (png_options.auto_filter_strategy) {
-            tempfilter = strategy_enable_cryo;
-            error = AutoChooseFilterStrategyCryo(image, w, h, inputstate, bit16,
-                                             origpng,
-                                             /* Don't try brute force and predefined */
-                                             kNumFilterStrategies - 2,
-                                             filterstrategies, &tempfilter, &tempsize);
-            if (!error) {
-              if (verbose) {
-                printf("Best filter:%d, size:%d\n", CountTrailingZeros(tempfilter),
-                       (unsigned int)tempsize);
-              }
-              if (bestsize == 0 || tempsize < bestsize) {
-                secondbestsize = bestsize;
-                secondbestfilter = bestfilter;
-                secondbestcleaner = bestcleaner;
-                bestsize = tempsize;
-                bestfilter = tempfilter;
-                bestcleaner = 16;
-              } else if (secondbestsize == 0 || tempsize < secondbestsize) {
-                secondbestsize = tempsize;
-                secondbestfilter = tempfilter;
-                secondbestcleaner = 16;
-              }
-            }
-          } else {
-            for (int i = 0; i < kNumFilterStrategies; i++) {
-              if (!(strategy_enable_cryo & (1<<i))) continue;
-
-              std::vector<unsigned char> temp;
-              error = TryOptimize(image, w, h, inputstate, bit16, origpng,
-                          filterstrategies[i], true /* use_zopfli */,
-                          windowsize, &png_options, &temp);
-              if (!error) {
-                if (verbose) {
-                  printf("Filter strategy %s: %d bytes\n",
-                          strategy_name[i].c_str(), (int) temp.size());
-                }
-                if (bestsize == 0 || temp.size() < bestsize) {
-                  bestsize = temp.size();
-                  (*resultpng).swap(temp);  // Store best result so far in the output.
-                }
-              }
-            }
-          }
+          mode <<= 1;
         }
         if (png_options.auto_filter_strategy) {
           LossyOptimizeTransparentCryo(&image[0], w, h,
