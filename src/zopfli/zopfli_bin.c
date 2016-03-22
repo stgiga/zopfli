@@ -932,7 +932,7 @@ int main(int argc, char* argv[]) {
           "  --mls#        maximum length score (d: 1024)\n"
           "  --splitlast   ignored, left for backwards compatibility\n\n");
       fprintf(stderr,
-          "      MANUAL BLOCK SPLITTING CONTROL (doesn't work with --legacy or --dir):\n"
+          "      MANUAL BLOCK SPLITTING CONTROL (doesn't work with --legacy):\n"
           "  --n#          number of blocks\n"
           "  --b#          block size in bytes\n"
           "  --cbs#        customize block start points\n"
@@ -953,8 +953,8 @@ int main(int argc, char* argv[]) {
           "      MISCELLANEOUS:\n"
           "  --brotli      use Brotli Huffman optimization\n"
           "  --legacy      use legacy mode when compressing data\n"
-          "  --lazy        lazy matching in Greedy LZ77 (d: OFF)\n"
-          "  --ohh         optymize huffman header (d: OFF)\n"
+          "  --lazy        lazy matching in Greedy LZ77\n"
+          "  --ohh         optymize huffman header\n"
           "  --pass#       try to recompress last block split max # times\n"
           "  --rc          reverse counts ordering in bit length calculations\n"
           "  --rw#         initial random W for iterations (1-65535, d: 1)\n");
