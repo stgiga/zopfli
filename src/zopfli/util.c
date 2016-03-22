@@ -241,4 +241,5 @@ void ZopfliInitOptions(ZopfliOptions* options) {
   options->ranstatez = 2;
   options->usebrotli = 0;
   options->revcounts = 0;
+  options->pass = 0;
 }

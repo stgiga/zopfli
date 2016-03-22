@@ -54,7 +54,7 @@ static size_t FindMinimum(FindMinimumFun f, void* context,
         result = i;
       }
     }
-    if(options->verbose>4) fprintf(stderr," [%lu - %lu] Best: %.0f\n",(unsigned long)start,(unsigned long)end,best);
+    if(options->verbose>5) fprintf(stderr," [%lu - %lu] Best: %.0f\n",(unsigned long)start,(unsigned long)end,best);
     *smallest = best;
     return result;
   } else {
@@ -83,7 +83,7 @@ static size_t FindMinimum(FindMinimumFun f, void* context,
         }
       }
       if (best > lastbest) {
-        if(options->verbose>4) fprintf(stderr," [%lu - %lu]\n",(unsigned long)start,(unsigned long)end);
+        if(options->verbose>5) fprintf(stderr," [%lu - %lu]\n",(unsigned long)start,(unsigned long)end);
         break;
       }
 
@@ -92,7 +92,7 @@ static size_t FindMinimum(FindMinimumFun f, void* context,
 
       pos = p[besti];
       lastbest = best;
-      if(options->verbose>4) fprintf(stderr," [%lu - %lu] Best: %.0f\n",(unsigned long)start,(unsigned long)end,best);
+      if(options->verbose>5) fprintf(stderr," [%lu - %lu] Best: %.0f\n",(unsigned long)start,(unsigned long)end,best);
     }
     *smallest = lastbest;
     free(p);
@@ -280,7 +280,7 @@ void ZopfliBlockSplitLZ77(const ZopfliOptions* options,
     } else {
       AddSorted(llpos, splitpoints, npoints);
       ++numblocks;
-      if(options->verbose>0 && options->verbose<5) fprintf(stderr,"Initializing blocks: %lu    \r",(unsigned long)(startnpoints+numblocks));
+      if(options->verbose>0 && options->verbose<6) fprintf(stderr,"Initializing blocks: %lu    \r",(unsigned long)(startnpoints+numblocks));
     }
 
     if (!FindLargestSplittableBlock(

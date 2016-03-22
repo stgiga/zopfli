@@ -135,17 +135,18 @@ void ShowHelp() {
          " ZopfliPNG only keeps the following chunks because they are"
          " essential: IHDR, PLTE, tRNS, IDAT and IEND.\n\n"
          "     CUSTOM ZOPFLIPNG OPTIONS:\n"
-         "--v=[number]:   verbose level for zopfli (0-5, d:2)\n"
-         "--mui=[number]: maximum unsuccessful iterations after last best (d: 0)\n"
-         "--mb=[number]:  maximum blocks, 0 = unlimited (d: 15)\n"
-         "--bsr=[number]: block splitting recursion (min: 2, d: 9)\n"
-         "--mls=[number]: maximum length score (d: 1024)\n"
-         "--rw=[number]:  initial random W for iterations (1-65535, d: 1)\n"
-         "--rz=[number]:  initial random Z for iterations (1-65535, d: 2)\n"
-         "--brotli:       use Brotli Huffman optimization\n"
-         "--lazy:         lazy matching in Greedy LZ77 (d: OFF)\n"
-         "--ohh:          optymize huffman header (d: OFF)\n"
-         "--rc:           reverse counts ordering in bit length calculations\n"
+         "--v=[number]:    verbose level for zopfli (0-5, d:2)\n"
+         "--mui=[number]:  maximum unsuccessful iterations after last best (d: 0)\n"
+         "--mb=[number]:   maximum blocks, 0 = unlimited (d: 15)\n"
+         "--bsr=[number]:  block splitting recursion (min: 2, d: 9)\n"
+         "--mls=[number]:  maximum length score (d: 1024)\n"
+         "--pass=[number]: maximum length score (d: 1024)\n"
+         "--rw=[number]:   initial random W for iterations (1-65535, d: 1)\n"
+         "--rz=[number]:   initial random Z for iterations (1-65535, d: 2)\n"
+         "--brotli:        use Brotli Huffman optimization\n"
+         "--lazy:          lazy matching in Greedy LZ77 (d: OFF)\n"
+         "--ohh:           optymize huffman header (d: OFF)\n"
+         "--rc:            reverse counts ordering in bit length calculations\n"
          "   more options available only in Zopfli\n"
          "\n"
          "Usage examples:\n"
@@ -258,6 +259,9 @@ printf("ZopfliPNG, a Portable Network Graphics (PNG) image optimizer.\n"
       } else if (name == "--mls") {
         if (num < 1) num = 1024;
         png_options.lengthscoremax = num;
+      } else if (name == "--pass") {
+        if (num < 1) num = 1;
+        png_options.pass = num;
       } else if (name == "--bsr") {
         if (num < 2) num = 9;
         png_options.findminimumrec = num;

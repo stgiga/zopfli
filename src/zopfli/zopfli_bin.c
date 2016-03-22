@@ -852,27 +852,30 @@ int main(int argc, char* argv[]) {
     else if (StringsEqual(arg, "--dir")) binoptions.usescandir = 1;
     else if (StringsEqual(arg, "--aas")) binoptions.additionalautosplits = 1;
     else if (arg[0] == '-' && arg[1] == '-' && arg[2] == 'i'
-        && arg[3] >= '0' && arg[3] <= '9') {
+          && arg[3] >= '0' && arg[3] <= '9') {
       options.numiterations = atoi(arg + 3);
     }  else if (arg[0] == '-' && arg[1] == '-' && arg[2] == 'm' && arg[3] == 'b'
-        && arg[4] >= '0' && arg[4] <= '9') {
+             && arg[4] >= '0' && arg[4] <= '9') {
       options.blocksplittingmax = atoi(arg + 4);
+    }  else if (arg[0] == '-' && arg[1] == '-' && arg[2] == 'p' && arg[3] == 'a'
+             && arg[4] == 's' && arg[5] == 's' && arg[6] >= '0' && arg[6] <= '9') {
+      options.pass = atoi(arg + 6);
     }  else if (arg[0] == '-' && arg[1] == '-' && arg[2] == 'm' && arg[3] == 'l' && arg[4] == 's'
-        && arg[5] >= '0' && arg[5] <= '9') {
+             && arg[5] >= '0' && arg[5] <= '9') {
       options.lengthscoremax = atoi(arg + 5);
     }  else if (arg[0] == '-' && arg[1] == '-' && arg[2] == 'b' && arg[3] == 's' && arg[4] == 'r'
-        && arg[5] >= '0' && arg[5] <= '9') {
+             && arg[5] >= '0' && arg[5] <= '9') {
       options.findminimumrec = atoi(arg + 5);
     }  else if (arg[0] == '-' && arg[1] == '-' && arg[2] == 'r' && arg[3] == 'w'
-        && arg[4] >= '0' && arg[4] <= '9') {
+             && arg[4] >= '0' && arg[4] <= '9') {
       options.ranstatew = atoi(arg + 4);
       if(options.ranstatew<1) options.ranstatew=1;
     }  else if (arg[0] == '-' && arg[1] == '-' && arg[2] == 'r' && arg[3] == 'z'
-        && arg[4] >= '0' && arg[4] <= '9') {
+             && arg[4] >= '0' && arg[4] <= '9') {
       options.ranstatez = atoi(arg + 4);
       if(options.ranstatez<1) options.ranstatez=1;
     }  else if (arg[0] == '-' && arg[1] == '-' && arg[2] == 'm' && arg[3] == 'u' && arg[4] == 'i'
-        && arg[5] >= '0' && arg[5] <= '9') {
+             && arg[5] >= '0' && arg[5] <= '9') {
       options.maxfailiterations = atoi(arg + 5);
     }  else if (arg[0] == '-' && arg[1] == '-' && arg[2] == 'c' && arg[3] == 'b' && arg[4] == 's' && arg[5] != '\0') {
       if(arg[5] == 'f' && arg[6] == 'i' && arg[7] == 'l' && arg[8] == 'e' && arg[9] != '\0') {
@@ -952,8 +955,10 @@ int main(int argc, char* argv[]) {
           "  --legacy      use legacy mode when compressing data\n"
           "  --lazy        lazy matching in Greedy LZ77 (d: OFF)\n"
           "  --ohh         optymize huffman header (d: OFF)\n"
+          "  --pass#       try to recompress last block split max # times\n"
           "  --rc          reverse counts ordering in bit length calculations\n"
-          "  --rw#         initial random W for iterations (1-65535, d: 1)\n"
+          "  --rw#         initial random W for iterations (1-65535, d: 1)\n");
+      fprintf(stderr,
           "  --rz#         initial random Z for iterations (1-65535, d: 2)\n\n"
           " Pressing CTRL+C will set maximum unsuccessful iterations to 1.\n"
           "\n");

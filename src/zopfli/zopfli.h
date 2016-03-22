@@ -111,6 +111,12 @@ typedef struct ZopfliOptions {
   */
   int revcounts;
 
+  /*
+  Recompress the file this many times after splitting last, it will
+  run this many times ONLY if last block splitting is still smaller.
+  */
+  int pass;
+
 } ZopfliOptions;
 
 typedef struct ZopfliAdditionalData {
