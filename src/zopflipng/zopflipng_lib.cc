@@ -284,7 +284,7 @@ void LossyOptimizeTransparentCryo(unsigned char* image, unsigned w, unsigned h, 
     int pg = 0;
     int pb = 0;
     for (size_t i = 0; i < (4 * w * h); ) {
-      for (size_t j = 3; j < 4*w;) {
+      for (size_t j = 3; j < 4 * w;) {
         // if alpha is 0, set the RGB values to those of the pixel on the left.
         if (image[i + j] == 0) {
           image[i + j - 3] = pr;
@@ -296,33 +296,59 @@ void LossyOptimizeTransparentCryo(unsigned char* image, unsigned w, unsigned h, 
           pg = image[i + j - 2];
           pb = image[i + j - 1];
         }
-        j+=4;
+        j += 4;
       }
-      i+=(w*4);
+      if (w > 1)
+      {
+        for (size_t j = 4 * (w - 2) + 3; j + 1 > 0;) {
+          // if alpha is 0, set the RGB values to those of the pixel on the right.
+          if (image[i + j] == 0) {
+            image[i + j - 3] = pr;
+            image[i + j - 2] = pg;
+            image[i + j - 1] = pb;
+          } else {
+            // Use the last encountered RGB value.
+            pr = image[i + j - 3];
+            pg = image[i + j - 2];
+            pb = image[i + j - 1];
+          }
+          j -= 4;
+        }
+      }
+      i += (w * 4);
       pr = pg = pb = 0;   // reset to zero at each new line
     }
   } else if (cleaner & 4) {  // Up filter
-    for (size_t j = 3; j < 4*w;) {
+    for (size_t j = 3; j < 4 * w;) {
       // if alpha is 0, set the RGB values to zero (black), first line only.
       if (image[j] == 0) {
         image[j - 3] = 0;
         image[j - 2] = 0;
         image[j - 1] = 0;
       }
-      j+=4;
+      j += 4;
     }
     if (h > 1) {
-      for (size_t i = w*4; i < (4 * w * h); ) {
-        for (size_t j = 3; j < 4*w;) {
+      for (size_t j = 3; j < 4 * w;) {
+        for (size_t i = w * 4; i < (4 * w * h); ) {
           // if alpha is 0, set the RGB values to those of the upper pixel.
           if (image[i + j] == 0) {
-            image[i + j - 3] = image[i + j - (3 + 4*w)];
-            image[i + j - 2] = image[i + j - (2 + 4*w)];
-            image[i + j - 1] = image[i + j - (1 + 4*w)];
+            image[i + j - 3] = image[i + j - 3 - 4 * w];
+            image[i + j - 2] = image[i + j - 2 - 4 * w];
+            image[i + j - 1] = image[i + j - 1 - 4 * w];
           }
-          j+=4;
+          i += (w * 4);
         }
-        i+=(w*4);
+        for (size_t i = 4 * w * (h - 2); i + w * 4 > 0;) {
+          // if alpha is 0, set the RGB values to those of the lower pixel.
+          if (image[i + j] == 0) {
+            image[i + j - 3] = image[i + j - 3 + 4 * w];
+            image[i + j - 2] = image[i + j - 2 + 4 * w];
+            image[i + j - 1] = image[i + j - 1 + 4 * w];
+          }
+          i -= (w * 4);
+        }
+        j += 4;
       }
     }
   } else if (cleaner & 8) {  // Average filter
