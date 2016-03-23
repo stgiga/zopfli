@@ -801,7 +801,7 @@ static void CompressFileLegacy(ZopfliOptions* options,
 static void VersionInfo(void) {
   fprintf(stderr,
   "Zopfli, a Compression Algorithm to produce Deflate streams.\n"
-  "KrzYmod extends Zopfli functionality - version 15\n\n");
+  "KrzYmod extends Zopfli functionality - version 16 rc1\n\n");
 }
 
 static void ParseCustomBlockBoundaries(unsigned long** bs, const char* data) {
@@ -955,7 +955,7 @@ int main(int argc, char* argv[]) {
           "  --legacy      use legacy mode when compressing data\n"
           "  --lazy        lazy matching in Greedy LZ77\n"
           "  --ohh         optymize huffman header\n"
-          "  --pass#       try to recompress last block split max # times\n"
+          "  --pass#       recompress last split points max # times (d: 0)\n"
           "  --rc          reverse counts ordering in bit length calculations\n"
           "  --rw#         initial random W for iterations (1-65535, d: 1)\n");
       fprintf(stderr,

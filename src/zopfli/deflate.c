@@ -1072,75 +1072,105 @@ DLL_PUBLIC void ZopfliDeflatePart(const ZopfliOptions* options, int btype, int f
     size_t* splitpoints2;
     size_t npoints2;
     double totalcost2;
-  do {
-    splitpoints2 = 0;
-    npoints2 = 0;
-    totalcost2 = 0;
+    do {
+      splitpoints2 = 0;
+      npoints2 = 0;
+      totalcost2 = 0;
 
-    ZopfliBlockSplitLZ77(options, &lz77,
-                         options->blocksplittingmax, &splitpoints2, &npoints2, 0);
+      ZopfliBlockSplitLZ77(options, &lz77,
+                           options->blocksplittingmax, &splitpoints2, &npoints2, 0);
 
-    for (i = 0; i <= npoints2; i++) {
-      size_t start = i == 0 ? 0 : splitpoints2[i - 1];
-      size_t end = i == npoints2 ? lz77.size : splitpoints2[i];
-      totalcost2 += ZopfliCalculateBlockSizeAutoType(&lz77, start, end, options->optimizehuffmanheader, options->usebrotli, options->revcounts);
-    }
-
-    if (totalcost2 < totalcost) {
-      size_t npts = 0;
-      size_t pos = instart;
-      if (options->verbose>3) {
-        fprintf(stderr,"! Above block split points are better (%lu bit < %lu bit) !\n",(unsigned long)totalcost2,(unsigned long)totalcost);
+      for (i = 0; i <= npoints2; i++) {
+        size_t start = i == 0 ? 0 : splitpoints2[i - 1];
+        size_t end = i == npoints2 ? lz77.size : splitpoints2[i];
+        totalcost2 += ZopfliCalculateBlockSizeAutoType(&lz77, start, end, options->optimizehuffmanheader, options->usebrotli, options->revcounts);
       }
-      free(splitpoints);
-      splitpoints = splitpoints2;
-      npoints = npoints2;
+
       ++pass;
-      if(pass<options->pass) {
-       if (options->verbose>3) {
-        fprintf(stderr," Recompressing pass %d.\n",pass);
-       }
-       totalcost = 0;
-       free(splitpoints_uncompressed);
-       splitpoints_uncompressed = 0;
-       if (npoints > 0) {
-        for (i = 0; i < lz77.size; i++) {
-         size_t length = lz77.dists[i] == 0 ? 1 : lz77.litlens[i];
-         if (splitpoints[npts] == i) {
-          ZOPFLI_APPEND_DATA(pos, &splitpoints_uncompressed, &npts);
-          if (npts == npoints) break;
-         }
-         pos += length;
+      if(pass <= options->pass) {
+        size_t* splitpoints_uncompressed2 = 0;
+        size_t totalcost3 = 0;
+        size_t npointstemp = 0;
+        ZopfliLZ77Store lz77temp;
+        ZopfliInitLZ77Store(in, &lz77temp);
+        if (options->verbose>3) {
+          fprintf(stderr," Recompressing, pass #%d.\n",pass);
         }
-       }
-       assert(npoints == npts);
-       ZopfliCleanLZ77Store(&lz77);
-       ZopfliInitLZ77Store(in, &lz77);
-       for (i = 0; i <= npoints; i++) {
-        size_t start = i == 0 ? instart : splitpoints_uncompressed[i - 1];
-        size_t end = i == npoints ? inend : splitpoints_uncompressed[i];
-        ZopfliBlockState s;
-        ZopfliLZ77Store store;
-        ZopfliInitLZ77Store(in, &store);
-        ZopfliInitBlockState(options, start, end, 1, &s);
-        ZopfliLZ77Optimal(&s, in, start, end, &store, options);
-        totalcost += ZopfliCalculateBlockSizeAutoType(&store, 0, store.size, options->optimizehuffmanheader, options->usebrotli, options->revcounts);
+        if(npoints2 > 0) {
+          size_t postemp = 0;
+          for (i = 0; i < lz77.size; ++i) {
+            size_t length = lz77.dists[i] == 0 ? 1 : lz77.litlens[i];
+            if (splitpoints2[npointstemp] == i) {
+              ZOPFLI_APPEND_DATA(postemp, &splitpoints_uncompressed2, &npointstemp);
+              if (npointstemp == npoints2) break;
+            }
+            postemp += length;
+          }
+        }
+        assert(npointstemp == npoints2);
+        ZopfliInitLZ77Store(in, &lz77temp);
+        for (i = 0; i <= npoints2; ++i) {
+          size_t start = i == 0 ? instart : splitpoints_uncompressed2[i - 1];
+          size_t end = i == npoints2 ? inend : splitpoints_uncompressed2[i];
+          ZopfliBlockState s;
+          ZopfliLZ77Store store;
+          ZopfliInitLZ77Store(in, &store);
+          ZopfliInitBlockState(options, start, end, 1, &s);
+          ZopfliLZ77Optimal(&s, in, start, end, &store, options);
+          totalcost3 += ZopfliCalculateBlockSizeAutoType(&store, 0, store.size, options->optimizehuffmanheader, options->usebrotli, options->revcounts);
 
-        ZopfliAppendLZ77Store(&store, &lz77);
-        if (i < npoints) splitpoints[i] = lz77.size;
+          ZopfliAppendLZ77Store(&store, &lz77temp);
+          if (i < npoints2) splitpoints2[i] = lz77temp.size;
  
-        ZopfliCleanBlockState(&s);
-        ZopfliCleanLZ77Store(&store);
-       }
+          ZopfliCleanBlockState(&s);
+          ZopfliCleanLZ77Store(&store);
+        }
+        if(totalcost3 < totalcost) {
+          if (options->verbose>3) {
+            fprintf(stderr,"!! RECOMPRESS: Smaller (%lu bit < %lu bit) !\n",(unsigned long)totalcost3,(unsigned long)totalcost);
+          }
+          totalcost = totalcost3;
+          ZopfliCopyLZ77Store(&lz77temp,&lz77);
+          ZopfliCleanLZ77Store(&lz77temp);
+          free(splitpoints);
+          free(splitpoints_uncompressed);
+          splitpoints = splitpoints2;
+          splitpoints_uncompressed = splitpoints_uncompressed2;
+          npoints = npoints2;
+        } else {
+          free(splitpoints2);
+          free(splitpoints_uncompressed2);
+          ZopfliCleanLZ77Store(&lz77temp);
+          if (options->verbose>3) {
+            fprintf(stderr,"!! RECOMPRESS: Bigger, using last (%lu bit > %lu bit) !\n",(unsigned long)totalcost3,(unsigned long)totalcost);
+          }
+          break;
+        }
+      } else {
+        if(totalcost2 < totalcost) {
+          free(splitpoints);
+          splitpoints = splitpoints2;
+          npoints = npoints2;
+          if(npoints2 > 0) {
+            size_t postemp = 0;
+            size_t npointstemp = 0;
+            free(splitpoints_uncompressed);
+            splitpoints_uncompressed = 0;
+            for (i = 0; i < lz77.size; ++i) {
+              size_t length = lz77.dists[i] == 0 ? 1 : lz77.litlens[i];
+              if (splitpoints[npointstemp] == i) {
+                ZOPFLI_APPEND_DATA(postemp, &splitpoints_uncompressed, &npointstemp);
+                if (npointstemp == npoints) break;
+              }
+              postemp += length;
+            }
+            assert(npointstemp == npoints);
+          }
+        } else {
+          free(splitpoints2);
+        }
       }
-    } else {
-      free(splitpoints2);
-      if (options->verbose>3) {
-        fprintf(stderr,"! Previous block split points were better (%lu bit > %lu bit) !\n",(unsigned long)totalcost2,(unsigned long)totalcost);
-      }
-      break;
-    }
-  } while(totalcost < totalcost2 && pass<options->pass);
+    } while(pass<options->pass);
   }
 
   for (i = 0; i <= npoints; i++) {
@@ -1149,6 +1179,19 @@ DLL_PUBLIC void ZopfliDeflatePart(const ZopfliOptions* options, int btype, int f
     AddLZ77BlockAutoType(options, i == npoints && final,
                          &lz77, start, end, 0,
                          bp, out, outsize);
+  }
+
+  if(npoints>0 && options->verbose>3) {
+    fprintf(stderr,"!! BEST SPLIT POINTS FOUND: ");
+    for (i = 0; i < npoints; ++i) {
+      fprintf(stderr, "%d ", (int)(splitpoints_uncompressed[i]));
+    }
+    fprintf(stderr, "(hex:");
+    for (i = 0; i < npoints; ++i) {
+      if(i==0) fprintf(stderr," "); else fprintf(stderr,",");
+      fprintf(stderr, "%x", (int)(splitpoints_uncompressed[i]));
+    }
+    fprintf(stderr,")\n");
   }
 
   ZopfliCleanLZ77Store(&lz77);

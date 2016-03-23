@@ -140,7 +140,7 @@ void ShowHelp() {
          "--mb=[number]:   maximum blocks, 0 = unlimited (d: 15)\n"
          "--bsr=[number]:  block splitting recursion (min: 2, d: 9)\n"
          "--mls=[number]:  maximum length score (d: 1024)\n"
-         "--pass=[number]: maximum length score (d: 1024)\n"
+         "--pass=[number]: recompress last split points max # times (d: 0)\n"
          "--rw=[number]:   initial random W for iterations (1-65535, d: 1)\n"
          "--rz=[number]:   initial random Z for iterations (1-65535, d: 2)\n"
          "--brotli:        use Brotli Huffman optimization\n"
@@ -170,7 +170,7 @@ void PrintResultSize(const char* label, size_t oldsize, size_t newsize) {
 
 int main(int argc, char *argv[]) {
 printf("ZopfliPNG, a Portable Network Graphics (PNG) image optimizer.\n"
-         "KrzYmod extends ZopfliPNG functionality - version 15\n\n");
+         "KrzYmod extends ZopfliPNG functionality - version 16 rc1\n\n");
   if (argc < 2) {
     ShowHelp();
     return 0;
