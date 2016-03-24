@@ -1040,7 +1040,6 @@ DLL_PUBLIC void ZopfliDeflatePart(const ZopfliOptions* options, int btype, int f
     return;
   }
 
-
   if (options->blocksplitting) {
     if(splitsnum==NULL || (splitsnum!=NULL && *splitsnum==0)) {
       ZopfliBlockSplit(options, in, instart, inend,
@@ -1062,7 +1061,7 @@ DLL_PUBLIC void ZopfliDeflatePart(const ZopfliOptions* options, int btype, int f
             if(npointstemp > 0) {
               size_t j = 0;
               for(;j < npointstemp; ++j) {
-                ZOPFLI_APPEND_DATA((start + splitunctemp[j]), &splitpoints_uncompressed, &npoints);
+                ZOPFLI_APPEND_DATA(splitunctemp[j], &splitpoints_uncompressed, &npoints);
               }
             }
             free(splitunctemp);
@@ -1076,7 +1075,7 @@ DLL_PUBLIC void ZopfliDeflatePart(const ZopfliOptions* options, int btype, int f
                          &splitunctemp, &npointstemp, &npointstemp);
         if(npointstemp > 0) {
           for(i = 0; i < npointstemp; ++i) {
-            ZOPFLI_APPEND_DATA(((*splits)[lastknownsplit] + splitunctemp[i]), &splitpoints_uncompressed, &npoints);
+            ZOPFLI_APPEND_DATA(splitunctemp[i], &splitpoints_uncompressed, &npoints);
           }
         }
         free(splitunctemp);
