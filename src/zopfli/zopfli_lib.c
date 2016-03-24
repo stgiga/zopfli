@@ -68,7 +68,7 @@ DLL_PUBLIC void ZopfliCompress(ZopfliOptions* options, const ZopfliFormat output
   } else if (output_type == ZOPFLI_FORMAT_DEFLATE) {
     unsigned char bp = 0;
     ZopfliDeflate(optionslib, 2 /* Dynamic block */, 1,
-                  in, insize, &bp, out, outsize);
+                  in, insize, &bp, out, outsize, 0, 0);
   } else {
     fprintf(stderr,"Error: No output format specified.\n");
     exit (EXIT_FAILURE);

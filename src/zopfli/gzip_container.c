@@ -65,7 +65,7 @@ void ZopfliGzipCompress(const ZopfliOptions* options,
   }
 
   ZopfliDeflate(options, 2 /* Dynamic block */, 1,
-                in, insize, &bp, out, outsize);
+                in, insize, &bp, out, outsize, 0, 0);
 
   /* CRC */
   for(i=0;i<4;++i) ZOPFLI_APPEND_DATA((crcvalue >> (i*8)) % 256, out, outsize);

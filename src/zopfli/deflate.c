@@ -1009,7 +1009,7 @@ the final bit will be set on the last block.
 DLL_PUBLIC void ZopfliDeflatePart(const ZopfliOptions* options, int btype, int final,
                           const unsigned char* in, size_t instart, size_t inend,
                           unsigned char* bp, unsigned char** out,
-                          size_t* outsize) {
+                          size_t* outsize, size_t** splits, size_t* splitsnum) {
   size_t i;
   /* byte coordinates rather than lz77 index */
   size_t* splitpoints_uncompressed = 0;
@@ -1042,9 +1042,46 @@ DLL_PUBLIC void ZopfliDeflatePart(const ZopfliOptions* options, int btype, int f
 
 
   if (options->blocksplitting) {
-    ZopfliBlockSplit(options, in, instart, inend,
-                     options->blocksplittingmax,
-                     &splitpoints_uncompressed, &npoints, &npoints);
+    if(splitsnum==NULL || (splitsnum!=NULL && *splitsnum==0)) {
+      ZopfliBlockSplit(options, in, instart, inend,
+                       options->blocksplittingmax,
+                       &splitpoints_uncompressed, &npoints, &npoints);
+    } else {
+      size_t lastknownsplit = 0;
+      size_t* splitunctemp = 0;
+      size_t npointstemp = 0;
+      for(i = 0; i < *splitsnum; ++i) {
+        if((*splits)[i] > instart && (*splits)[i] < inend) {
+          if(options->additionalautosplits==1) {
+            size_t start = i == 0 ? instart : (*splits)[i - 1];
+            if(start < instart) start = instart;
+            lastknownsplit = i;
+            ZopfliBlockSplit(options, in, start, (*splits)[i], 
+                             options->blocksplittingmax,
+                             &splitunctemp, &npointstemp, &npointstemp);
+            if(npointstemp > 0) {
+              size_t j = 0;
+              for(;j < npointstemp; ++j) {
+                ZOPFLI_APPEND_DATA((start + splitunctemp[j]), &splitpoints_uncompressed, &npoints);
+              }
+            }
+            free(splitunctemp);
+          }
+          ZOPFLI_APPEND_DATA((*splits)[i], &splitpoints_uncompressed, &npoints);
+        }
+      }
+      if(options->additionalautosplits==1) {
+        ZopfliBlockSplit(options, in, (*splits)[lastknownsplit] , inend,
+                         options->blocksplittingmax,
+                         &splitunctemp, &npointstemp, &npointstemp);
+        if(npointstemp > 0) {
+          for(i = 0; i < npointstemp; ++i) {
+            ZOPFLI_APPEND_DATA(((*splits)[lastknownsplit] + splitunctemp[i]), &splitpoints_uncompressed, &npoints);
+          }
+        }
+        free(splitunctemp);
+      }
+    }
     splitpoints = (size_t*)malloc(sizeof(*splitpoints) * npoints);
   }
 
@@ -1125,9 +1162,10 @@ DLL_PUBLIC void ZopfliDeflatePart(const ZopfliOptions* options, int btype, int f
           ZopfliCleanBlockState(&s);
           ZopfliCleanLZ77Store(&store);
         }
+        fprintf(stderr,"!! RECOMPRESS: ");
         if(totalcost3 < totalcost) {
           if (options->verbose>3) {
-            fprintf(stderr,"!! RECOMPRESS: Smaller (%lu bit < %lu bit) !\n",(unsigned long)totalcost3,(unsigned long)totalcost);
+            fprintf(stderr,"Smaller (%lu bit < %lu bit) !\n",(unsigned long)totalcost3,(unsigned long)totalcost);
           }
           totalcost = totalcost3;
           ZopfliCopyLZ77Store(&lz77temp,&lz77);
@@ -1142,7 +1180,7 @@ DLL_PUBLIC void ZopfliDeflatePart(const ZopfliOptions* options, int btype, int f
           free(splitpoints_uncompressed2);
           ZopfliCleanLZ77Store(&lz77temp);
           if (options->verbose>3) {
-            fprintf(stderr,"!! RECOMPRESS: Bigger, using last (%lu bit > %lu bit) !\n",(unsigned long)totalcost3,(unsigned long)totalcost);
+            fprintf(stderr,"Bigger, using last (%lu bit > %lu bit) !\n",(unsigned long)totalcost3,(unsigned long)totalcost);
           }
           break;
         }
@@ -1182,8 +1220,15 @@ DLL_PUBLIC void ZopfliDeflatePart(const ZopfliOptions* options, int btype, int f
   }
 
   if(npoints>0 && options->verbose>3) {
+    int hadsplits = 0;
+    if(splits!=NULL) {
+      if(*splits!=NULL) free(*splits);
+      *splitsnum = 0;
+      hadsplits = 1;
+    }
     fprintf(stderr,"!! BEST SPLIT POINTS FOUND: ");
     for (i = 0; i < npoints; ++i) {
+      if(hadsplits==1) ZOPFLI_APPEND_DATA(splitpoints_uncompressed[i], splits, splitsnum);
       fprintf(stderr, "%d ", (int)(splitpoints_uncompressed[i]));
     }
     fprintf(stderr, "(hex:");
@@ -1197,14 +1242,15 @@ DLL_PUBLIC void ZopfliDeflatePart(const ZopfliOptions* options, int btype, int f
   ZopfliCleanLZ77Store(&lz77);
   free(splitpoints);
   free(splitpoints_uncompressed);
+
 }
 
 DLL_PUBLIC void ZopfliDeflate(const ZopfliOptions* options, int btype, int final,
                    const unsigned char* in, size_t insize,
-                   unsigned char* bp, unsigned char** out, size_t* outsize) {
+                   unsigned char* bp, unsigned char** out, size_t* outsize, size_t** splits, size_t* splitsnum) {
  size_t offset = *outsize;
 #if ZOPFLI_MASTER_BLOCK_SIZE == 0
-  ZopfliDeflatePart(options, btype, final, in, 0, insize, bp, out, outsize);
+  ZopfliDeflatePart(options, btype, final, in, 0, insize, bp, out, outsize, splits, splitsnum);
 #else
   size_t i = 0;
   while (i < insize) {
@@ -1212,10 +1258,9 @@ DLL_PUBLIC void ZopfliDeflate(const ZopfliOptions* options, int btype, int final
     int final2 = final && masterfinal;
     size_t size = masterfinal ? insize - i : ZOPFLI_MASTER_BLOCK_SIZE;
     ZopfliDeflatePart(options, btype, final2,
-                      in, i, i + size, bp, out, outsize);
+                      in, i, i + size, bp, out, outsize, splits, splitsnum);
     i += size;
   }
 #endif
-  if(options->verbose>0) fprintf(stderr,"Progress: 100.0%%                                                  \n\n");
   if(options->verbose>1) PrintSummary(insize,0,*outsize-offset);
 }

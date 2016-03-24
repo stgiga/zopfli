@@ -62,7 +62,6 @@ void ZopfliZipCompress(const ZopfliOptions* options,
 
  /* MS-DOS TIME */
   if(moredata == NULL) {
-/*    for(i=0;i<sizeof(defTimestamp);++i) ZOPFLI_APPEND_DATA(defTimestamp[i], out, outsize); */
     for(i=0;i<sizeof(defTimestamp);++i) ZOPFLI_APPEND_DATA(defTimestamp >> (i*8) % 256, out, outsize);
   } else {
     for(i=0;i<4;++i) ZOPFLI_APPEND_DATA((moredata->timestamp >> (i*8)) % 256, out, outsize);
@@ -91,7 +90,7 @@ void ZopfliZipCompress(const ZopfliOptions* options,
 
   if(fullsize<insize) fullsize=insize;
   ZopfliDeflate(options, 2 /* Dynamic block */, 1,
-                in, insize, &bp, out, outsize);
+                in, insize, &bp, out, outsize, 0, 0);
 
   rawdeflsize = *outsize - rawdeflsize;
 

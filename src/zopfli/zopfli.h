@@ -117,16 +117,28 @@ typedef struct ZopfliOptions {
   */
   int pass;
 
+  /*
+  Runs zopfli splitting between manual/custom start points
+  */
+  int additionalautosplits;
+
 } ZopfliOptions;
 
-typedef struct ZopfliAdditionalData {
 /*
- Used to hold additonal data that will be necessary for communication between
- bin and lib part.
+This struct holds 2 variables and is sent to LIB as last parameter
+for ZIP or GZIP compression. Can be safely passed as NULL pointer.
 */
-
+typedef struct ZopfliAdditionalData {
+  /*
+  Unix timestamp for GZIP or MS-DOS timestamp for ZIP. Will use
+  lowest possible timestamp if structure is not passed.
+  */
   unsigned long timestamp;
 
+  /*
+  Filename to store in archive. ZIP will use CRC32, GZIP will not
+  store filename if structure is not passed.
+  */
   const char* filename;
 
 } ZopfliAdditionalData;

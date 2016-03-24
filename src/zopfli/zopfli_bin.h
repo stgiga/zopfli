@@ -50,12 +50,7 @@ typedef struct ZopfliBinOptions {
   /*
   Custom block start points in hexadecimal format comma separated.
   */
-  unsigned long *custblocksplit;
-
-  /*
-  Runs zopfli splitting between manual/custom start points
-  */
-  int additionalautosplits;
+  size_t *custblocksplit;
 
   /*
   If to use legacy compression mode when compressing data.

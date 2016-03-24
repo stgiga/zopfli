@@ -242,4 +242,5 @@ void ZopfliInitOptions(ZopfliOptions* options) {
   options->usebrotli = 0;
   options->revcounts = 0;
   options->pass = 0;
+  options->additionalautosplits = 0;
 }
