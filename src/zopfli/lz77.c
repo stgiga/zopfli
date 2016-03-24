@@ -264,7 +264,9 @@ Indirectly, this affects:
 static int GetLengthScore(int length, int distance, int max) {
   /*
   At 1024, the distance uses 9+ extra bits and this seems to be the sweet spot
-  on tested files. However it's possible to alter this value by --mls switch.
+  on tested files.
+
+  Here we allow user to be smarter and finetune it with --mls switch.
   */
   return distance > max ? length - 1 : length;
 }
@@ -540,6 +542,10 @@ void ZopfliFindLongestMatch(ZopfliBlockState* s, const ZopfliHash* h,
   assert(pos + *length <= size);
 }
 
+/*
+Here we allow user to turn ON lazy matching without the need to recompile
+the program, by simply passing --lazy switch.
+*/
 void ZopfliLZ77Greedy(ZopfliBlockState* s, const unsigned char* in,
                       size_t instart, size_t inend,
                       ZopfliLZ77Store* store, const ZopfliOptions* options) {

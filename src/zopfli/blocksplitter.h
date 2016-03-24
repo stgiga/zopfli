@@ -39,7 +39,7 @@ maxblocks: set a limit to the amount of blocks. Set to 0 to mean no limit.
 */
 void ZopfliBlockSplitLZ77(const ZopfliOptions* options,
                           const ZopfliLZ77Store* lz77, size_t maxblocks,
-                          size_t** splitpoints, size_t* npoints, size_t startnpoints);
+                          size_t** splitpoints, size_t* npoints);
 
 /*
 Does blocksplitting on uncompressed data.
@@ -57,7 +57,7 @@ npoints: pointer to amount of splitpoints, for the dynamic array. The amount of
 */
 void ZopfliBlockSplit(const ZopfliOptions* options,
                       const unsigned char* in, size_t instart, size_t inend,
-                      size_t maxblocks, size_t** splitpoints, size_t* npoints, size_t* startnpoints);
+                      size_t maxblocks, size_t** splitpoints, size_t* npoints);
 
 /*
 Divides the input into equal blocks, does not even take LZ77 lengths into

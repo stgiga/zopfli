@@ -39,6 +39,12 @@ typedef double FindMinimumFun(size_t i, void* context);
 Finds minimum of function f(i) where i is of type size_t, f(i) is of type
 double, i is in range start-end (excluding end).
 Outputs the minimum value in *smallest and returns the index of this value.
+
+Here we allow changing recursion by --bsr switch instead of using
+hardcoded 9. I have no idea if it proves to be better or worse, we just
+allow the user to be smarter than us.
+
+Also prints some garbage at verbosity level 6+.
 */
 static size_t FindMinimum(FindMinimumFun f, void* context,
                           size_t start, size_t end,
@@ -112,8 +118,10 @@ lstart: start of block
 lend: end of block (not inclusive)
 */
 static double EstimateCost(const ZopfliLZ77Store* lz77,
-                           size_t lstart, size_t lend, int ohh, int usebrotli, int revcounts) {
-  return ZopfliCalculateBlockSizeAutoType(lz77, lstart, lend, ohh, usebrotli, revcounts);
+                           size_t lstart, size_t lend, int ohh,
+                           int usebrotli, int revcounts) {
+  return ZopfliCalculateBlockSizeAutoType(lz77, lstart, lend, ohh,
+                                          usebrotli, revcounts);
 }
 
 typedef struct SplitCostContext {
@@ -153,7 +161,7 @@ static void AddSorted(size_t value, size_t** out, size_t* outsize) {
 }
 
 /*
-Prints the block split points as decimal and hex values in the terminal.
+Prints block split points as decimal and hex values.
 */
 
 static void PrintPoints(size_t** splitpoints, size_t* npoints, size_t offset) {
@@ -238,7 +246,7 @@ static int FindLargestSplittableBlock(
 
 void ZopfliBlockSplitLZ77(const ZopfliOptions* options,
                           const ZopfliLZ77Store* lz77, size_t maxblocks,
-                          size_t** splitpoints, size_t* npoints, size_t startnpoints) {
+                          size_t** splitpoints, size_t* npoints) {
   size_t lstart, lend;
   size_t i;
   size_t llpos = 0;
@@ -280,7 +288,8 @@ void ZopfliBlockSplitLZ77(const ZopfliOptions* options,
     } else {
       AddSorted(llpos, splitpoints, npoints);
       ++numblocks;
-      if(options->verbose>0 && options->verbose<6) fprintf(stderr,"Initializing blocks: %lu    \r",(unsigned long)(startnpoints+numblocks));
+      if(options->verbose>0 && options->verbose<6) 
+        fprintf(stderr,"Initializing blocks: %lu    \r",(unsigned long)(numblocks));
     }
 
     if (!FindLargestSplittableBlock(
@@ -307,7 +316,7 @@ void ZopfliBlockSplitLZ77(const ZopfliOptions* options,
 
 void ZopfliBlockSplit(const ZopfliOptions* options,
                       const unsigned char* in, size_t instart, size_t inend,
-                      size_t maxblocks, size_t** splitpoints, size_t* npoints, size_t* startnpoints) {
+                      size_t maxblocks, size_t** splitpoints, size_t* npoints) {
   size_t pos = 0;
   size_t i;
   ZopfliBlockState s;
@@ -326,7 +335,7 @@ void ZopfliBlockSplit(const ZopfliOptions* options,
   ZopfliLZ77Greedy(&s, in, instart, inend, &store, options);
   ZopfliBlockSplitLZ77(options,
                        &store, maxblocks,
-                       &lz77splitpoints, &nlz77points, *startnpoints);
+                       &lz77splitpoints, &nlz77points);
   /* Convert LZ77 positions to positions in the uncompressed input. */
   pos = instart;
   if (nlz77points > 0) {

@@ -87,7 +87,11 @@ static void InitRanState(RanState* state,short int m_w,short int m_z) {
   state->m_z = m_z;
 }
 
-/* Get random number: "Multiply-With-Carry" generator of G. Marsaglia */
+/*
+Get random number: "Multiply-With-Carry" generator of G. Marsaglia.
+We can feed the generator with 2 unsigned shorts passed
+with --rw and --rz switches.
+*/
 static unsigned int Ran(RanState* state) {
   state->m_z = 36969 * (state->m_z & 65535) + (state->m_z >> 16);
   state->m_w = 18000 * (state->m_w & 65535) + (state->m_w >> 16);
@@ -450,6 +454,11 @@ static double LZ77OptimalRun(ZopfliBlockState* s,
   return cost;
 }
 
+/*
+Here we allow user to define how many unsuccessful in size reduction
+iterations need to pass to give up in finding best parameters.
+(--mui switch).
+*/
 void ZopfliLZ77Optimal(ZopfliBlockState *s,
                        const unsigned char* in, size_t instart, size_t inend,
                        ZopfliLZ77Store* store, const ZopfliOptions* options) {
@@ -492,7 +501,8 @@ void ZopfliLZ77Optimal(ZopfliBlockState *s,
                    length_array, GetCostStat, (void*)&stats,
                    &currentstore);
     cost = ZopfliCalculateBlockSize(&currentstore, 0, currentstore.size,
-                                    2, s->options->optimizehuffmanheader, s->options->usebrotli, s->options->revcounts);
+                                    2, s->options->optimizehuffmanheader,
+                                    s->options->usebrotli, s->options->revcounts);
     if (s->options->verbose>4 || (s->options->verbose>2 && cost < bestcost)) {
       fprintf(stderr, "Iteration %d: %d bit      \r", i, (int) cost);
     }
@@ -527,7 +537,8 @@ void ZopfliLZ77Optimal(ZopfliBlockState *s,
     }
     lastcost = cost;
     if(mui>0 && fails>=mui) {
-      if(s->options->verbose>3) fprintf(stderr, "Iteration %d: No further reduction in the last %d tries.\n", i,fails);
+      if(s->options->verbose>3) fprintf(stderr, "Iteration %d: No further reduction"
+                                                " in the last %d tries.\n", i,fails);
       break;
     }
   }

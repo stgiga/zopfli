@@ -91,8 +91,13 @@ static int exists(const char* file) {
   return 0;
 }
 
+/*
+Similar to original Zopfli but with support for larger files (especially
+for 64 bit compilations), offset reading, applying ZOPFLI_MASTER_BLOCK_SIZE limiter.
+*/
 static void LoadFile(const char* filename,
-                     unsigned char** out, size_t* outsize, size_t* offset, size_t* filesize, size_t amount, int limiter) {
+                     unsigned char** out, size_t* outsize, size_t* offset,
+                     size_t* filesize, size_t amount, int limiter) {
   FILE* file;
 
   *out = 0;
@@ -105,7 +110,8 @@ static void LoadFile(const char* filename,
     fseeko(file,(size_t)(-1), SEEK_SET);
     *filesize = ftello(file);
     if(*filesize > 0 && (fread(&testfile, 1, 1, file))==1) {
-      fprintf(stderr,"Error: Files larger than %luMB are not supported by this version.\n",(unsigned long)((size_t)(-1)/1024/1024));
+      fprintf(stderr,"Error: Files larger than %luMB are not supported"
+                      "by this version.\n",(unsigned long)((size_t)(-1)/1024/1024));
       exit(EXIT_FAILURE);
     }
   }
@@ -113,7 +119,8 @@ static void LoadFile(const char* filename,
   *filesize = ftello(file);
   *outsize = *filesize-*offset;
   if(amount>0) *outsize=amount;
-  if(*outsize > ZOPFLI_MASTER_BLOCK_SIZE && ZOPFLI_MASTER_BLOCK_SIZE>0 && limiter==1) {
+  if(*outsize > ZOPFLI_MASTER_BLOCK_SIZE && ZOPFLI_MASTER_BLOCK_SIZE>0
+     && limiter==1) {
     *outsize = ZOPFLI_MASTER_BLOCK_SIZE;
   }
   fseeko(file, *offset, SEEK_SET);
@@ -135,6 +142,7 @@ static void LoadFile(const char* filename,
 
 /*
 Saves a file from a memory array, overwriting the file if it existed.
+With offsets support for chunk-writting.
 */
 static void SaveFile(const char* filename,
                      const unsigned char* in, size_t insize, size_t fseekdata) {
@@ -157,6 +165,9 @@ static char StringsEqual(const char* str1, const char* str2) {
   return strcmp(str1, str2) == 0;
 }
 
+/*
+Output to stdout.
+*/
 static void ConsoleOutput(const unsigned char* in, size_t insize) {
   size_t i;
   /* Windows workaround for stdout output. */
@@ -184,7 +195,12 @@ static char* AddStrings(const char* str1, const char* str2) {
   return result;
 }
 
-static int ListDir(const char* filename, char ***filesindir, unsigned int *j, int isroot) {
+/*
+Scans directory and its subdirectories for files that will be later
+compressed to ZIP. Empty directories and 0 size files won't be compressed.
+*/
+static int ListDir(const char* filename, char ***filesindir,
+                   unsigned int *j, int isroot) {
   DIR *dir;
   struct dirent *ent;
   struct stat attrib;
@@ -234,6 +250,9 @@ static int ListDir(const char* filename, char ***filesindir, unsigned int *j, in
   return 1;
 }
 
+/*
+ZIP and GZIP timestamp generator from file creation time.
+*/
 static unsigned long Timestamp(const char* file, const ZopfliFormat output_type) {
   struct tm* tt;
   struct stat attrib;
@@ -259,7 +278,10 @@ static unsigned long Timestamp(const char* file, const ZopfliFormat output_type)
   }
 }
 
-static void RemoveIfExists(const char* tempfilename, const char* outfilename) {
+/*
+Renames a file. Will prompt user if destination file already exists.
+*/
+static void RenameFile(const char* tempfilename, const char* outfilename) {
   int input;
   if(exists(outfilename)) {
     char answer = 0;
@@ -284,16 +306,18 @@ static void RemoveIfExists(const char* tempfilename, const char* outfilename) {
 }
 
 /*
-outfilename: filename to write output to, or 0 to write to stdout instead
+Wrapper for ZopfliBlockSplit in low input/output memory compression mode.
 */
-
-static size_t SplitInput(const ZopfliOptions* options, const unsigned char* in, size_t insize, size_t offset, size_t **splitpoints, size_t *npoints) {
+static size_t SplitInput(const ZopfliOptions* options, const unsigned char* in,
+                         size_t insize, size_t offset, size_t **splitpoints,
+                         size_t *npoints) {
 
   size_t *tempsplitpoints = NULL;
   size_t tempnpoints = 0;
   size_t i;
 
-  ZopfliBlockSplit(options,in,0,insize,options->blocksplittingmax,&tempsplitpoints,&tempnpoints,npoints);
+  ZopfliBlockSplit(options,in,0,insize,options->blocksplittingmax,
+                   &tempsplitpoints,&tempnpoints);
   for(i=0;i<tempnpoints;++i) {
     tempsplitpoints[i]+=offset;
     ZOPFLI_APPEND_DATA(tempsplitpoints[i],splitpoints,npoints);
@@ -304,6 +328,11 @@ static size_t SplitInput(const ZopfliOptions* options, const unsigned char* in, 
 
 }
 
+/*
+This procedure would most likely require optimisations since it contains a lot of
+(working!) crap, to omitt certain LIB limitations that, on the other hand, would require
+a lot of modifications. We don't want to make LIB go too far away from original, do we?
+*/
 static int Compress(ZopfliOptions* options, const ZopfliBinOptions* binoptions,
                          const ZopfliFormat output_type,
                          const char* infilename,
@@ -358,7 +387,8 @@ static int Compress(ZopfliOptions* options, const ZopfliBinOptions* binoptions,
     if(binoptions->custblocksplit != NULL) {
       i=2;
       while(i<=binoptions->custblocksplit[0]) {
-        if(binoptions->custblocksplit[i]<fullsize && binoptions->custblocksplit[i]>binoptions->custblocksplit[i-1]) {
+        if(binoptions->custblocksplit[i]<fullsize 
+           && binoptions->custblocksplit[i]>binoptions->custblocksplit[i-1]) {
           if(binoptions->additionalautosplits==1) {
             size_t oldloffset;
             do {
@@ -453,7 +483,7 @@ static int Compress(ZopfliOptions* options, const ZopfliBinOptions* binoptions,
       fprintf(stderr, "\n");
       if(binoptions->dumpsplitsfile != NULL) {
         fclose(file);
-        RemoveIfExists(tempfilename,binoptions->dumpsplitsfile);
+        RenameFile(tempfilename,binoptions->dumpsplitsfile);
         fprintf(stderr,"Hex split points successfully saved to file: %s\n",binoptions->dumpsplitsfile);
         free(tempfilename);
         exit(EXIT_SUCCESS);
@@ -539,7 +569,8 @@ static int Compress(ZopfliOptions* options, const ZopfliBinOptions* binoptions,
       }
 
       LoadFile(infilename, &in, &insize, &loffset, &fullsize, oldloffset, 1);
-      if(output_type == ZOPFLI_FORMAT_GZIP || output_type == ZOPFLI_FORMAT_GZIP_NAME || output_type == ZOPFLI_FORMAT_ZIP) {
+      if(output_type == ZOPFLI_FORMAT_GZIP || 
+         output_type == ZOPFLI_FORMAT_GZIP_NAME || output_type == ZOPFLI_FORMAT_ZIP) {
         CRCu(in,insize,&checksum);
       } else if(output_type == ZOPFLI_FORMAT_ZLIB) {
         adler32u(in,insize,&checksum);
@@ -562,7 +593,8 @@ static int Compress(ZopfliOptions* options, const ZopfliBinOptions* binoptions,
       if(options->verbose==1) fprintf(stderr,"                                     \r");
       if(options->verbose>0) fprintf(stderr, "Progress: %.1f%%",100.0 * (double)processed / (double)fullsize);
       if(options->verbose>1) {
-        fprintf(stderr, "  ---  Block: %d / %d  ---  Data left: %luKB", (int)(i + 1), (int)(npoints + 1),(unsigned long)((fullsize - processed)/1024));
+        fprintf(stderr, "  ---  Block: %d / %d  ---  Data left: %luKB",
+               (int)(i + 1), (int)(npoints + 1),(unsigned long)((fullsize - processed)/1024));
         if(options->verbose>2) {
           fprintf(stderr,"\n");
         } else {
@@ -624,7 +656,8 @@ static int Compress(ZopfliOptions* options, const ZopfliBinOptions* binoptions,
         l+=i;
       } while(l<fullsize);
     }
-    if(output_type == ZOPFLI_FORMAT_GZIP || output_type == ZOPFLI_FORMAT_GZIP_NAME || output_type == ZOPFLI_FORMAT_ZIP) {
+    if(output_type == ZOPFLI_FORMAT_GZIP ||
+       output_type == ZOPFLI_FORMAT_GZIP_NAME || output_type == ZOPFLI_FORMAT_ZIP) {
       CRCu(in,insize,&checksum);
     } else if(output_type == ZOPFLI_FORMAT_ZLIB) {
       adler32u(in,insize,&checksum);
@@ -647,7 +680,7 @@ static int Compress(ZopfliOptions* options, const ZopfliBinOptions* binoptions,
         }
       }
       fclose(file);
-      RemoveIfExists(tempfilename,binoptions->dumpsplitsfile);
+      RenameFile(tempfilename,binoptions->dumpsplitsfile);
       fprintf(stderr,"Hex split points successfully saved to file: %s\n",binoptions->dumpsplitsfile);
       free(tempfilename);
     }
@@ -743,6 +776,9 @@ static int Compress(ZopfliOptions* options, const ZopfliBinOptions* binoptions,
 
 }
 
+/*
+Wrapper for Compress for single-file mode.
+*/
 static void CompressFile(ZopfliOptions* options, const ZopfliBinOptions* binoptions,
                          const ZopfliFormat output_type,
                          const char* infilename,
@@ -754,12 +790,16 @@ static void CompressFile(ZopfliOptions* options, const ZopfliBinOptions* binopti
 
   if(outfilename) tempfilename = AddStrings(outfilename,tempfileext);
 
-  if(Compress(options,binoptions,output_type,infilename,tempfilename,0,0)==1) RemoveIfExists(tempfilename,outfilename);
+  if(Compress(options,binoptions,output_type,infilename,tempfilename,0,0)==1)
+    RenameFile(tempfilename,outfilename);
 
   free(tempfilename);
 
 }
 
+/*
+Wrapper for Compress for multi-file mode.
+*/
 static void CompressMultiFile(ZopfliOptions* options, const ZopfliBinOptions* binoptions,
                          const ZopfliFormat output_type,
                          const char* infilename,
@@ -806,18 +846,18 @@ static void CompressMultiFile(ZopfliOptions* options, const ZopfliBinOptions* bi
 
   CleanCDIR(&zipcdir);
 
-  RemoveIfExists(tempfilename,outfilename);
+  RenameFile(tempfilename,outfilename);
 
   free(tempfilename);
     
 }
 
-static void VersionInfo(void) {
-  fprintf(stderr,
-  "Zopfli, a Compression Algorithm to produce Deflate streams.\n"
-  "KrzYmod extends Zopfli functionality - version 16 rc1\n\n");
-}
-
+/*
+Here we parse custom block split points passed with
+CBS[FILE] switch. Intentionally used size_t here.
+Note that too high split points on 32-bit architecture
+may turn into garbage...
+*/
 static void ParseCustomBlockBoundaries(size_t** bs, const char* data) {
   char buff[2] = {0, 0};
   size_t j, k=1;
@@ -834,6 +874,12 @@ static void ParseCustomBlockBoundaries(size_t** bs, const char* data) {
       (*bs)[k-1] = ((*bs)[k-1]<<4) + strtoul(buff,NULL,16);
     }
   }
+}
+
+static void VersionInfo(void) {
+  fprintf(stderr,
+  "Zopfli, a Compression Algorithm to produce Deflate streams.\n"
+  "KrzYmod extends Zopfli functionality - version 16 rc1\n\n");
 }
 
 int main(int argc, char* argv[]) {
@@ -874,11 +920,11 @@ int main(int argc, char* argv[]) {
     }  else if (arg[0] == '-' && arg[1] == '-' && arg[2] == 'p' && arg[3] == 'a'
              && arg[4] == 's' && arg[5] == 's' && arg[6] >= '0' && arg[6] <= '9') {
       options.pass = atoi(arg + 6);
-    }  else if (arg[0] == '-' && arg[1] == '-' && arg[2] == 'm' && arg[3] == 'l' && arg[4] == 's'
-             && arg[5] >= '0' && arg[5] <= '9') {
+    }  else if (arg[0] == '-' && arg[1] == '-' && arg[2] == 'm' && arg[3] == 'l'
+             && arg[4] == 's' && arg[5] >= '0' && arg[5] <= '9') {
       options.lengthscoremax = atoi(arg + 5);
-    }  else if (arg[0] == '-' && arg[1] == '-' && arg[2] == 'b' && arg[3] == 's' && arg[4] == 'r'
-             && arg[5] >= '0' && arg[5] <= '9') {
+    }  else if (arg[0] == '-' && arg[1] == '-' && arg[2] == 'b' && arg[3] == 's'
+             && arg[4] == 'r' && arg[5] >= '0' && arg[5] <= '9') {
       options.findminimumrec = atoi(arg + 5);
     }  else if (arg[0] == '-' && arg[1] == '-' && arg[2] == 'r' && arg[3] == 'w'
              && arg[4] >= '0' && arg[4] <= '9') {
@@ -888,11 +934,13 @@ int main(int argc, char* argv[]) {
              && arg[4] >= '0' && arg[4] <= '9') {
       options.ranstatez = atoi(arg + 4);
       if(options.ranstatez<1) options.ranstatez=1;
-    }  else if (arg[0] == '-' && arg[1] == '-' && arg[2] == 'm' && arg[3] == 'u' && arg[4] == 'i'
-             && arg[5] >= '0' && arg[5] <= '9') {
+    }  else if (arg[0] == '-' && arg[1] == '-' && arg[2] == 'm' && arg[3] == 'u'
+             && arg[4] == 'i' && arg[5] >= '0' && arg[5] <= '9') {
       options.maxfailiterations = atoi(arg + 5);
-    }  else if (arg[0] == '-' && arg[1] == '-' && arg[2] == 'c' && arg[3] == 'b' && arg[4] == 's' && arg[5] != '\0') {
-      if(arg[5] == 'f' && arg[6] == 'i' && arg[7] == 'l' && arg[8] == 'e' && arg[9] != '\0') {
+    }  else if (arg[0] == '-' && arg[1] == '-' && arg[2] == 'c' && arg[3] == 'b'
+             && arg[4] == 's' && arg[5] != '\0') {
+      if(arg[5] == 'f' && arg[6] == 'i' && arg[7] == 'l' && arg[8] == 'e'
+      && arg[9] != '\0') {
         const char *cbsfile = arg+9;
         FILE* file = fopen(cbsfile, "rb");
         char* filedata = NULL;
@@ -918,16 +966,21 @@ int main(int argc, char* argv[]) {
       } else {
         ParseCustomBlockBoundaries(&binoptions.custblocksplit,arg+5);
       }
-    }  else if (arg[0] == '-' && arg[1] == '-' && arg[2] == 'c' && arg[3] == 'b' && arg[4] == 'd' && arg[5] != '\0') {
+    }  else if (arg[0] == '-' && arg[1] == '-' && arg[2] == 'c' && arg[3] == 'b'
+             && arg[4] == 'd' && arg[5] != '\0') {
        binoptions.dumpsplitsfile = arg+5;
-    }  else if (arg[0] == '-' && arg[1] == '-' && arg[2] == 'v' && arg[3] >= '0' && arg[3] <= '9') {
+    }  else if (arg[0] == '-' && arg[1] == '-' && arg[2] == 'v' && arg[3] >= '0'
+             && arg[3] <= '9') {
       options.verbose = atoi(arg + 3);
-    }  else if (arg[0] == '-' && arg[1] == '-' && arg[2] == 'b' && arg[3] >= '0' && arg[3] <= '9') {
+    }  else if (arg[0] == '-' && arg[1] == '-' && arg[2] == 'b' && arg[3] >= '0'
+             && arg[3] <= '9') {
       binoptions.blocksize = atoi(arg + 3);
-    }  else if (arg[0] == '-' && arg[1] == '-' && arg[2] == 'n' && arg[3] >= '0' && arg[3] <= '9') {
+    }  else if (arg[0] == '-' && arg[1] == '-' && arg[2] == 'n' && arg[3] >= '0'
+             && arg[3] <= '9') {
       binoptions.numblocks = atoi(arg + 3);
     }
-    else if (arg[0] == '-' && (arg[1] == 'h' || arg[1] == '?' || (arg[1] == '-' && (arg[2] == 'h' || arg[2] == '?')))) {
+    else if (arg[0] == '-' && (arg[1] == 'h' || arg[1] == '?' || (arg[1] == '-'
+         && (arg[2] == 'h' || arg[2] == '?')))) {
       VersionInfo();
       fprintf(stderr,
           "Usage: zopfli [OPTIONS] FILE\n\n"

@@ -32,8 +32,13 @@ void intHandler(int exit_code);
 
 /* You can use this function in Your own lib calls/applications.
    ZopfliFormat is required but can be passed as simple number.
-   ZopfliAdditionalData and ZopfliOptions structures are
-   optional and can be NULL.
+   ZopfliOptions, ZopfliPredefinedSplits and ZopfliAdditionalData
+   structures are optional and can be NULL.
+
+   ZopfliPredefinedSplits structure holds 3 variables being
+   an array of block split offsets, number of block split offsets
+   and if to perform additional auto splitting between predefined
+   split points (0 or 1). size_t array, size_t and int.
 
    ZopfliAdditonalData structure can hold 2 variables being
    file timestamp and name. If timestamp is omitted, lower possible
@@ -41,37 +46,36 @@ void intHandler(int exit_code);
    GZ will not store filename and ZIP will use input data CRC32 as
    file name.
 */
-
 DLL_PUBLIC void ZopfliCompress(ZopfliOptions* options, const ZopfliFormat output_type,
                     const unsigned char* in, size_t insize,
                     unsigned char** out, size_t* outsize, ZopfliPredefinedSplits* sp,
                     const ZopfliAdditionalData* moredata) {
-  ZopfliOptions optionstemp;
-  ZopfliOptions* optionslib = NULL;
   if(in == NULL || out == NULL || outsize == NULL) {
     fprintf(stderr,"Critical Error: one or more required pointers are NULL\n");
     exit(EXIT_FAILURE);
-  }
-  if(options == NULL) {
-    optionslib = &optionstemp;
-    ZopfliInitOptions(optionslib);
-    optionslib->verbose = 0;
   } else {
-    optionslib = options;
-    mui = options->maxfailiterations;
-  }
-  if (output_type == ZOPFLI_FORMAT_GZIP || output_type == ZOPFLI_FORMAT_GZIP_NAME) {
-    ZopfliGzipCompress(optionslib, in, insize, out, outsize, sp, moredata);
-  } else if (output_type == ZOPFLI_FORMAT_ZLIB) {
-    ZopfliZlibCompress(optionslib, in, insize, out, outsize, sp);
-  } else if (output_type == ZOPFLI_FORMAT_ZIP) {
-    ZopfliZipCompress(optionslib, in, insize, out, outsize, sp, moredata);
-  } else if (output_type == ZOPFLI_FORMAT_DEFLATE) {
-    unsigned char bp = 0;
-    ZopfliDeflate(optionslib, 2 /* Dynamic block */, 1,
-                  in, insize, &bp, out, outsize, sp);
-  } else {
-    fprintf(stderr,"Error: No output format specified.\n");
-    exit (EXIT_FAILURE);
+    ZopfliOptions* optionslib = (ZopfliOptions*)malloc(sizeof(*optionslib));
+    if(options == NULL) {
+      ZopfliInitOptions(optionslib);
+      optionslib->verbose = 0;
+    } else {
+      optionslib = options;
+      mui = options->maxfailiterations;
+    }
+    if (output_type == ZOPFLI_FORMAT_GZIP || output_type == ZOPFLI_FORMAT_GZIP_NAME) {
+      ZopfliGzipCompress(optionslib, in, insize, out, outsize, sp, moredata);
+    } else if (output_type == ZOPFLI_FORMAT_ZLIB) {
+      ZopfliZlibCompress(optionslib, in, insize, out, outsize, sp);
+    } else if (output_type == ZOPFLI_FORMAT_ZIP) {
+      ZopfliZipCompress(optionslib, in, insize, out, outsize, sp, moredata);
+    } else if (output_type == ZOPFLI_FORMAT_DEFLATE) {
+      unsigned char bp = 0;
+      ZopfliDeflate(optionslib, 2 /* Dynamic block */, 1,
+                    in, insize, &bp, out, outsize, sp);
+    } else {
+      fprintf(stderr,"Error: No output format specified.\n");
+      exit (EXIT_FAILURE);
+    }
+    free(optionslib);
   }
 }
