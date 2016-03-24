@@ -61,6 +61,10 @@ static void InitCDIR(ZipCDIR *zipcdir) {
   zipcdir->fullsize = 0;
 }
 
+static void CleanCDIR(ZipCDIR *zipcdir) {
+  free(zipcdir->data);
+}
+
 static void ZopfliInitBinOptions(ZopfliBinOptions* options) {
   options->usescandir = 0;
   options->blocksize = 0;
@@ -746,13 +750,7 @@ static void CompressFile(ZopfliOptions* options, const ZopfliBinOptions* binopti
 
   if(outfilename) tempfilename = AddStrings(outfilename,tempfileext);
 
-  if(output_type == ZOPFLI_FORMAT_ZIP) {
-    ZipCDIR zipcdir;
-    InitCDIR(&zipcdir);
-    if(Compress(options,binoptions,output_type,infilename,tempfilename,&zipcdir,zipcdir.offset)==1) RemoveIfExists(tempfilename,outfilename);
-  } else {
-    if(Compress(options,binoptions,output_type,infilename,tempfilename,NULL,0)==1) RemoveIfExists(tempfilename,outfilename);
-  }
+  if(Compress(options,binoptions,output_type,infilename,tempfilename,0,0)==1) RemoveIfExists(tempfilename,outfilename);
 
   free(tempfilename);
 
@@ -801,6 +799,8 @@ static void CompressMultiFile(ZopfliOptions* options, const ZopfliBinOptions* bi
     free(fileindir);
 
   }
+
+  CleanCDIR(&zipcdir);
 
   RemoveIfExists(tempfilename,outfilename);
 
