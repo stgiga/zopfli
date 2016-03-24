@@ -66,6 +66,11 @@ typedef struct ZopfliBinOptions {
   */
   const char* dumpsplitsfile;
 
+  /*
+  Runs zopfli splitting between manual/custom start points
+  */
+  int additionalautosplits;
+
 } ZopfliBinOptions;
 
 typedef struct ZipCDIR {

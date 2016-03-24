@@ -1009,7 +1009,7 @@ the final bit will be set on the last block.
 DLL_PUBLIC void ZopfliDeflatePart(const ZopfliOptions* options, int btype, int final,
                           const unsigned char* in, size_t instart, size_t inend,
                           unsigned char* bp, unsigned char** out,
-                          size_t* outsize, size_t** splits, size_t* splitsnum) {
+                          size_t* outsize, ZopfliPredefinedSplits *sp) {
   size_t i;
   /* byte coordinates rather than lz77 index */
   size_t* splitpoints_uncompressed = 0;
@@ -1041,7 +1041,7 @@ DLL_PUBLIC void ZopfliDeflatePart(const ZopfliOptions* options, int btype, int f
   }
 
   if (options->blocksplitting) {
-    if(splitsnum==NULL || (splitsnum!=NULL && *splitsnum==0)) {
+    if(sp==NULL || sp->splitpoints==NULL) {
       ZopfliBlockSplit(options, in, instart, inend,
                        options->blocksplittingmax,
                        &splitpoints_uncompressed, &npoints, &npoints);
@@ -1049,13 +1049,13 @@ DLL_PUBLIC void ZopfliDeflatePart(const ZopfliOptions* options, int btype, int f
       size_t lastknownsplit = 0;
       size_t* splitunctemp = 0;
       size_t npointstemp = 0;
-      for(i = 0; i < *splitsnum; ++i) {
-        if((*splits)[i] > instart && (*splits)[i] < inend) {
-          if(options->additionalautosplits==1) {
-            size_t start = i == 0 ? instart : (*splits)[i - 1];
+      for(i = 0; i < sp->npoints; ++i) {
+        if(sp->splitpoints[i] > instart && sp->splitpoints[i] < inend) {
+          if(sp->moresplitting == 1) {
+            size_t start = i == 0 ? instart : sp->splitpoints[i - 1];
             if(start < instart) start = instart;
             lastknownsplit = i;
-            ZopfliBlockSplit(options, in, start, (*splits)[i], 
+            ZopfliBlockSplit(options, in, start, sp->splitpoints[i], 
                              options->blocksplittingmax,
                              &splitunctemp, &npointstemp, &npointstemp);
             if(npointstemp > 0) {
@@ -1066,11 +1066,11 @@ DLL_PUBLIC void ZopfliDeflatePart(const ZopfliOptions* options, int btype, int f
             }
             free(splitunctemp);
           }
-          ZOPFLI_APPEND_DATA((*splits)[i], &splitpoints_uncompressed, &npoints);
+          ZOPFLI_APPEND_DATA(sp->splitpoints[i], &splitpoints_uncompressed, &npoints);
         }
       }
-      if(options->additionalautosplits==1) {
-        ZopfliBlockSplit(options, in, (*splits)[lastknownsplit] , inend,
+      if(sp->moresplitting == 1) {
+        ZopfliBlockSplit(options, in, sp->splitpoints[lastknownsplit] , inend,
                          options->blocksplittingmax,
                          &splitunctemp, &npointstemp, &npointstemp);
         if(npointstemp > 0) {
@@ -1220,14 +1220,17 @@ DLL_PUBLIC void ZopfliDeflatePart(const ZopfliOptions* options, int btype, int f
 
   if(npoints>0 && options->verbose>3) {
     int hadsplits = 0;
-    if(splits!=NULL) {
-      if(*splits!=NULL) free(*splits);
-      *splitsnum = 0;
+    if(sp!=NULL) {
+      if(sp->splitpoints!=NULL) free(sp->splitpoints);
+      sp->npoints = 0;
       hadsplits = 1;
     }
     fprintf(stderr,"!! BEST SPLIT POINTS FOUND: ");
     for (i = 0; i < npoints; ++i) {
-      if(hadsplits==1) ZOPFLI_APPEND_DATA(splitpoints_uncompressed[i], splits, splitsnum);
+      if(hadsplits==1) {
+        ZOPFLI_APPEND_DATA(splitpoints_uncompressed[i],
+                           &sp->splitpoints, &sp->npoints);
+      }
       fprintf(stderr, "%d ", (int)(splitpoints_uncompressed[i]));
     }
     fprintf(stderr, "(hex:");
@@ -1246,20 +1249,58 @@ DLL_PUBLIC void ZopfliDeflatePart(const ZopfliOptions* options, int btype, int f
 
 DLL_PUBLIC void ZopfliDeflate(const ZopfliOptions* options, int btype, int final,
                    const unsigned char* in, size_t insize,
-                   unsigned char* bp, unsigned char** out, size_t* outsize, size_t** splits, size_t* splitsnum) {
+                   unsigned char* bp, unsigned char** out, size_t* outsize,
+                   ZopfliPredefinedSplits *sp) {
  size_t offset = *outsize;
 #if ZOPFLI_MASTER_BLOCK_SIZE == 0
-  ZopfliDeflatePart(options, btype, final, in, 0, insize, bp, out, outsize, splits, splitsnum);
+  ZopfliDeflatePart(options, btype, final, in, 0, insize, bp, out, outsize, sp);
 #else
   size_t i = 0;
+  ZopfliPredefinedSplits* originalsp = (ZopfliPredefinedSplits*)malloc(sizeof(*originalsp));
+  ZopfliPredefinedSplits* finalsp = (ZopfliPredefinedSplits*)malloc(sizeof(*finalsp));
+  if(sp != NULL) {
+    originalsp->splitpoints = 0;
+    originalsp->npoints = 0;
+    originalsp->moresplitting = sp->moresplitting;
+    finalsp->splitpoints = 0;
+    finalsp->npoints = 0;
+    finalsp->moresplitting = sp->moresplitting;
+    for(; i < sp->npoints; ++i) {
+      ZOPFLI_APPEND_DATA(sp->splitpoints[i], &originalsp->splitpoints, &originalsp->npoints);
+    }
+    i = 0;
+  }
   while (i < insize) {
     int masterfinal = (i + ZOPFLI_MASTER_BLOCK_SIZE >= insize);
     int final2 = final && masterfinal;
     size_t size = masterfinal ? insize - i : ZOPFLI_MASTER_BLOCK_SIZE;
     ZopfliDeflatePart(options, btype, final2,
-                      in, i, i + size, bp, out, outsize, splits, splitsnum);
+                      in, i, i + size, bp, out, outsize, sp);
+    if(sp != NULL) {
+      size_t j = 0;
+      for(; j < sp->npoints; ++j) {
+        ZOPFLI_APPEND_DATA(i + sp->splitpoints[j], &finalsp->splitpoints, &finalsp->npoints);
+      }
+      if(sp->splitpoints!=NULL) free(sp->splitpoints);
+      sp->npoints = 0;
+      for(j = 0; j < originalsp->npoints; ++j) {
+        ZOPFLI_APPEND_DATA(originalsp->splitpoints[j], &sp->splitpoints, &sp->npoints);
+      }
+    }
     i += size;
   }
+  if(sp != NULL) {
+    size_t j = 0;
+    if(sp->splitpoints!=NULL) free(sp->splitpoints);
+    if(originalsp->splitpoints!=NULL) free(originalsp->splitpoints);
+    sp->npoints = 0;
+    for(; j < finalsp->npoints; ++j) {
+      ZOPFLI_APPEND_DATA(finalsp->splitpoints[j], &sp->splitpoints, &sp->npoints);
+    }
+    if(finalsp->splitpoints!=NULL) free(finalsp->splitpoints);
+  }
+  free(originalsp);
+  free(finalsp);
 #endif
   if(options->verbose>1) PrintSummary(insize,0,*outsize-offset);
 }

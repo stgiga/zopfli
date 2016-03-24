@@ -44,7 +44,8 @@ void intHandler(int exit_code);
 
 DLL_PUBLIC void ZopfliCompress(ZopfliOptions* options, const ZopfliFormat output_type,
                     const unsigned char* in, size_t insize,
-                    unsigned char** out, size_t* outsize, const ZopfliAdditionalData* moredata) {
+                    unsigned char** out, size_t* outsize, ZopfliPredefinedSplits* sp,
+                    const ZopfliAdditionalData* moredata) {
   ZopfliOptions optionstemp;
   ZopfliOptions* optionslib = NULL;
   if(in == NULL || out == NULL || outsize == NULL) {
@@ -60,15 +61,15 @@ DLL_PUBLIC void ZopfliCompress(ZopfliOptions* options, const ZopfliFormat output
     mui = options->maxfailiterations;
   }
   if (output_type == ZOPFLI_FORMAT_GZIP || output_type == ZOPFLI_FORMAT_GZIP_NAME) {
-    ZopfliGzipCompress(optionslib, in, insize, out, outsize, moredata);
+    ZopfliGzipCompress(optionslib, in, insize, out, outsize, sp, moredata);
   } else if (output_type == ZOPFLI_FORMAT_ZLIB) {
-    ZopfliZlibCompress(optionslib, in, insize, out, outsize);
+    ZopfliZlibCompress(optionslib, in, insize, out, outsize, sp);
   } else if (output_type == ZOPFLI_FORMAT_ZIP) {
-    ZopfliZipCompress(optionslib, in, insize, out, outsize, moredata);
+    ZopfliZipCompress(optionslib, in, insize, out, outsize, sp, moredata);
   } else if (output_type == ZOPFLI_FORMAT_DEFLATE) {
     unsigned char bp = 0;
     ZopfliDeflate(optionslib, 2 /* Dynamic block */, 1,
-                  in, insize, &bp, out, outsize, 0, 0);
+                  in, insize, &bp, out, outsize, sp);
   } else {
     fprintf(stderr,"Error: No output format specified.\n");
     exit (EXIT_FAILURE);

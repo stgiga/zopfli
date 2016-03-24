@@ -29,7 +29,9 @@ Compresses the data according to the gzip specification.
 */
 void ZopfliGzipCompress(const ZopfliOptions* options,
                         const unsigned char* in, size_t insize,
-                        unsigned char** out, size_t* outsize, const ZopfliAdditionalData* moredata) {
+                        unsigned char** out, size_t* outsize,
+                        ZopfliPredefinedSplits* sp,
+                        const ZopfliAdditionalData* moredata) {
 
   static const unsigned char headerstart[3]  = {  31, 139,   8 };
   static const unsigned char headerend[2]    = {   2,   3 };
@@ -65,7 +67,7 @@ void ZopfliGzipCompress(const ZopfliOptions* options,
   }
 
   ZopfliDeflate(options, 2 /* Dynamic block */, 1,
-                in, insize, &bp, out, outsize, 0, 0);
+                in, insize, &bp, out, outsize, sp);
 
   /* CRC */
   for(i=0;i<4;++i) ZOPFLI_APPEND_DATA((crcvalue >> (i*8)) % 256, out, outsize);

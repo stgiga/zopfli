@@ -26,7 +26,8 @@ Author: jyrki.alakuijala@gmail.com (Jyrki Alakuijala)
 
 void ZopfliZlibCompress(const ZopfliOptions* options,
                         const unsigned char* in, size_t insize,
-                        unsigned char** out, size_t* outsize) {
+                        unsigned char** out, size_t* outsize,
+                        ZopfliPredefinedSplits* sp) {
   unsigned long checksum = 1L;
   unsigned cmf = 120;  /* CM 8, CINFO 7. See zlib spec.*/
   unsigned cmfflg;
@@ -42,7 +43,7 @@ void ZopfliZlibCompress(const ZopfliOptions* options,
   ZOPFLI_APPEND_DATA(cmfflg % 256, out, outsize);
 
   ZopfliDeflate(options, 2 /* dynamic block */, 1,
-                in, insize, &bp, out, outsize, 0, 0);
+                in, insize, &bp, out, outsize, sp);
 
   for(bp=4;bp!=0;--bp) ZOPFLI_APPEND_DATA((checksum >> ((bp-1)*8)) % 256, out, outsize);
 

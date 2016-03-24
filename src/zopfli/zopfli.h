@@ -117,11 +117,6 @@ typedef struct ZopfliOptions {
   */
   int pass;
 
-  /*
-  Runs zopfli splitting between manual/custom start points
-  */
-  int additionalautosplits;
-
 } ZopfliOptions;
 
 /*
@@ -142,6 +137,31 @@ typedef struct ZopfliAdditionalData {
   const char* filename;
 
 } ZopfliAdditionalData;
+
+/*
+This struct is used for custom block splits to be passed to LIB.
+Can be safely passed as NULL pointer, otherwise must be in
+read/write mode for ZopfliDeflatePart to update it with
+best split point positions Zopfli considered the best.
+*/
+typedef struct ZopfliPredefinedSplits {
+  /*
+  Split points in uncompressed stream as byte offsets.
+  */
+  size_t* splitpoints;
+
+  /*
+  Amount of split points
+  */
+  size_t npoints;
+
+  /*
+  Tells ZopfliDeflatePart to try to further split input stream
+  between defined split points.
+  */
+  int moresplitting;
+
+} ZopfliPredefinedSplits;
 
 /* Initializes shared options with default values. */
 void ZopfliInitOptions(ZopfliOptions* options);
@@ -167,7 +187,8 @@ outsize: pointer to the dynamic output array size
 */
 void ZopfliCompress(ZopfliOptions* options, const ZopfliFormat output_type,
                     const unsigned char* in, size_t insize,
-                    unsigned char** out, size_t* outsize, const ZopfliAdditionalData* moredata);
+                    unsigned char** out, size_t* outsize, ZopfliPredefinedSplits* sp,
+                    const ZopfliAdditionalData* moredata);
 
 #ifdef __cplusplus
 }  // extern "C"

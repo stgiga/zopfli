@@ -359,7 +359,7 @@ static int Compress(ZopfliOptions* options, const ZopfliBinOptions* binoptions,
       i=2;
       while(i<=binoptions->custblocksplit[0]) {
         if(binoptions->custblocksplit[i]<fullsize && binoptions->custblocksplit[i]>binoptions->custblocksplit[i-1]) {
-          if(options->additionalautosplits==1) {
+          if(binoptions->additionalautosplits==1) {
             size_t oldloffset;
             do {
               size_t tempnumblocks;
@@ -374,7 +374,7 @@ static int Compress(ZopfliOptions* options, const ZopfliBinOptions* binoptions,
             } while(loffset<binoptions->custblocksplit[i] && loffset<fullsize);
           }
           ZOPFLI_APPEND_DATA(binoptions->custblocksplit[i],&splitpoints,&npoints);
-          if(i==binoptions->custblocksplit[0] && options->additionalautosplits==1) {
+          if(i==binoptions->custblocksplit[0] && binoptions->additionalautosplits==1) {
             size_t oldloffset;
             do {
               size_t tempnumblocks;
@@ -571,7 +571,7 @@ static int Compress(ZopfliOptions* options, const ZopfliBinOptions* binoptions,
       } else {
         fprintf(stderr,"\r");
       }
-      ZopfliDeflatePart(options,2,final,inAndWindow,WindowSize,inAndWindowSize,&bp,&out,&outsize, 0, 0);
+      ZopfliDeflatePart(options,2,final,inAndWindow,WindowSize,inAndWindowSize,&bp,&out,&outsize, 0);
       processed+=(inAndWindowSize-WindowSize);
       if(i<npoints) {
         if(inAndWindowSize>ZOPFLI_WINDOW_SIZE) {
@@ -590,11 +590,15 @@ static int Compress(ZopfliOptions* options, const ZopfliBinOptions* binoptions,
     }
   } else {
     int final = 1;
+    ZopfliPredefinedSplits sp;
+    sp.splitpoints = 0;
+    sp.npoints = 0;
+    sp.moresplitting = binoptions->additionalautosplits;
     LoadFile(infilename, &in, &insize, &loffset, &fullsize, 0, 0);
     if(binoptions->custblocksplit != NULL) {
       i=2;
       while(i<=binoptions->custblocksplit[0]) {
-        ZOPFLI_APPEND_DATA(binoptions->custblocksplit[i],&splitpoints,&npoints);
+        ZOPFLI_APPEND_DATA(binoptions->custblocksplit[i],&sp.splitpoints,&sp.npoints);
         ++i;
       }
     } else if(binoptions->numblocks>0) {
@@ -607,7 +611,7 @@ static int Compress(ZopfliOptions* options, const ZopfliBinOptions* binoptions,
         }
         l=i;
         do {
-          ZOPFLI_APPEND_DATA(l,&splitpoints,&npoints);
+          ZOPFLI_APPEND_DATA(l,&sp.splitpoints,&sp.npoints);
           l+=i;
         } while(l<fullsize);
       }
@@ -616,7 +620,7 @@ static int Compress(ZopfliOptions* options, const ZopfliBinOptions* binoptions,
       i = binoptions->blocksize;
       l=i;
       do {
-        ZOPFLI_APPEND_DATA(l,&splitpoints,&npoints);
+        ZOPFLI_APPEND_DATA(l,&sp.splitpoints,&sp.npoints);
         l+=i;
       } while(l<fullsize);
     }
@@ -625,7 +629,7 @@ static int Compress(ZopfliOptions* options, const ZopfliBinOptions* binoptions,
     } else if(output_type == ZOPFLI_FORMAT_ZLIB) {
       adler32u(in,insize,&checksum);
     }
-    ZopfliDeflate(options, 2, final, in, insize, &bp, &out, &outsize, &splitpoints, &npoints);
+    ZopfliDeflate(options, 2, final, in, insize, &bp, &out, &outsize, &sp);
     if (!outfilename) {
       ConsoleOutput(out,outsize-1);
     } else {
@@ -637,9 +641,9 @@ static int Compress(ZopfliOptions* options, const ZopfliBinOptions* binoptions,
       tempfilename = AddStrings(binoptions->dumpsplitsfile,tempfileext);
       file = fopen(tempfilename, "wb");
       fprintf(file,"0");
-      if(npoints>0) {
-        for (j = 0; j < npoints; j++) {
-          fprintf(file, ",%x", (int)splitpoints[j]);
+      if(sp.npoints>0) {
+        for (j = 0; j < sp.npoints; j++) {
+          fprintf(file, ",%x", (int)sp.splitpoints[j]);
         }
       }
       fclose(file);
@@ -702,7 +706,7 @@ static int Compress(ZopfliOptions* options, const ZopfliBinOptions* binoptions,
     for(j=0;j<2;++j) ZOPFLI_APPEND_DATA(0, &out, &outsize);
     offset+=zipcdirloc->size+22;
     if(zipcdir == NULL) {
-      free(zipcdirloc->data);
+      CleanCDIR(zipcdirloc);
     } else {
       zipcdirloc->fullsize += fullsize;
       fullsize = zipcdirloc->fullsize;
@@ -860,7 +864,7 @@ int main(int argc, char* argv[]) {
     else if (StringsEqual(arg, "--ohh")) options.optimizehuffmanheader = 1;
     else if (StringsEqual(arg, "--rc")) options.revcounts = 1;
     else if (StringsEqual(arg, "--dir")) binoptions.usescandir = 1;
-    else if (StringsEqual(arg, "--aas")) options.additionalautosplits = 1;
+    else if (StringsEqual(arg, "--aas")) binoptions.additionalautosplits = 1;
     else if (arg[0] == '-' && arg[1] == '-' && arg[2] == 'i'
           && arg[3] >= '0' && arg[3] <= '9') {
       options.numiterations = atoi(arg + 3);

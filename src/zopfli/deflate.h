@@ -62,7 +62,7 @@ void PrintSummary(unsigned long insize, unsigned long outsize, unsigned long def
 void ZopfliDeflate(const ZopfliOptions* options, int btype, int final,
                    const unsigned char* in, size_t insize,
                    unsigned char* bp, unsigned char** out, size_t* outsize,
-                   size_t** splits, size_t* splitsnum);
+                   ZopfliPredefinedSplits *sp);
 
 /*
 Like ZopfliDeflate, but allows to specify start and end byte with instart and
@@ -72,7 +72,7 @@ back window.
 void ZopfliDeflatePart(const ZopfliOptions* options, int btype, int final,
                        const unsigned char* in, size_t instart, size_t inend,
                        unsigned char* bp, unsigned char** out,
-                       size_t* outsize, size_t** splits, size_t* splitsnum);
+                       size_t* outsize, ZopfliPredefinedSplits* sp);
 
 /*
 Calculates block size in bits.

@@ -97,7 +97,7 @@ unsigned CustomPNGDeflate(unsigned char** out, size_t* outsize,
   options.revcounts             = png_options->revcounts;
   options.pass                  = png_options->pass;
 
-  ZopfliDeflate(&options, 2 /* Dynamic */, 1, in, insize, &bp, out, outsize, 0, 0);
+  ZopfliDeflate(&options, 2 /* Dynamic */, 1, in, insize, &bp, out, outsize, 0);
 
   return 0;  // OK
 }

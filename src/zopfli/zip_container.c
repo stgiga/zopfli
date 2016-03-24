@@ -30,7 +30,9 @@ Compresses the data according to the zip specification.
 
 void ZopfliZipCompress(const ZopfliOptions* options,
                         const unsigned char* in, size_t insize,
-                        unsigned char** out, size_t* outsize, const ZopfliAdditionalData* moredata) {
+                        unsigned char** out, size_t* outsize,
+                        ZopfliPredefinedSplits* sp,
+                        const ZopfliAdditionalData* moredata) {
 
   static const unsigned char filePKh[10]     = { 80, 75,  3,  4, 20,  0,  2,  0,  8,  0};
   static const unsigned char CDIRPKh[12]     = { 80, 75,  1,  2, 20,  0, 20,  0,  2,  0,  8,  0};
@@ -90,7 +92,7 @@ void ZopfliZipCompress(const ZopfliOptions* options,
 
   if(fullsize<insize) fullsize=insize;
   ZopfliDeflate(options, 2 /* Dynamic block */, 1,
-                in, insize, &bp, out, outsize, 0, 0);
+                in, insize, &bp, out, outsize, sp);
 
   rawdeflsize = *outsize - rawdeflsize;
 
