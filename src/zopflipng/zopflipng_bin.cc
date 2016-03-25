@@ -147,6 +147,7 @@ void ShowHelp() {
          "--lazy:          lazy matching in Greedy LZ77\n"
          "--ohh:           optymize huffman header\n"
          "--rc:            reverse counts ordering in bit length calculations\n"
+         "--rp:            use restore points\n"
          "   more options available only in Zopfli\n"
          "\n"
          "Usage examples:\n"
@@ -170,7 +171,7 @@ void PrintResultSize(const char* label, size_t oldsize, size_t newsize) {
 
 int main(int argc, char *argv[]) {
 printf("ZopfliPNG, a Portable Network Graphics (PNG) image optimizer.\n"
-         "KrzYmod extends ZopfliPNG functionality - version 16 rc1\n\n");
+         "KrzYmod extends ZopfliPNG functionality - version 16 rc2\n\n");
   if (argc < 2) {
     ShowHelp();
     return 0;
@@ -247,6 +248,8 @@ printf("ZopfliPNG, a Portable Network Graphics (PNG) image optimizer.\n"
         png_options.lazymatching = 1;
       } else if (name == "--rc") {
         png_options.revcounts = 1;
+      } else if (name == "--rp") {
+        png_options.restorepoints = 1;
       } else if (name == "--ohh") {
         png_options.optimizehuffmanheader = 1;
       } else if (name == "--iterations") {

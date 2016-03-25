@@ -1030,36 +1030,52 @@ static void AddLZ77BlockAutoType(const ZopfliOptions* options, int final,
   ZopfliCleanLZ77Store(&fixedstore);
 }
 
+static size_t freadsizet(void* buffer, char diff, size_t count, FILE* stream) {
+  size_t read = 0;
+  int sizetsize = sizeof(size_t);
+  if(diff==0) {
+    read = fread(buffer, sizetsize, count, stream) * sizetsize * count;
+  } else if(diff<0) {
+    read = fread(buffer, -diff, count, stream) * -diff * count;
+    fseek(stream, -diff, SEEK_CUR);
+    read += -diff;
+  } else {
+    read = fread(buffer, sizetsize-diff, count, stream) * (sizetsize - diff) * count;
+  }
+  return read;
+}
+
 static int LoadRestore(const char* infile, unsigned long* crc,
                        const unsigned char* in, size_t* i,
                        size_t* npoints, size_t** splitpoints,
                        size_t** splitpoints_uncompressed,
-                       double* totalcost, double* alltimebest,
+                       double* totalcost, 
                        int* mode, ZopfliLZ77Store* lz77, int v) {
   FILE *file;
   unsigned long verifycrc;
-  size_t j, llsize, dsize;
+  size_t j, b = 0, llsize, dsize;
   const char lz77fileh[] = "KrzYmod Zopfli Restore Point\0";
   char* verifyheader = (char*)malloc(sizeof(lz77fileh));
-  char varsize[3] = { sizeof(unsigned short), sizeof(double), sizeof(size_t) };
+  char sizetsize = sizeof(size_t);
+  char sizetdiff;
   ZopfliLZ77Store lz77restore;
   file = fopen(infile, "rb");
   if(!file) return 1;
   fprintf(stderr,"Loading Restore Point . . .\n");
-  fread(verifyheader, sizeof(lz77fileh)-1, 1, file);
+  b += fread(verifyheader, sizeof(lz77fileh)-1, 1, file) * (sizeof(lz77fileh) - 1);
   j = strcmp(verifyheader,lz77fileh);
   free(verifyheader);
   if(j != 0) return 2;
-  fread(&verifycrc, sizeof(unsigned long), 1, file);
+  b += fread(&verifycrc, sizeof(unsigned long), 1, file) * sizeof(unsigned long);
   if(verifycrc != *crc) return 3;
-  for(j = 0; j < 3; ++j) {
-    char test;
-    fread(&test, 1, 1, file);
-    if(test != varsize[j]) return 4;
+  {
+   char test;
+   b += fread(&test, 1, 1, file);
+   sizetdiff = sizetsize - test;
   }
   ZopfliInitLZ77Store(in, &lz77restore);
-  fread(i, sizeof(size_t), 1, file);
-  fread(npoints, sizeof(size_t), 1, file);
+  b += freadsizet(i, sizetdiff, 1, file);
+  b += freadsizet(npoints, sizetdiff, 1, file);
   if(*splitpoints != NULL) {
     free(*splitpoints);
     *splitpoints = 0;
@@ -1071,15 +1087,14 @@ static int LoadRestore(const char* infile, unsigned long* crc,
   *splitpoints = (size_t*)malloc(sizeof(**splitpoints) * *npoints);
   *splitpoints_uncompressed = (size_t*)malloc(sizeof(**splitpoints_uncompressed) * *npoints);
   for(j = 0; j < *npoints; ++j) {
-    fread(&(*(splitpoints))[j], sizeof(size_t), 1, file);
-    fread(&(*(splitpoints_uncompressed))[j], sizeof(size_t), 1, file);
+    b += freadsizet(&(*(splitpoints))[j], sizetdiff, 1, file);
+    b += freadsizet(&(*(splitpoints_uncompressed))[j], sizetdiff, 1, file);
   }
-  fread(totalcost, sizeof(double), 1, file);
-  fread(alltimebest, sizeof(double), 1, file);
-  fread(mode, sizeof(int), 1, file);
-  fread(&llsize, sizeof(size_t), 1, file);
-  fread(&dsize, sizeof(size_t), 1, file);
-  fread(&lz77restore.size, sizeof(size_t), 1, file);
+  b += fread(totalcost, sizeof(double), 1, file) * sizeof(double);
+  b += fread(mode, sizeof(int), 1, file) * sizeof(int);
+  b += freadsizet(&llsize, sizetdiff, 1, file);
+  b += freadsizet(&dsize, sizetdiff, 1, file);
+  b += freadsizet(&lz77restore.size, sizetdiff, 1, file);
   lz77restore.litlens = (unsigned short*)malloc(sizeof(*lz77restore.litlens) * lz77restore.size);
   lz77restore.dists = (unsigned short*)malloc(sizeof(*lz77restore.dists) * lz77restore.size);
   lz77restore.pos = (size_t*)malloc(sizeof(*lz77restore.pos) * lz77restore.size);
@@ -1088,34 +1103,35 @@ static int LoadRestore(const char* infile, unsigned long* crc,
   lz77restore.ll_counts = (size_t*)malloc(sizeof(*lz77restore.ll_counts) * llsize);
   lz77restore.d_counts = (size_t*)malloc(sizeof(*lz77restore.d_counts) * dsize);
   for(j = 0; j < lz77restore.size; ++j) {
-    fread(&lz77restore.litlens[j], sizeof(unsigned short), 1, file);
-    fread(&lz77restore.dists[j], sizeof(unsigned short), 1, file);
-    fread(&lz77restore.pos[j], sizeof(size_t), 1, file);
-    fread(&lz77restore.ll_symbol[j], sizeof(unsigned short), 1, file);
-    fread(&lz77restore.d_symbol[j], sizeof(unsigned short), 1, file);
+    b += fread(&lz77restore.litlens[j], sizeof(unsigned short), 1, file) * sizeof(unsigned short);
+    b += fread(&lz77restore.dists[j], sizeof(unsigned short), 1, file) * sizeof(unsigned short);
+    b += freadsizet(&lz77restore.pos[j], sizetdiff, 1, file);
+    b += fread(&lz77restore.ll_symbol[j], sizeof(unsigned short), 1, file) * sizeof(unsigned short);
+    b += fread(&lz77restore.d_symbol[j], sizeof(unsigned short), 1, file) * sizeof(unsigned short);
   }
   for(j = 0; j < llsize; ++j) {
-    fread(&lz77restore.ll_counts[j], sizeof(size_t), 1, file);
+    b += freadsizet(&lz77restore.ll_counts[j], sizetdiff, 1, file);
   }
   for(j = 0; j < dsize; ++j) {
-    fread(&lz77restore.d_counts[j], sizeof(size_t), 1, file);
+    b += freadsizet(&lz77restore.d_counts[j], sizetdiff, 1, file);
   }
   fclose(file);
   if(v>4) {
-    fprintf(stderr,"-------------------------\n"
-                   "RP STATE LOADED\n"
-                   "-------------------------\n"
-                   " npoints:     %d\n"
-                   " i:           %d\n"
-                   " totalcost:   %.0f\n"
-                   " alltimebest: %.0f\n"
-                   " mode:        %d\n"
-                   " llsize:      %d\n"
-                   " dsize:       %d\n"
-                   " lz77.size:   %d\n"
-                   "-------------------------\n",
-    (int)*npoints,(int)*i,(float)*totalcost,(float)*alltimebest,*mode,
-    (int)llsize,(int)dsize,(int)lz77restore.size);
+    fprintf(stderr,">------------------------\n"
+                   ">  RP STATE LOADED\n"
+                   ">------------------------\n"
+                   "> npoints:     %d\n"
+                   "> i:           %d\n"
+                   "> totalcost:   %.0f\n"
+                   "> mode:        %d\n"
+                   "> llsize:      %d\n"
+                   "> dsize:       %d\n"
+                   "> lz77.size:   %d\n"
+                   ">------------------------\n"
+                   ">   SIZE: %d bytes\n"
+                   ">------------------------\n",
+    (int)*npoints,(int)*i,*totalcost,*mode,
+    (int)llsize,(int)dsize,(int)lz77restore.size,(int)b);
   }
   ZopfliAppendLZ77Store(&lz77restore, lz77);
   ZopfliCleanLZ77Store(&lz77restore);
@@ -1126,63 +1142,61 @@ static int SaveRestore(const char* infile, unsigned long* crc,
                        size_t* i, size_t* npoints,
                        size_t** splitpoints,
                        size_t** splitpoints_uncompressed,
-                       double* totalcost, double* alltimebest,
+                       double* totalcost, 
                        int mode, ZopfliLZ77Store* lz77, int v) {
   FILE *file;
-  size_t j, k;
+  size_t j, k, b = 0;
   size_t llsize = ZOPFLI_NUM_LL * CeilDiv(lz77->size, ZOPFLI_NUM_LL);
   size_t dsize = ZOPFLI_NUM_D * CeilDiv(lz77->size, ZOPFLI_NUM_D);
   const char lz77fileh[] = "KrzYmod Zopfli Restore Point\0";
-  char varsize[3] = { sizeof(unsigned short), sizeof(double), sizeof(size_t) };
+  char sizetsize = sizeof(size_t);
   file = fopen(infile, "wb");
   if(!file) return 11;
-  fwrite(&lz77fileh, sizeof(lz77fileh)-1, 1, file);
-  fwrite(crc, sizeof(unsigned long), 1, file);
-  for(j = 0; j < 3; ++j) {
-    fwrite(&varsize[j], 1, 1, file);
-  }
+  b += fwrite(&lz77fileh, sizeof(lz77fileh)-1, 1, file) * (sizeof(lz77fileh) - 1);
+  b += fwrite(crc, sizeof(unsigned long), 1, file) * sizeof(unsigned long);
+  b += fwrite(&sizetsize, 1, 1, file);
   k = *i + 1;
-  fwrite(&k, sizeof(size_t), 1, file);
-  fwrite(npoints, sizeof(size_t), 1, file);
+  b += fwrite(&k, sizetsize, 1, file) * sizetsize;
+  b += fwrite(npoints, sizetsize, 1, file) * sizetsize;
   for(j = 0; j < *npoints; ++j) {
-    fwrite(&(*(splitpoints))[j], sizeof(size_t), 1, file);
-    fwrite(&(*(splitpoints_uncompressed))[j], sizeof(size_t), 1, file);
+    b += fwrite(&(*(splitpoints))[j], sizetsize, 1, file) * sizetsize;
+    b += fwrite(&(*(splitpoints_uncompressed))[j], sizetsize, 1, file) * sizetsize;
   }
-  fwrite(totalcost, sizeof(double), 1, file);
-  fwrite(alltimebest, sizeof(double), 1, file);
-  fwrite(&mode, sizeof(int), 1, file);
-  fwrite(&llsize, sizeof(size_t), 1, file);
-  fwrite(&dsize, sizeof(size_t), 1, file);
-  fwrite(&lz77->size, sizeof(lz77->size), 1, file);
+  b += fwrite(totalcost, sizeof(double), 1, file) * sizeof(double);
+  b += fwrite(&mode, sizeof(int), 1, file) * sizeof(int);
+  b += fwrite(&llsize, sizetsize, 1, file) * sizetsize;
+  b += fwrite(&dsize, sizetsize, 1, file) * sizetsize;
+  b += fwrite(&lz77->size, sizetsize, 1, file) * sizetsize;
   for(j = 0; j < lz77->size; ++j) {
-    fwrite(&lz77->litlens[j], sizeof(unsigned short), 1, file);
-    fwrite(&lz77->dists[j], sizeof(unsigned short), 1, file);
-    fwrite(&lz77->pos[j], sizeof(size_t), 1, file);
-    fwrite(&lz77->ll_symbol[j], sizeof(unsigned short), 1, file);
-    fwrite(&lz77->d_symbol[j], sizeof(unsigned short), 1, file);
+    b += fwrite(&lz77->litlens[j], sizeof(unsigned short), 1, file) * sizeof(unsigned short);
+    b += fwrite(&lz77->dists[j], sizeof(unsigned short), 1, file) * sizeof(unsigned short);
+    b += fwrite(&lz77->pos[j], sizetsize, 1, file) * sizetsize;
+    b += fwrite(&lz77->ll_symbol[j], sizeof(unsigned short), 1, file) * sizeof(unsigned short);
+    b += fwrite(&lz77->d_symbol[j], sizeof(unsigned short), 1, file) * sizeof(unsigned short);
   }
   for(j = 0; j < llsize; ++j) {
-    fwrite(&lz77->ll_counts[j], sizeof(size_t), 1, file);
+    b += fwrite(&lz77->ll_counts[j], sizetsize, 1, file) * sizetsize;
   }
   for(j = 0; j < dsize; ++j) {
-    fwrite(&lz77->d_counts[j], sizeof(size_t), 1, file);
+    b += fwrite(&lz77->d_counts[j], sizetsize, 1, file) * sizetsize;
   }
   fclose(file);
   if(v>4) {
-    fprintf(stderr,"-------------------------\n"
-                   "RP STATE SAVED\n"
-                   "-------------------------\n"
-                   " npoints:     %d\n"
-                   " i:           %d\n"
-                   " totalcost:   %.0f\n"
-                   " alltimebest: %.0f\n"
-                   " mode:        %d\n"
-                   " llsize:      %d\n"
-                   " dsize:       %d\n"
-                   " lz77.size:   %d\n"
-                   "-------------------------\n",
-    (int)*npoints,(int)k,(float)*totalcost,(float)*alltimebest,mode,
-    (int)llsize,(int)dsize,(int)lz77->size);
+    fprintf(stderr,"<------------------------\n"
+                   "<  RP STATE SAVED\n"
+                   "<------------------------\n"
+                   "< npoints:     %d\n"
+                   "< i:           %d\n"
+                   "< totalcost:   %.0f\n"
+                   "< mode:        %d\n"
+                   "< llsize:      %d\n"
+                   "< dsize:       %d\n"
+                   "< lz77.size:   %d\n"
+                   "<------------------------\n"
+                   "<   SIZE: %d bytes\n"
+                   "<------------------------\n",
+    (int)*npoints,(int)k,*totalcost,mode,
+    (int)llsize,(int)dsize,(int)lz77->size,(int)b);
   }
   return 10;
 }
@@ -1190,7 +1204,7 @@ static int SaveRestore(const char* infile, unsigned long* crc,
 static void ErrorRestore(const char* rpfile, int rp_error) {
   switch(rp_error) {
     case 0:
-      fprintf(stderr,"SUCCESS: Restoring compression from %s . . .\n",rpfile);
+      fprintf(stderr,"%s - SUCCESS! Resuming . . .\n",rpfile);
       break;
     case 1:
       fprintf(stderr,"Restore Point file %s not found . . .\n",rpfile);
@@ -1287,11 +1301,11 @@ DLL_PUBLIC void ZopfliDeflatePart(const ZopfliOptions* options, int btype, int f
 
   if(options->restorepoints) {
     crc = CRC(in + instart, inend - instart);
-    sprintf(rpfile1,"%sC-%08lx%s",lz77file,crc & 0xFFFFFFFFUL,lz77ext);
-    sprintf(rpfile2,"%sR-%08lx%s",lz77file,crc & 0xFFFFFFFFUL,lz77ext);
+    sprintf(rpfile1,"%s-%08lx-C%s",lz77file,crc & 0xFFFFFFFFUL,lz77ext);
+    sprintf(rpfile2,"%s-%08lx-R%s",lz77file,crc & 0xFFFFFFFFUL,lz77ext);
     rp_error = LoadRestore(rpfile1, &crc, in, &i, &npoints, &splitpoints,
                            &splitpoints_uncompressed, &totalcost,
-                           &alltimebest, &mode, &lz77, options->verbose);
+                           &mode, &lz77, options->verbose);
     ErrorRestore(rpfile1, rp_error);
   }
 
@@ -1361,16 +1375,17 @@ DLL_PUBLIC void ZopfliDeflatePart(const ZopfliOptions* options, int btype, int f
       if(options->restorepoints && mui!=1) {
         rp_error = SaveRestore(rpfile1, &crc, &i, &npoints, &splitpoints,
                                &splitpoints_uncompressed, &totalcost,
-                               &alltimebest, 0, &lz77, options->verbose);
+                               0, &lz77, options->verbose);
         ErrorRestore(rpfile1, rp_error);
       }
 
       ZopfliCleanBlockState(&s);
       ZopfliCleanLZ77Store(&store);
     }
-    alltimebest = totalcost;
     mode = 1;
   }
+
+  alltimebest = totalcost;
 
   /* Second block splitting attempt */
   if (options->blocksplitting && npoints > 1) {
@@ -1405,8 +1420,8 @@ DLL_PUBLIC void ZopfliDeflatePart(const ZopfliOptions* options, int btype, int f
         if(options->restorepoints && pass==1) {
           int dummy;
           rp_error = LoadRestore(rpfile2, &crc, in, &j, &npoints2, &splitpoints2,
-                                 &splitpoints_uncompressed2, &totalcost2,
-                                 &alltimebest, &dummy, &lz77temp, options->verbose);
+                                 &splitpoints_uncompressed2, &totalcost,
+                                 &dummy, &lz77temp, options->verbose);
           ErrorRestore(rpfile2, rp_error);
         }
 
@@ -1445,7 +1460,7 @@ DLL_PUBLIC void ZopfliDeflatePart(const ZopfliOptions* options, int btype, int f
           if(options->restorepoints && mui!=1) {
             rp_error = SaveRestore(rpfile2, &crc, &i, &npoints2, &splitpoints2,
                                    &splitpoints_uncompressed2, &totalcost,
-                                   &alltimebest, 1, &lz77temp, options->verbose);
+                                   1, &lz77temp, options->verbose);
             ErrorRestore(rpfile2, rp_error);
           }
 
@@ -1458,17 +1473,13 @@ DLL_PUBLIC void ZopfliDeflatePart(const ZopfliOptions* options, int btype, int f
             fprintf(stderr,"Smaller (%lu bit < %lu bit) !\n",(unsigned long)totalcost,(unsigned long)alltimebest);
           }
           alltimebest = totalcost;
-          totalcost = 0;
           ZopfliCopyLZ77Store(&lz77temp,&lz77);
           ZopfliCleanLZ77Store(&lz77temp);
 
           if(options->restorepoints && mui!=1) {
-            rp_error = SaveRestore(rpfile1, &crc, &i, &npoints2, &splitpoints2,
-                                   &splitpoints_uncompressed2, &totalcost,
-                                   &alltimebest, 1, &lz77, options->verbose);
-            if(rp_error == 1) {
-              fprintf(stderr,"Can't save Restore Point . . .\n");
-            }
+            unlink(rpfile1);
+            if(rename(rpfile2,rpfile1)) rp_error=11;
+            ErrorRestore(rpfile1, rp_error);
           }
 
           free(splitpoints);

@@ -216,7 +216,10 @@ struct ZopfliPNGOptions {
   int pass;
 
   /*
-  Unused in ZopfliPNG due to a lot of recompress attempts
+  Zopfli restore points support by dumping important ZopfliDeflatePart
+  variables and restoring them on next run. They are deleted everytime
+  mentioned function finishes work so only useful when running expensive
+  Zopfli Compression within ZopfliPNG only once / process.
   */
   int restorepoints;
 
