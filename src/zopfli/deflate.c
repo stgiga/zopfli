@@ -1034,7 +1034,8 @@ static int LoadRestore(const char* infile, unsigned long* crc,
                        const unsigned char* in, size_t* i,
                        size_t* npoints, size_t** splitpoints,
                        size_t** splitpoints_uncompressed,
-                       double* totalcost, ZopfliLZ77Store* lz77) {
+                       double* totalcost, double* alltimebest,
+                       int* mode, ZopfliLZ77Store* lz77) {
   FILE *file;
   unsigned long verifycrc;
   size_t j, llsize, dsize;
@@ -1059,6 +1060,14 @@ static int LoadRestore(const char* infile, unsigned long* crc,
   ZopfliInitLZ77Store(in, &lz77restore);
   fread(i, sizeof(size_t), 1, file);
   fread(npoints, sizeof(size_t), 1, file);
+  if(*splitpoints != NULL) {
+    free(*splitpoints);
+    *splitpoints = 0;
+  }
+  if(*splitpoints_uncompressed != NULL) {
+    free(*splitpoints_uncompressed);
+    *splitpoints_uncompressed = 0;
+  }
   *splitpoints = (size_t*)malloc(sizeof(**splitpoints) * *npoints);
   *splitpoints_uncompressed = (size_t*)malloc(sizeof(**splitpoints_uncompressed) * *npoints);
   for(j = 0; j < *npoints; ++j) {
@@ -1066,6 +1075,8 @@ static int LoadRestore(const char* infile, unsigned long* crc,
     fread(&(*(splitpoints_uncompressed))[j], sizeof(size_t), 1, file);
   }
   fread(totalcost, sizeof(double), 1, file);
+  fread(alltimebest, sizeof(double), 1, file);
+  fread(mode, sizeof(int), 1, file);
   fread(&llsize, sizeof(size_t), 1, file);
   fread(&dsize, sizeof(size_t), 1, file);
   fread(&lz77restore.size, sizeof(size_t), 1, file);
@@ -1099,7 +1110,8 @@ static int SaveRestore(const char* infile, unsigned long* crc,
                        size_t* i, size_t* npoints,
                        size_t** splitpoints,
                        size_t** splitpoints_uncompressed,
-                       double* totalcost, ZopfliLZ77Store* lz77) {
+                       double* totalcost, double* alltimebest,
+                       int mode, ZopfliLZ77Store* lz77) {
   FILE *file;
   size_t j;
   size_t llsize = ZOPFLI_NUM_LL * CeilDiv(lz77->size, ZOPFLI_NUM_LL);
@@ -1107,7 +1119,7 @@ static int SaveRestore(const char* infile, unsigned long* crc,
   const char lz77fileh[] = "KrzYmod Zopfli Restore Point\0";
   char varsize[3] = { sizeof(unsigned short), sizeof(double), sizeof(size_t) };
   file = fopen(infile, "wb");
-  if(!file) return 1;
+  if(!file) return 11;
   fwrite(&lz77fileh, sizeof(lz77fileh)-1, 1, file);
   fwrite(crc, sizeof(unsigned long), 1, file);
   for(j = 0; j < 3; ++j) {
@@ -1121,6 +1133,8 @@ static int SaveRestore(const char* infile, unsigned long* crc,
     fwrite(&(*(splitpoints_uncompressed))[j], sizeof(size_t), 1, file);
   }
   fwrite(totalcost, sizeof(double), 1, file);
+  fwrite(alltimebest, sizeof(double), 1, file);
+  fwrite(&mode, sizeof(int), 1, file);
   fwrite(&llsize, sizeof(size_t), 1, file);
   fwrite(&dsize, sizeof(size_t), 1, file);
   fwrite(&lz77->size, sizeof(lz77->size), 1, file);
@@ -1138,7 +1152,44 @@ static int SaveRestore(const char* infile, unsigned long* crc,
     fwrite(&lz77->d_counts[j], sizeof(size_t), 1, file);
   }
   fclose(file);
-  return 0;
+  return 10;
+}
+
+static void ErrorRestore(const char* rpfile, int rp_error) {
+  switch(rp_error) {
+    case 0:
+      fprintf(stderr,"SUCCESS: Restoring compression from %s . . .\n",rpfile);
+      break;
+    case 1:
+      fprintf(stderr,"Restore Point file %s not found . . .\n",rpfile);
+      break;
+    case 2:
+      fprintf(stderr,"ERROR: %s is not a valid Restore Point file . . .\n", rpfile);
+      break;
+    case 3:
+      fprintf(stderr,"ERROR: CRC mismatch in Restore Point file %s . . .\n", rpfile);
+      break;
+    case 4:
+      fprintf(stderr,"ERROR: %s contains different variable sizes . . .\n", rpfile);
+      break;
+    case 11:
+      fprintf(stderr,"ERROR: Can't save Restore Point file %s . . .\n",rpfile);
+  }
+}
+
+static void PrintProgress(int v, size_t start, size_t inend, size_t i, size_t npoints) {
+  if(v>0) fprintf(stderr, "Progress: %.1f%%",100.0 * (double) start / (double)inend);
+  if(v>1) {
+    fprintf(stderr, "  ---  Block: %d / %d  ---  Data left: %luKB",
+            (int)(i + 1), (int)(npoints + 1),(unsigned long)((inend - start)/1024));
+    if(v>2) {
+      fprintf(stderr,"\n");
+    } else {
+      fprintf(stderr,"  \r");
+    }
+  } else {
+    fprintf(stderr,"\r");
+  }
 }
 
 /*
@@ -1169,9 +1220,14 @@ DLL_PUBLIC void ZopfliDeflatePart(const ZopfliOptions* options, int btype, int f
   size_t* splitpoints = 0;
   double totalcost = 0;
   int pass = 0;
+  double alltimebest = 0;
   int rp_error = 0;
+  int mode = 0;
   unsigned long crc;
-  const char lz77file[] = "zopfli.lz77rp\0";
+  const char lz77file[] = "zopfli\0";
+  const char lz77ext[] = ".lz77rp\0";
+  char* rpfile1 = (char*)malloc((sizeof(lz77file)+sizeof(lz77ext)+10) * sizeof(char));
+  char* rpfile2 = (char*)malloc((sizeof(lz77file)+sizeof(lz77ext)+10) * sizeof(char));
   ZopfliLZ77Store lz77;
 
   /* If btype=2 is specified, it tries all block types. If a lesser btype is
@@ -1198,26 +1254,15 @@ DLL_PUBLIC void ZopfliDeflatePart(const ZopfliOptions* options, int btype, int f
   ZopfliInitLZ77Store(in, &lz77);
 
   if(options->restorepoints) {
-    crc = CRC(in, inend);
-    rp_error = LoadRestore(lz77file, &crc, in, &i, &npoints, &splitpoints,
-                           &splitpoints_uncompressed, &totalcost, &lz77);
-    switch(rp_error) {
-      case 0:
-        fprintf(stderr,"SUCCESS: Restoring compression . . .\n");
-        break;
-      case 1:
-        fprintf(stderr,"No Restore Point found . . .\n");
-        break;
-      case 2:
-        fprintf(stderr,"Not a valid Restore Point file . . .\n");
-        break;
-      case 3:
-        fprintf(stderr,"Restore Point CRC mismatch . . .\n");
-        break;
-      case 4:
-        fprintf(stderr,"Restore Point variables size verification failed . . .\n");
-    }
+    crc = CRC(in + instart, inend - instart);
+    sprintf(rpfile1,"%sC-%08lx%s",lz77file,crc & 0xFFFFFFFFUL,lz77ext);
+    sprintf(rpfile2,"%sR-%08lx%s",lz77file,crc & 0xFFFFFFFFUL,lz77ext);
+    rp_error = LoadRestore(rpfile1, &crc, in, &i, &npoints, &splitpoints,
+                           &splitpoints_uncompressed, &totalcost,
+                           &alltimebest, &mode, &lz77);
+    ErrorRestore(rpfile1, rp_error);
   }
+
   if(!options->restorepoints || rp_error!=0) {
     if (options->blocksplitting) {
       if(sp==NULL || sp->splitpoints==NULL) {
@@ -1264,43 +1309,35 @@ DLL_PUBLIC void ZopfliDeflatePart(const ZopfliOptions* options, int btype, int f
     i = 0;
   }
 
-  for (; i <= npoints; i++) {
-    size_t start = i == 0 ? instart : splitpoints_uncompressed[i - 1];
-    size_t end = i == npoints ? inend : splitpoints_uncompressed[i];
-    ZopfliBlockState s;
-    ZopfliLZ77Store store;
-    ZopfliInitLZ77Store(in, &store);
-    ZopfliInitBlockState(options, start, end, 1, &s);
+  if(mode == 0) {
+    for (; i <= npoints; i++) {
+      size_t start = i == 0 ? instart : splitpoints_uncompressed[i - 1];
+      size_t end = i == npoints ? inend : splitpoints_uncompressed[i];
+      ZopfliBlockState s;
+      ZopfliLZ77Store store;
+      ZopfliInitLZ77Store(in, &store);
+      ZopfliInitBlockState(options, start, end, 1, &s);
 
-    if(options->verbose>0) fprintf(stderr, "Progress: %.1f%%",100.0 * (double) start / (double)inend);
-    if(options->verbose>1) {
-      fprintf(stderr, "  ---  Block: %d / %d  ---  Data left: %luKB",
-             (int)(i + 1), (int)(npoints + 1),(unsigned long)((inend - start)/1024));
-      if(options->verbose>2) {
-        fprintf(stderr,"\n");
-      } else {
-        fprintf(stderr,"  \r");
+      PrintProgress(options->verbose, start, inend, i, npoints);
+
+      ZopfliLZ77Optimal(&s, in, start, end, &store, options);
+      totalcost += ZopfliCalculateBlockSizeAutoType(&store, 0, store.size, options->optimizehuffmanheader, options->usebrotli, options->revcounts);
+
+      ZopfliAppendLZ77Store(&store, &lz77);
+      if (i < npoints) splitpoints[i] = lz77.size;
+
+      if(options->restorepoints && mui!=1) {
+        rp_error = SaveRestore(rpfile1, &crc, &i, &npoints, &splitpoints,
+                               &splitpoints_uncompressed, &totalcost,
+                               &alltimebest, 0, &lz77);
+        ErrorRestore(rpfile1, rp_error);
       }
-    } else {
-      fprintf(stderr,"\r");
+
+      ZopfliCleanBlockState(&s);
+      ZopfliCleanLZ77Store(&store);
     }
-
-    ZopfliLZ77Optimal(&s, in, start, end, &store, options);
-    totalcost += ZopfliCalculateBlockSizeAutoType(&store, 0, store.size, options->optimizehuffmanheader, options->usebrotli, options->revcounts);
-
-    ZopfliAppendLZ77Store(&store, &lz77);
-    if (i < npoints) splitpoints[i] = lz77.size;
-
-    if(options->restorepoints && mui!=1) {
-      rp_error = SaveRestore(lz77file, &crc, &i, &npoints, &splitpoints,
-                             &splitpoints_uncompressed, &totalcost, &lz77);
-      if(rp_error == 1) {
-        fprintf(stderr,"Can't save Restore Point . . .\n");
-      }
-    }
-
-    ZopfliCleanBlockState(&s);
-    ZopfliCleanLZ77Store(&store);
+    alltimebest = totalcost;
+    mode = 1;
   }
 
   /* Second block splitting attempt */
@@ -1326,10 +1363,21 @@ DLL_PUBLIC void ZopfliDeflatePart(const ZopfliOptions* options, int btype, int f
       ++pass;
       if(pass <= options->pass) {
         size_t* splitpoints_uncompressed2 = 0;
-        size_t totalcost3 = 0;
         size_t npointstemp = 0;
+        size_t j = 0;
         ZopfliLZ77Store lz77temp;
+        totalcost = 0;
         ZopfliInitLZ77Store(in, &lz77temp);
+
+
+        if(options->restorepoints && pass==1) {
+          int dummy;
+          rp_error = LoadRestore(rpfile2, &crc, in, &j, &npoints2, &splitpoints2,
+                                 &splitpoints_uncompressed2, &totalcost2,
+                                 &alltimebest, &dummy, &lz77temp);
+          ErrorRestore(rpfile2, rp_error);
+        }
+
         if (options->verbose>3) {
           fprintf(stderr," Recompressing, pass #%d.\n",pass);
         }
@@ -1345,31 +1393,51 @@ DLL_PUBLIC void ZopfliDeflatePart(const ZopfliOptions* options, int btype, int f
           }
         }
         assert(npointstemp == npoints2);
-        ZopfliInitLZ77Store(in, &lz77temp);
-        for (i = 0; i <= npoints2; ++i) {
+
+        for (i = j; i <= npoints2; ++i) {
           size_t start = i == 0 ? instart : splitpoints_uncompressed2[i - 1];
           size_t end = i == npoints2 ? inend : splitpoints_uncompressed2[i];
           ZopfliBlockState s;
           ZopfliLZ77Store store;
           ZopfliInitLZ77Store(in, &store);
           ZopfliInitBlockState(options, start, end, 1, &s);
+
+          PrintProgress(options->verbose, start, inend, i, npoints2);
+
           ZopfliLZ77Optimal(&s, in, start, end, &store, options);
-          totalcost3 += ZopfliCalculateBlockSizeAutoType(&store, 0, store.size, options->optimizehuffmanheader, options->usebrotli, options->revcounts);
+          totalcost += ZopfliCalculateBlockSizeAutoType(&store, 0, store.size, options->optimizehuffmanheader, options->usebrotli, options->revcounts);
 
           ZopfliAppendLZ77Store(&store, &lz77temp);
           if (i < npoints2) splitpoints2[i] = lz77temp.size;
  
+          if(options->restorepoints && mui!=1) {
+            rp_error = SaveRestore(rpfile2, &crc, &i, &npoints2, &splitpoints2,
+                                   &splitpoints_uncompressed2, &totalcost,
+                                   &alltimebest, 1, &lz77temp);
+            ErrorRestore(rpfile2, rp_error);
+          }
+
           ZopfliCleanBlockState(&s);
           ZopfliCleanLZ77Store(&store);
         }
         fprintf(stderr,"!! RECOMPRESS: ");
-        if(totalcost3 < totalcost) {
+        if(totalcost < alltimebest) {
           if (options->verbose>3) {
-            fprintf(stderr,"Smaller (%lu bit < %lu bit) !\n",(unsigned long)totalcost3,(unsigned long)totalcost);
+            fprintf(stderr,"Smaller (%lu bit < %lu bit) !\n",(unsigned long)totalcost,(unsigned long)alltimebest);
           }
-          totalcost = totalcost3;
+          alltimebest = totalcost;
           ZopfliCopyLZ77Store(&lz77temp,&lz77);
           ZopfliCleanLZ77Store(&lz77temp);
+
+          if(options->restorepoints && mui!=1) {
+            rp_error = SaveRestore(rpfile1, &crc, &i, &npoints2, &splitpoints2,
+                                   &splitpoints_uncompressed2, &totalcost,
+                                   &alltimebest, 1, &lz77);
+            if(rp_error == 1) {
+              fprintf(stderr,"Can't save Restore Point . . .\n");
+            }
+          }
+
           free(splitpoints);
           free(splitpoints_uncompressed);
           splitpoints = splitpoints2;
@@ -1380,12 +1448,12 @@ DLL_PUBLIC void ZopfliDeflatePart(const ZopfliOptions* options, int btype, int f
           free(splitpoints_uncompressed2);
           ZopfliCleanLZ77Store(&lz77temp);
           if (options->verbose>3) {
-            fprintf(stderr,"Bigger, using last (%lu bit > %lu bit) !\n",(unsigned long)totalcost3,(unsigned long)totalcost);
+            fprintf(stderr,"Bigger, using last (%lu bit > %lu bit) !\n",(unsigned long)totalcost,(unsigned long)alltimebest);
           }
           break;
         }
       } else {
-        if(totalcost2 < totalcost) {
+        if(totalcost2 < alltimebest) {
           free(splitpoints);
           splitpoints = splitpoints2;
           npoints = npoints2;
@@ -1408,6 +1476,7 @@ DLL_PUBLIC void ZopfliDeflatePart(const ZopfliOptions* options, int btype, int f
           free(splitpoints2);
         }
       }
+      mode = 0;
     } while(pass<options->pass);
   }
 
@@ -1448,7 +1517,17 @@ DLL_PUBLIC void ZopfliDeflatePart(const ZopfliOptions* options, int btype, int f
   ZopfliCleanLZ77Store(&lz77);
   free(splitpoints);
   free(splitpoints_uncompressed);
-  if(options->restorepoints && mui!=1) unlink(lz77file);
+  if(options->restorepoints && mui!=1) {
+    if(final == 1) {
+      unlink(rpfile1);
+      unlink(rpfile2);
+    } else {
+      fprintf(stderr,"Info: Not final, restore point files kept . . .\n"
+                     "      You would need to delete them manually . . .\n");
+    }
+  }
+  free(rpfile1);
+  free(rpfile2);
 
 }
 
