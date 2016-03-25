@@ -117,6 +117,12 @@ typedef struct ZopfliOptions {
   */
   int pass;
 
+  /*
+  Zopfli restore points support by dumping important ZopfliDeflatePart
+  variables and restoring them on next run.
+  */
+  int restorepoints;
+
 } ZopfliOptions;
 
 /*

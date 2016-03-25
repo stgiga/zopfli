@@ -96,6 +96,8 @@ typedef struct CZopfliPNGOptions {
   int revcounts;
 
   int pass;
+
+  int restorepoints;
 } CZopfliPNGOptions;
 
 // Sets the default options
@@ -212,6 +214,11 @@ struct ZopfliPNGOptions {
   run this many times ONLY if last block splitting is still smaller.
   */
   int pass;
+
+  /*
+  Unused in ZopfliPNG due to a lot of recompress attempts
+  */
+  int restorepoints;
 
 };
 

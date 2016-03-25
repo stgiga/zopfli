@@ -1039,6 +1039,10 @@ int main(int argc, char* argv[]) {
   if (options.numiterations < 1) {
     fprintf(stderr, "Error: --i parameter must be at least 1.\n");
     return EXIT_FAILURE;
+  } else if (options.numiterations > 9999 && !binoptions.usescandir
+             && binoptions.legacy) {
+    fprintf(stderr, "Info: Restore points automatically enabled.\n");
+    options.restorepoints = 1;
   }
 
   if (options.blocksplittingmax < 0) {
