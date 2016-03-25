@@ -1043,8 +1043,12 @@ int main(int argc, char* argv[]) {
     return EXIT_FAILURE;
   }
 
-  if(options.restorepoints && binoptions.legacy && !binoptions.usescandir) {
-    fprintf(stderr, "Info: Using restore points.\n");
+  if(options.restorepoints) {
+    if(binoptions.legacy && !binoptions.usescandir) {
+      fprintf(stderr, "Info: Using restore points.\n");
+    } else {
+      options.restorepoints=0;
+    }
   }
 
   if (options.blocksplittingmax < 0) {
