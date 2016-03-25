@@ -1142,11 +1142,11 @@ static int SaveRestore(const char* infile, unsigned long* crc,
     fwrite(&varsize[j], 1, 1, file);
   }
   k = *i + 1;
-  fwrite(&j, sizeof(size_t), 1, file);
+  fwrite(&k, sizeof(size_t), 1, file);
   fwrite(npoints, sizeof(size_t), 1, file);
-  for(k = 0; k < *npoints; ++k) {
-    fwrite(&(*(splitpoints))[k], sizeof(size_t), 1, file);
-    fwrite(&(*(splitpoints_uncompressed))[k], sizeof(size_t), 1, file);
+  for(j = 0; j < *npoints; ++j) {
+    fwrite(&(*(splitpoints))[j], sizeof(size_t), 1, file);
+    fwrite(&(*(splitpoints_uncompressed))[j], sizeof(size_t), 1, file);
   }
   fwrite(totalcost, sizeof(double), 1, file);
   fwrite(alltimebest, sizeof(double), 1, file);
