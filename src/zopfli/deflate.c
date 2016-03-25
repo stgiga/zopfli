@@ -1035,7 +1035,7 @@ static int LoadRestore(const char* infile, unsigned long* crc,
                        size_t* npoints, size_t** splitpoints,
                        size_t** splitpoints_uncompressed,
                        double* totalcost, double* alltimebest,
-                       int* mode, ZopfliLZ77Store* lz77) {
+                       int* mode, ZopfliLZ77Store* lz77, int v) {
   FILE *file;
   unsigned long verifycrc;
   size_t j, llsize, dsize;
@@ -1101,6 +1101,22 @@ static int LoadRestore(const char* infile, unsigned long* crc,
     fread(&lz77restore.d_counts[j], sizeof(size_t), 1, file);
   }
   fclose(file);
+  if(v>4) {
+    fprintf(stderr,"-------------------------\n"
+                   "RP STATE LOADED\n"
+                   "-------------------------\n"
+                   " npoints:     %d\n"
+                   " i:           %d\n"
+                   " totalcost:   %.0f\n"
+                   " alltimebest: %.0f\n"
+                   " mode:        %d\n"
+                   " llsize:      %d\n"
+                   " dsize:       %d\n"
+                   " lz77.size:   %d\n"
+                   "-------------------------\n",
+    (int)*npoints,(int)*i,(float)*totalcost,(float)*alltimebest,*mode,
+    (int)llsize,(int)dsize,(int)lz77restore.size);
+  }
   ZopfliAppendLZ77Store(&lz77restore, lz77);
   ZopfliCleanLZ77Store(&lz77restore);
   return 0;
@@ -1111,9 +1127,9 @@ static int SaveRestore(const char* infile, unsigned long* crc,
                        size_t** splitpoints,
                        size_t** splitpoints_uncompressed,
                        double* totalcost, double* alltimebest,
-                       int mode, ZopfliLZ77Store* lz77) {
+                       int mode, ZopfliLZ77Store* lz77, int v) {
   FILE *file;
-  size_t j;
+  size_t j, k;
   size_t llsize = ZOPFLI_NUM_LL * CeilDiv(lz77->size, ZOPFLI_NUM_LL);
   size_t dsize = ZOPFLI_NUM_D * CeilDiv(lz77->size, ZOPFLI_NUM_D);
   const char lz77fileh[] = "KrzYmod Zopfli Restore Point\0";
@@ -1125,12 +1141,12 @@ static int SaveRestore(const char* infile, unsigned long* crc,
   for(j = 0; j < 3; ++j) {
     fwrite(&varsize[j], 1, 1, file);
   }
-  j = *i + 1;
+  k = *i + 1;
   fwrite(&j, sizeof(size_t), 1, file);
   fwrite(npoints, sizeof(size_t), 1, file);
-  for(j = 0; j < *npoints; ++j) {
-    fwrite(&(*(splitpoints))[j], sizeof(size_t), 1, file);
-    fwrite(&(*(splitpoints_uncompressed))[j], sizeof(size_t), 1, file);
+  for(k = 0; k < *npoints; ++k) {
+    fwrite(&(*(splitpoints))[k], sizeof(size_t), 1, file);
+    fwrite(&(*(splitpoints_uncompressed))[k], sizeof(size_t), 1, file);
   }
   fwrite(totalcost, sizeof(double), 1, file);
   fwrite(alltimebest, sizeof(double), 1, file);
@@ -1152,6 +1168,22 @@ static int SaveRestore(const char* infile, unsigned long* crc,
     fwrite(&lz77->d_counts[j], sizeof(size_t), 1, file);
   }
   fclose(file);
+  if(v>4) {
+    fprintf(stderr,"-------------------------\n"
+                   "RP STATE SAVED\n"
+                   "-------------------------\n"
+                   " npoints:     %d\n"
+                   " i:           %d\n"
+                   " totalcost:   %.0f\n"
+                   " alltimebest: %.0f\n"
+                   " mode:        %d\n"
+                   " llsize:      %d\n"
+                   " dsize:       %d\n"
+                   " lz77.size:   %d\n"
+                   "-------------------------\n",
+    (int)*npoints,(int)k,(float)*totalcost,(float)*alltimebest,mode,
+    (int)llsize,(int)dsize,(int)lz77->size);
+  }
   return 10;
 }
 
@@ -1259,7 +1291,7 @@ DLL_PUBLIC void ZopfliDeflatePart(const ZopfliOptions* options, int btype, int f
     sprintf(rpfile2,"%sR-%08lx%s",lz77file,crc & 0xFFFFFFFFUL,lz77ext);
     rp_error = LoadRestore(rpfile1, &crc, in, &i, &npoints, &splitpoints,
                            &splitpoints_uncompressed, &totalcost,
-                           &alltimebest, &mode, &lz77);
+                           &alltimebest, &mode, &lz77, options->verbose);
     ErrorRestore(rpfile1, rp_error);
   }
 
@@ -1329,7 +1361,7 @@ DLL_PUBLIC void ZopfliDeflatePart(const ZopfliOptions* options, int btype, int f
       if(options->restorepoints && mui!=1) {
         rp_error = SaveRestore(rpfile1, &crc, &i, &npoints, &splitpoints,
                                &splitpoints_uncompressed, &totalcost,
-                               &alltimebest, 0, &lz77);
+                               &alltimebest, 0, &lz77, options->verbose);
         ErrorRestore(rpfile1, rp_error);
       }
 
@@ -1374,7 +1406,7 @@ DLL_PUBLIC void ZopfliDeflatePart(const ZopfliOptions* options, int btype, int f
           int dummy;
           rp_error = LoadRestore(rpfile2, &crc, in, &j, &npoints2, &splitpoints2,
                                  &splitpoints_uncompressed2, &totalcost2,
-                                 &alltimebest, &dummy, &lz77temp);
+                                 &alltimebest, &dummy, &lz77temp, options->verbose);
           ErrorRestore(rpfile2, rp_error);
         }
 
@@ -1413,7 +1445,7 @@ DLL_PUBLIC void ZopfliDeflatePart(const ZopfliOptions* options, int btype, int f
           if(options->restorepoints && mui!=1) {
             rp_error = SaveRestore(rpfile2, &crc, &i, &npoints2, &splitpoints2,
                                    &splitpoints_uncompressed2, &totalcost,
-                                   &alltimebest, 1, &lz77temp);
+                                   &alltimebest, 1, &lz77temp, options->verbose);
             ErrorRestore(rpfile2, rp_error);
           }
 
@@ -1426,13 +1458,14 @@ DLL_PUBLIC void ZopfliDeflatePart(const ZopfliOptions* options, int btype, int f
             fprintf(stderr,"Smaller (%lu bit < %lu bit) !\n",(unsigned long)totalcost,(unsigned long)alltimebest);
           }
           alltimebest = totalcost;
+          totalcost = 0;
           ZopfliCopyLZ77Store(&lz77temp,&lz77);
           ZopfliCleanLZ77Store(&lz77temp);
 
           if(options->restorepoints && mui!=1) {
             rp_error = SaveRestore(rpfile1, &crc, &i, &npoints2, &splitpoints2,
                                    &splitpoints_uncompressed2, &totalcost,
-                                   &alltimebest, 1, &lz77);
+                                   &alltimebest, 1, &lz77, options->verbose);
             if(rp_error == 1) {
               fprintf(stderr,"Can't save Restore Point . . .\n");
             }
