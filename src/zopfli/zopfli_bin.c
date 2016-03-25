@@ -879,7 +879,7 @@ static void ParseCustomBlockBoundaries(size_t** bs, const char* data) {
 static void VersionInfo(void) {
   fprintf(stderr,
   "Zopfli, a Compression Algorithm to produce Deflate streams.\n"
-  "KrzYmod extends Zopfli functionality - version 16 rc1\n\n");
+  "KrzYmod extends Zopfli functionality - version 16 rc2\n\n");
 }
 
 int main(int argc, char* argv[]) {
@@ -909,6 +909,7 @@ int main(int argc, char* argv[]) {
     else if (StringsEqual(arg, "--lazy")) options.lazymatching = 1;
     else if (StringsEqual(arg, "--ohh")) options.optimizehuffmanheader = 1;
     else if (StringsEqual(arg, "--rc")) options.revcounts = 1;
+    else if (StringsEqual(arg, "--rp")) options.restorepoints = 1;
     else if (StringsEqual(arg, "--dir")) binoptions.usescandir = 1;
     else if (StringsEqual(arg, "--aas")) binoptions.additionalautosplits = 1;
     else if (arg[0] == '-' && arg[1] == '-' && arg[2] == 'i'
@@ -1024,8 +1025,9 @@ int main(int argc, char* argv[]) {
           "  --ohh         optymize huffman header\n"
           "  --pass#       recompress last split points max # times (d: 0)\n"
           "  --rc          reverse counts ordering in bit length calculations\n"
-          "  --rw#         initial random W for iterations (1-65535, d: 1)\n");
+          "  --rp          use restore points\n");
       fprintf(stderr,
+          "  --rw#         initial random W for iterations (1-65535, d: 1)\n"
           "  --rz#         initial random Z for iterations (1-65535, d: 2)\n\n"
           " Pressing CTRL+C will set maximum unsuccessful iterations to 1.\n"
           "\n");
@@ -1039,10 +1041,10 @@ int main(int argc, char* argv[]) {
   if (options.numiterations < 1) {
     fprintf(stderr, "Error: --i parameter must be at least 1.\n");
     return EXIT_FAILURE;
-  } else if (options.numiterations > 9999 && !binoptions.usescandir
-             && binoptions.legacy) {
-    fprintf(stderr, "Info: Restore points automatically enabled.\n");
-    options.restorepoints = 1;
+  }
+
+  if(options.restorepoints && binoptions.legacy && !binoptions.usescandir) {
+    fprintf(stderr, "Info: Using restore points.\n");
   }
 
   if (options.blocksplittingmax < 0) {
