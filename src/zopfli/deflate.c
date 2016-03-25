@@ -24,6 +24,10 @@ Author: jyrki.alakuijala@gmail.com (Jyrki Alakuijala)
 #include <assert.h>
 #include <stdio.h>
 
+#if !(_WIN32)
+#include <unistd.h>
+#endif
+
 #include "inthandler.h"
 #include "blocksplitter.h"
 #include "squeeze.h"
@@ -1030,7 +1034,7 @@ static void AddLZ77BlockAutoType(const ZopfliOptions* options, int final,
   ZopfliCleanLZ77Store(&fixedstore);
 }
 
-static size_t freadsizet(void* buffer, char diff, size_t count, FILE* stream) {
+static size_t freadsizet(void* buffer, signed char diff, size_t count, FILE* stream) {
   size_t read = 0;
   int sizetsize = sizeof(size_t);
   if(diff==0) {
@@ -1056,8 +1060,8 @@ static int LoadRestore(const char* infile, unsigned long* crc,
   size_t j, b = 0, llsize, dsize;
   const char lz77fileh[] = "KrzYmod Zopfli Restore Point\0";
   char* verifyheader = (char*)malloc(sizeof(lz77fileh));
-  char sizetsize = sizeof(size_t);
-  char sizetdiff;
+  signed char sizetsize = sizeof(size_t);
+  signed char sizetdiff;
   ZopfliLZ77Store lz77restore;
   file = fopen(infile, "rb");
   if(!file) return 1;
@@ -1069,7 +1073,7 @@ static int LoadRestore(const char* infile, unsigned long* crc,
   b += fread(&verifycrc, sizeof(unsigned long), 1, file) * sizeof(unsigned long);
   if(verifycrc != *crc) return 3;
   {
-   char test;
+   signed char test;
    b += fread(&test, 1, 1, file);
    sizetdiff = sizetsize - test;
   }
@@ -1149,7 +1153,7 @@ static int SaveRestore(const char* infile, unsigned long* crc,
   size_t llsize = ZOPFLI_NUM_LL * CeilDiv(lz77->size, ZOPFLI_NUM_LL);
   size_t dsize = ZOPFLI_NUM_D * CeilDiv(lz77->size, ZOPFLI_NUM_D);
   const char lz77fileh[] = "KrzYmod Zopfli Restore Point\0";
-  char sizetsize = sizeof(size_t);
+  signed char sizetsize = sizeof(size_t);
   file = fopen(infile, "wb");
   if(!file) return 11;
   b += fwrite(&lz77fileh, sizeof(lz77fileh)-1, 1, file) * (sizeof(lz77fileh) - 1);
