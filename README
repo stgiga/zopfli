@@ -1,83 +1,36 @@
-KrzYmod highly extends Zopfli/ZopfliPNG functionality.
+Zopfli KrzYmod is a Zopfli fork that heavly modifies original Zopfli
+project for power-user control and more features.
+
+Features:
+- ZIP container support,
+- Separate GZIP with filename stored support,
+- Stores file modification time inside archive,
+- Multiple files compression with ZIP container,
+- Multiple recompressions support after splitting last,
+- Restore Points to resume compression (single-file mode only),
+- Additional switches to finetune compression and block splitting,
+- Ability to use dumb block size splitting,
+- Ability to use predefined split points,
+- Special less memory compression algorithm with a limited
+  features to be enabled with --lessmem switch.
+
 Without passing its special commands the program should run as usual.
 
-Firstly it may be hard to understand what these commands are used for
-and if they are actually useful for You.
+Description of new commands list in Zopfli KrzYmod:
 
-In this document Zopfli switches will be used as an examples.
-ZopfliPNG ones are the same but in case of additional parameters
-next to the switch = sign is required.
-
-1. --mb#
-
-   This command tells zopfli to how many blocks at maximum split
-   stream to. It's limited to 15 in the original Zopfli version
-   and considered by program authors to be the best choice.
-   However, it was found out that increasing number of blocks that
-   stream gets split to produces smaller files.
-   In case of too many blocks, stream may be slower to decompress.
-   Setting it to 0 will use as many blocks as Zopfli auto block splitting
-   model finds optimal.
-
-2. --mls#
-
-   This command alters the GetLengthScore function. Changing this parameter
-   will alter certain Zopfli compression decissions and block splitting model
-   which can improve or hurt compression. The default is 1024 and there is
-   no logic whatsoever in changing this option other than try&error.
-   However during my tests on 16KB BMP file chaging this parameter reduced
-   compressed file further by 5 bytes (NOT bits).
-
-3. --bsr#
-
-   Block splitting recursion. Changing this options will alter block splitting
-   model. The default is 9 and this is another try&error option. Setting this
-   value too high will cause Zopfli to spend more time splitting stream to
-   blocks, as well as, may cause Zopfli to use fewer blocks without properly
-   checking if the decissions are optimal enough.
-
-4. --mui#
-
-   Maximum unsuccessful iterations after last best. This switch is used to
-   limit Zopfli work if it can't find another bit reductions after trying
-   # iterations. In order for this option to be the most useful --i# parameter
-   should be set very high, for example: --i999999 --mui999 will cause Zopfli
-   to give up after 999 iterations that proved to be of no use for compressed
-   block size bit reduction.
-   This parameter is set to 1 when CTRL+C is pressed. Zopfli will still try
-   to gain some savings on each block but only if the reduction comes with
-   every iteration done, if there is at least one result that is not
-   the best, Zopfli will end working on that block.
-
-5. --lazy
-
-   Use lazy matching in LZ77 Greedy. This option has an impact on block
-   splitting model and iteration progression. In original version it
-   can only be changed before compiling the software and it's considered
-   to be another try&error switch.
-
-6. --ohh
-
-   Optimize Huffman Header by Frédéric Kayser. This options changes how
-   Huffman trees are encoded in dynamic blocks.
-   It records 8 as 4+4 not as 6+single+single and 7 as 4+3 not as 6+single
-   as in default Zopfli Huffman tree encoding.
-   Enabling this mode will usually improve compression by a few bits per blocks,
-   rarery the result will be worse. Sometimes also impacts block splitting model.
-
-7. --gzipname
-
-   This will tell Zopfli to include filename inside GZip archive, so then changing
-   gz filename will not cause archived file to be renamed. Note that it will produce
-   file bigger by (compressed file name length + 1) bytes.
-
-8. --zip
+1. --zip
 
    Tells Zopfli to use ZIP container instead of the default GZip. This can be useful
    on Microsoft based operating systems that support ZIP better. Note that the
    resulting file will be bigger than GZip.
 
-9. --dir
+2. --gzipname
+
+   This will tell Zopfli to include filename inside GZip archive, so then changing
+   gz filename will not cause archived file to be renamed. Note that it will produce
+   file bigger by (compressed file name length + 1) bytes.
+
+3. --dir
 
    Tells Zopfli to read directory as input instead of file. Scan it recursively and
    compress all files found. This option works only in conjuction with --zip switch,
@@ -94,36 +47,74 @@ next to the switch = sign is required.
       but deleting all files inside a directory may cause directory in ZIP file
       to disappear),
     - character encoding may be incorrect if using special letters.
-   Usually the workaround for above is to use some 1 bytes file in directories that
-   are supposed to be empty like empty.dir and to use english alphabets only.
+   Usually the workaround for above is to use some 1 byte files in directories that
+   are supposed to be empty like empty.dir and to use english alphabet only.
    These issues may or may not be fixed in future releases (depends if there are any
    requests for them to be fixed).
 
-10. --v#
 
-   This option is formerly known as just -v and it extends control over Zopfli
-   verbosity. The default is 2 and it can be set from 0 (quiet) to 5 (most verbose):
-   * 0 - quiet mode, don't display anthing except some errors,
-   * 1 - program title, percentage progress and file added when --zip & --dir are used,
-   * 2 - display block progression, bytes left to compress next to percentage progress,
-         as well as, summary after every file being successfully compressed,
-   * 3 - display fixed/dynamic block comparison + per block summary,
-   * 4 - additionally display block split points, best iterations using separate lines
-         and treesize (same functionality as -v in original release),
-   * 5 - additionally display block splitting decissions and current iteration being
-         processed using same line until bit reduction occurs.
+4. --mb#
 
-11. --n#
+   This command tells zopfli to how many blocks at maximum split
+   stream to. It's limited to 15 in the original Zopfli version
+   and considered by program authors to be the best choice.
+   However, it was found out that increasing number of blocks that
+   stream gets split to produces smaller files.
+   In case of too many blocks, stream may be slower to decompress.
+   Setting it to 0 will use as many blocks as Zopfli auto block splitting
+   model finds optimal.
+
+
+5. --mui#
+
+   Maximum unsuccessful iterations after last best. This switch is used to
+   limit Zopfli work if it can't find another bit reductions after trying
+   # iterations. In order for this option to be the most useful --i# parameter
+   should be set very high, for example: --i999999 --mui999 will cause Zopfli
+   to give up after 999 iterations that proved to be of no use for compressed
+   block size bit reduction.
+   This parameter is set to 1 when CTRL+C is pressed. Zopfli will still try
+   to gain some savings on each block but only if the reduction comes with
+   every iteration done, if there is at least one result that is not
+   the best, Zopfli will end working on that block.
+
+6. --lazy
+
+   Use lazy matching in LZ77 Greedy. This option has an impact on block
+   splitting model and iteration progression. In original version it
+   can only be changed before compiling the software and it's considered
+   to be another try&error switch.
+
+7. --ohh
+
+   Optimize Huffman Header by Frédéric Kayser. This options changes how
+   Huffman trees are encoded in dynamic blocks.
+   It records 8 as 4+4 not as 6+single+single and 7 as 4+3 not as 6+single
+   as in default Zopfli Huffman tree encoding.
+   Enabling this mode will usually improve compression by a few bits per blocks,
+   rarery the result will be worse. Sometimes also impacts block splitting model.
+
+8. --brotli
+
+   Use Optmized Huffman for Rle algotihm from Brotli. This impacts block split points
+   and compression. May or may not result in smaller files.
+
+9. --rc
+
+   Use descending sorting for lit/len and dist symbols' counts as per GCC 5.3 qsort
+   behavior. Impacts compression and block splitting. Default is GCC 4.8 behavior.
+
+9. --n#
 
    Use dumb block splitting by telling zopfli to how many blocks split stream to.
 
-12. --b#
+10. --b#
 
    Same as above but instead use size in bytes as delimeter. This and above option
    are most likely useless unless it's required for stream to use certain amount
    of blocks or certain uncompressed block size.
 
-13. --cbs#
+11. --cbs#
 
    Manually pass block start positions with optional block type. The list must be
    passed in hexadecimal format, separated by commas while optionally adding
@@ -134,7 +125,7 @@ next to the switch = sign is required.
    first typed block split is REALLY omitted so can be anything or even empty,
    however, a comma should be passed then. Example: ,513=0,5555,fe89=0,14532 .
 
-14. --cbsfile#
+12. --cbsfile#
 
    Same as above but instead of typing manually block start positions a file
    can be prepared holding that data. The contents MUST be the same as it would
@@ -142,14 +133,14 @@ next to the switch = sign is required.
    characters than [0-f],[,],[=] should be used. Otherwise undefined behaviour
    may occur.
 
-15. --cbd#
+13. --cbd#
 
    Save block start positons to a file and exit without compressing any data.
    This is useful in case of testing various options while preserving block
    boundaries by feeding --cbsfile with that file data. This option works
    in auto splitting mode, manual splitting mode and manual+auto splitting mode.
 
-16. --aas
+14. --aas
 
    Enables additional auto splitting mode when custom block start positions are passed
    so Zopfli can still decide between the boundaries if the data should be split
@@ -157,7 +148,36 @@ next to the switch = sign is required.
    line switches. Each data between manually passed block start positions is
    analysed separately as if it were separate stream inputs (files).
 
-17. --rw# and --rz#
+15. --bsr#
+
+   Block splitting recursion. Changing this options will alter block splitting
+   model. The default is 9 and this is another try&error option. Setting this
+   value too high will cause Zopfli to spend more time splitting stream to
+   blocks, as well as, may cause Zopfli to use fewer blocks without properly
+   checking if the decissions are optimal enough.
+
+16. --mls#
+
+   This command alters the GetLengthScore function. Changing this parameter
+   will alter certain Zopfli compression decissions and block splitting model
+   which can improve or hurt compression. The default is 1024 and there is
+   no logic whatsoever in changing this option other than try&error.
+   However during my tests on 16KB BMP file chaging this parameter reduced
+   compressed file further by 5 bytes (NOT bits).
+
+17. --nosplitlast
+
+   Disables splitting last after compression. This mode is useful when custom split
+   points need to stay the same. For example to huffmix results later.
+
+18. --pass#
+
+   Multiple splitting last & recompression attempts to check if resulting deflate stream
+   gets smaller. It will run # times or until no size was reduced in the last recompression
+   attempt. This mode doesn't work when --lessmem or --nosplitlast is used, or when the
+   compressed input is only 1 block long.
+
+19. --rw# and --rz#
 
    Initial random W and Z for iterations. These parameters are 1 for W and 2 for Z
    by default and they are locked in original Zopfli. They are used to init
@@ -173,19 +193,39 @@ next to the switch = sign is required.
    1 bit reduction when changing these parameters on --mui999 when previously
    the file was created doing as many as 99,999 unsucessful iteration.
 
-18. --legacy
-   Use legacy compression mode which is as much as possible compatible with original
-   Zopfli while maintaining Zopfli KrzYmod special switches. This switch works with
-   single and multi-file mode but opposed to KrzYmod algorithm keeps whole input
-   and output in memory until compression finishes. Since last Zopfli algorithm changes
-   this mode is required for Zopfli to perform additional splitting last after compression
-   and is recommended to use to get final block splitting for later test runs 
-   with --cbs switch.
+20. --rp
 
-19. --brotli
+   Use Restore Points. This mode let's Zopfli save special Restore Point files named
+   Zopfli-[current input CRC32]-[C/R].lz77rp for resuming compression after Zopfli
+   was closed or CTRL+C was pressed. This mode doesn't work with multi-file compression
+   or when --lessmem is used. If input is > than ZOPFLI_MASTER_BLOCK_SIZE then restore
+   files of previous ZOPFLI_MASTER_BLOCK_SIZE chunks will not be automatically deleted.
+   Manual deletion will be required. ZOPFLI_MASTER_BLOCK_SIZE in KrzYmod Zopfli is set
+   to 100MB. Restore Points can take few times more than uncompressed data. Up to 2
+   Restore Point files are used for given input, one for compression, one for recompression.
 
-   Use Optmized Huffman for Rle algotihm from Brotli. This impacts block split points
-   and compression. May or may not result in smaller files.
+21. --lessmem
+
+   By default Zopfli KrzYmod uses most of improved original Zopfli algorithm by
+   keeping full input, output and LZ77 Store in memory.
+   This parameter tells Zopfli to use KrzYmod algorithm with reduced memory
+   usage for input, output and LZ77 Store at the cost of limited features.
+   Splitting last, Recompression and Restore Points are not supported in this mode.
+
+22. --v#
+
+   This option is formerly known as just -v and it extends control over Zopfli
+   verbosity. The default is 2 and it can be set from 0 (quiet) to 5 (most verbose):
+   * 0 - quiet mode, don't display anthing except some errors,
+   * 1 - program title, percentage progress and file added when --zip & --dir are used,
+   * 2 - display block progression, bytes left to compress next to percentage progress,
+         as well as, summary after every file being successfully compressed,
+   * 3 - display fixed/dynamic block comparison + per block summary,
+   * 4 - additionally display block split points, best iterations using separate lines
+         and treesize (same functionality as -v in original release),
+   * 5 - additionally display current iteration being processed using same line until
+         bit reduction occurs, and Restore Points information.
+   * 6 - additionally display debug mode of block splitting decissions.
 
 
 Additionally to mentioned above options KrzYmod Zopfli version also fix few issues found
