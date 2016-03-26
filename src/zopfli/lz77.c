@@ -548,7 +548,7 @@ the program, by simply passing --lazy switch.
 */
 void ZopfliLZ77Greedy(ZopfliBlockState* s, const unsigned char* in,
                       size_t instart, size_t inend,
-                      ZopfliLZ77Store* store, const ZopfliOptions* options) {
+                      ZopfliLZ77Store* store) {
   size_t i = 0, j;
   unsigned short leng;
   unsigned short dist;
@@ -579,11 +579,11 @@ void ZopfliLZ77Greedy(ZopfliBlockState* s, const unsigned char* in,
 
     ZopfliFindLongestMatch(s, h, in, i, inend, ZOPFLI_MAX_MATCH, dummysublen,
                            &dist, &leng);
-    lengthscore = GetLengthScore(leng, dist, options->lengthscoremax);
+    lengthscore = GetLengthScore(leng, dist, s->options->lengthscoremax);
 
-    if (options->lazymatching == 1) {
+    if (s->options->lazymatching == 1) {
       /* Lazy matching. */
-      prevlengthscore = GetLengthScore(prev_length, prev_match, options->lengthscoremax);
+      prevlengthscore = GetLengthScore(prev_length, prev_match, s->options->lengthscoremax);
       if (match_available) {
         match_available = 0;
         if (lengthscore > prevlengthscore + 1) {

@@ -332,7 +332,7 @@ void ZopfliBlockSplit(const ZopfliOptions* options,
 
   /* Unintuitively, Using a simple LZ77 method here instead of ZopfliLZ77Optimal
   results in better blocks. */
-  ZopfliLZ77Greedy(&s, in, instart, inend, &store, options);
+  ZopfliLZ77Greedy(&s, in, instart, inend, &store);
   ZopfliBlockSplitLZ77(options,
                        &store, maxblocks,
                        &lz77splitpoints, &nlz77points);

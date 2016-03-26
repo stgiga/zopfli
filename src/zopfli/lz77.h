@@ -136,6 +136,6 @@ dictionary.
 */
 void ZopfliLZ77Greedy(ZopfliBlockState* s, const unsigned char* in,
                       size_t instart, size_t inend,
-                      ZopfliLZ77Store* store, const ZopfliOptions* options);
+                      ZopfliLZ77Store* store);
 
 #endif  /* ZOPFLI_LZ77_H_ */

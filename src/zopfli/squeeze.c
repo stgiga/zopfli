@@ -461,7 +461,7 @@ iterations need to pass to give up in finding best parameters.
 */
 void ZopfliLZ77Optimal(ZopfliBlockState *s,
                        const unsigned char* in, size_t instart, size_t inend,
-                       ZopfliLZ77Store* store, const ZopfliOptions* options) {
+                       ZopfliLZ77Store* store) {
   /* Dist to get to here with smallest cost. */
   size_t blocksize = inend - instart;
   unsigned short* length_array =
@@ -489,7 +489,7 @@ void ZopfliLZ77Optimal(ZopfliBlockState *s,
   the statistics of the previous run. */
 
   /* Initial run. */
-  ZopfliLZ77Greedy(s, in, instart, inend, &currentstore, options);
+  ZopfliLZ77Greedy(s, in, instart, inend, &currentstore);
   GetStatistics(&currentstore, &stats);
 
   /* Repeat statistics with each time the cost model from the previous stat

@@ -1078,6 +1078,7 @@ static int LoadRestore(const char* infile, unsigned long* crc,
   char* verifyheader = (char*)malloc(sizeof(lz77fileh));
   unsigned char sizetsize1 = sizeof(size_t);
   unsigned char sizetsize2 = sizetsize1;
+  unsigned char sizetsize3 = sizetsize1;
   ZopfliLZ77Store lz77restore;
   file = fopen(infile, "rb");
   if(!file) return 1;
@@ -1090,8 +1091,9 @@ static int LoadRestore(const char* infile, unsigned long* crc,
   if(verifycrc != *crc) return 3;
   b += fread(&sizetsize1, 1, 1, file);
   b += fread(&sizetsize2, 1, 1, file);
-  if(sizetsize1 > sizeof(size_t)) return 4;
-  if(sizetsize2 > sizeof(size_t)) return 4;
+  b += fread(&sizetsize3, 1, 1, file);
+  if(sizetsize1 > sizeof(size_t) || sizetsize2 > sizeof(size_t) ||
+     sizetsize3 > sizeof(size_t)) return 4;
   ZopfliInitLZ77Store(in, &lz77restore);
   b += freadst(i, sizetsize1, 1, file);
   b += freadst(npoints, sizetsize1, 1, file);
@@ -1126,7 +1128,7 @@ static int LoadRestore(const char* infile, unsigned long* crc,
   for(j = 0; j < lz77restore.size; ++j)
     b += fread(&lz77restore.dists[j], sizeof(unsigned short), 1, file) * sizeof(unsigned short);
   for(j = 0; j < lz77restore.size; ++j)
-    b += freadst(&lz77restore.pos[j], sizetsize2, 1, file);
+    b += freadst(&lz77restore.pos[j], sizetsize3, 1, file);
   for(j = 0; j < lz77restore.size; ++j)
     b += fread(&lz77restore.ll_symbol[j], sizeof(unsigned short), 1, file) * sizeof(unsigned short);
   for(j = 0; j < lz77restore.size; ++j)
@@ -1171,6 +1173,7 @@ static int SaveRestore(const char* infile, unsigned long* crc,
   const char lz77fileh[] = "KrzYmod Zopfli Restore Point\0";
   unsigned char sizetsize1 = sizeof(size_t);
   unsigned char sizetsize2 = sizetsize1;
+  unsigned char sizetsize3 = sizetsize1;
   size_t verifysize = 0;
   file = fopen(infile, "wb");
   if(!file) return 11;
@@ -1194,12 +1197,15 @@ static int SaveRestore(const char* infile, unsigned long* crc,
   Sl(&verifysize,llsize);
   Sl(&verifysize,dsize);
   Sl(&verifysize,lz77->size);
+  Verifysize_t(verifysize, &sizetsize2);
+  verifysize = 0;
   for(j = 0; j < lz77->size; ++j) {
     Sl(&verifysize,lz77->pos[j]);
   }
-  Verifysize_t(verifysize, &sizetsize2);
+  Verifysize_t(verifysize, &sizetsize3);
   b += fwrite(&sizetsize1, 1, 1, file);
   b += fwrite(&sizetsize2, 1, 1, file);
+  b += fwrite(&sizetsize3, 1, 1, file);
   b += fwrite(&k, sizetsize1, 1, file) * sizetsize1;
   b += fwrite(npoints, sizetsize1, 1, file) * sizetsize1;
   for(j = 0; j < *npoints; ++j)
@@ -1216,7 +1222,7 @@ static int SaveRestore(const char* infile, unsigned long* crc,
   for(j = 0; j < lz77->size; ++j)
     b += fwrite(&lz77->dists[j], sizeof(unsigned short), 1, file) * sizeof(unsigned short);
   for(j = 0; j < lz77->size; ++j)
-    b += fwrite(&lz77->pos[j], sizetsize2, 1, file) * sizetsize2;
+    b += fwrite(&lz77->pos[j], sizetsize3, 1, file) * sizetsize3;
   for(j = 0; j < lz77->size; ++j)
     b += fwrite(&lz77->ll_symbol[j], sizeof(unsigned short), 1, file) * sizeof(unsigned short);
   for(j = 0; j < lz77->size; ++j)
@@ -1411,7 +1417,7 @@ DLL_PUBLIC void ZopfliDeflatePart(const ZopfliOptions* options, int btype, int f
 
       PrintProgress(options->verbose, start, inend, i, npoints);
 
-      ZopfliLZ77Optimal(&s, in, start, end, &store, options);
+      ZopfliLZ77Optimal(&s, in, start, end, &store);
       totalcost += ZopfliCalculateBlockSizeAutoType(&store, 0, store.size, options->optimizehuffmanheader, options->usebrotli, options->revcounts);
 
       ZopfliAppendLZ77Store(&store, &lz77);
@@ -1496,7 +1502,7 @@ DLL_PUBLIC void ZopfliDeflatePart(const ZopfliOptions* options, int btype, int f
 
           PrintProgress(options->verbose, start, inend, i, npoints2);
 
-          ZopfliLZ77Optimal(&s, in, start, end, &store, options);
+          ZopfliLZ77Optimal(&s, in, start, end, &store);
           totalcost += ZopfliCalculateBlockSizeAutoType(&store, 0, store.size, options->optimizehuffmanheader, options->usebrotli, options->revcounts);
 
           ZopfliAppendLZ77Store(&store, &lz77temp);
