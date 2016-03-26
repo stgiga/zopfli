@@ -72,7 +72,7 @@ back window.
 void ZopfliDeflatePart(const ZopfliOptions* options, int btype, int final,
                        const unsigned char* in, size_t instart, size_t inend,
                        unsigned char* bp, unsigned char** out,
-                       size_t* outsize, ZopfliPredefinedSplits* sp);
+                       size_t* outsize, int v, ZopfliPredefinedSplits* sp);
 
 /*
 Calculates block size in bits.
@@ -81,16 +81,16 @@ dists: ll77 distances
 lstart: start of block
 lend: end of block (not inclusive)
 */
-double ZopfliCalculateBlockSize(const ZopfliLZ77Store* lz77,
-                                size_t lstart, size_t lend, int btype,
-                                int ohh, int usebrotli, int revcounts);
+double ZopfliCalculateBlockSize(const ZopfliOptions* options,
+                                const ZopfliLZ77Store* lz77,
+                                size_t lstart, size_t lend, int btype);
 
 /*
 Calculates block size in bits, automatically using the best btype.
 */
-double ZopfliCalculateBlockSizeAutoType(const ZopfliLZ77Store* lz77,
-                                        size_t lstart, size_t lend, int ohh,
-                                        int usebrotli, int revcounts);
+double ZopfliCalculateBlockSizeAutoType(const ZopfliOptions* options,
+                                        const ZopfliLZ77Store* lz77,
+                                        size_t lstart, size_t lend, int v);
 
 void DeflateBlock(const ZopfliOptions* options,
                          int btype, int final,

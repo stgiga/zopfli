@@ -115,7 +115,7 @@ void ShowHelp() {
          "--iterations=[number]: number of iterations, more iterations makes it"
          " slower but provides slightly better compression. Default: 15 for"
          " small files, 5 for large files.\n"
-         "--splitting=[0-3]: ignored, left for backwards compatibility\n"
+         "--nosplittinglast: don't use last splitting after compression\n"
          "--filters=[types]: filter strategies to try:\n"
          " 0-4: give all scanlines PNG filter type 0-4\n"
          " m: minimum sum\n"
@@ -282,6 +282,8 @@ printf("ZopfliPNG, a Portable Network Graphics (PNG) image optimizer.\n"
         png_options.ranstatez = num;
       } else if (name == "--splitting") {
         // ignored
+      } else if (name == "--nosplitlast") {
+        png_options.noblocksplittinglast = 1;
       } else if (name == "--filters") {
         for (size_t j = 0; j < value.size(); j++) {
           ZopfliPNGFilterStrategy strategy = kStrategyZero;

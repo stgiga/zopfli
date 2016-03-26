@@ -71,7 +71,7 @@ static void ZopfliInitBinOptions(ZopfliBinOptions* options) {
   options->numblocks = 0;
   options->custblocksplit = NULL;
   options->dumpsplitsfile = NULL;
-  options->legacy = 0;
+  options->legacy = 1;
 }
 
 static size_t ceilz(float num) {
@@ -603,7 +603,7 @@ static int Compress(ZopfliOptions* options, const ZopfliBinOptions* binoptions,
       } else {
         fprintf(stderr,"\r");
       }
-      ZopfliDeflatePart(options,2,final,inAndWindow,WindowSize,inAndWindowSize,&bp,&out,&outsize, 0);
+      ZopfliDeflatePart(options,2,final,inAndWindow,WindowSize,inAndWindowSize,&bp,&out,&outsize, 0, 0);
       processed+=(inAndWindowSize-WindowSize);
       if(i<npoints) {
         if(inAndWindowSize>ZOPFLI_WINDOW_SIZE) {
@@ -903,9 +903,9 @@ int main(int argc, char* argv[]) {
     else if (StringsEqual(arg, "--gzip")) output_type = ZOPFLI_FORMAT_GZIP;
     else if (StringsEqual(arg, "--gzipname")) output_type = ZOPFLI_FORMAT_GZIP_NAME;
     else if (StringsEqual(arg, "--zip")) output_type = ZOPFLI_FORMAT_ZIP;
-    else if (StringsEqual(arg, "--splitlast")) /* Ignored */;
+    else if (StringsEqual(arg, "--nosplitlast")) options.noblocksplittinglast = 1;
     else if (StringsEqual(arg, "--brotli")) options.usebrotli = 1;
-    else if (StringsEqual(arg, "--legacy")) binoptions.legacy = 1;
+    else if (StringsEqual(arg, "--lessmem")) binoptions.legacy = 0;
     else if (StringsEqual(arg, "--lazy")) options.lazymatching = 1;
     else if (StringsEqual(arg, "--ohh")) options.optimizehuffmanheader = 1;
     else if (StringsEqual(arg, "--rc")) options.revcounts = 1;
@@ -998,7 +998,7 @@ int main(int argc, char* argv[]) {
           "  --mb#         maximum blocks, 0 = unlimited (d: 15)\n"
           "  --bsr#        block splitting recursion (min: 2, d: 9)\n"
           "  --mls#        maximum length score (d: 1024)\n"
-          "  --splitlast   ignored, left for backwards compatibility\n\n");
+          "  --nosplitlast don't use last splitting after compression\n\n");
       fprintf(stderr,
           "      MANUAL BLOCK SPLITTING CONTROL:\n"
           "  --n#          number of blocks\n"
@@ -1020,7 +1020,7 @@ int main(int argc, char* argv[]) {
       fprintf(stderr,
           "      MISCELLANEOUS:\n"
           "  --brotli      use Brotli Huffman optimization\n"
-          "  --legacy      use legacy mode when compressing data\n"
+          "  --lessmem     use less memory algorithm\n"
           "  --lazy        lazy matching in Greedy LZ77\n"
           "  --ohh         optymize huffman header\n"
           "  --pass#       recompress last split points max # times (d: 0)\n"
@@ -1036,7 +1036,7 @@ int main(int argc, char* argv[]) {
     }
   }
 
-  if(options.verbose>0) VersionInfo();
+  if(options.verbose) VersionInfo();
 
   if (options.numiterations < 1) {
     fprintf(stderr, "Error: --i parameter must be at least 1.\n");
@@ -1045,7 +1045,7 @@ int main(int argc, char* argv[]) {
 
   if(options.restorepoints) {
     if(binoptions.legacy && !binoptions.usescandir) {
-      fprintf(stderr, "Info: Using restore points.\n");
+      if(options.verbose) fprintf(stderr, "Info: Using restore points.\n");
     } else {
       options.restorepoints=0;
     }
@@ -1082,10 +1082,15 @@ int main(int argc, char* argv[]) {
         output_type = ZOPFLI_FORMAT_DEFLATE;
         outfilename = AddStrings(filename, ".deflate");
       }
-      if (options.verbose>0 && outfilename) {
+      if(options.verbose && !binoptions.legacy) {
+        fprintf(stderr,"Info: Using less memory usage algorithm.\n"
+                       "      Splitting last, recompression and restore points\n"
+                       "      are not supported in this mode.\n\n");
+      }
+      if (options.verbose && outfilename) {
         fprintf(stderr, "Saving to: %s\n\n", outfilename);
       }
-      if(binoptions.usescandir == 1) {
+      if(binoptions.usescandir) {
         if(output_type == ZOPFLI_FORMAT_ZIP && !output_to_stdout) {
             if(binoptions.custblocksplit != NULL || binoptions.dumpsplitsfile != NULL) {
               fprintf(stderr, "Error: --cbs and --cbd work only in single file compression (no --dir).\n");

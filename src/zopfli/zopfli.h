@@ -123,6 +123,12 @@ typedef struct ZopfliOptions {
   */
   int restorepoints;
 
+  /*
+  Disables block splitting last after compression, useful when
+  custom block split points without changes are desired.
+  */
+  int noblocksplittinglast;
+
 } ZopfliOptions;
 
 /*

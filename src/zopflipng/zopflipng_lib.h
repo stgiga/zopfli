@@ -98,6 +98,8 @@ typedef struct CZopfliPNGOptions {
   int pass;
 
   int restorepoints;
+
+  int noblocksplittinglast;
 } CZopfliPNGOptions;
 
 // Sets the default options
@@ -222,6 +224,11 @@ struct ZopfliPNGOptions {
   Zopfli Compression within ZopfliPNG only once / process.
   */
   int restorepoints;
+
+  /*
+  Disables block splitting last after compression.
+  */
+  int noblocksplittinglast;
 
 };
 

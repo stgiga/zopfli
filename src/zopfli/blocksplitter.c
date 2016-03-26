@@ -35,6 +35,13 @@ context: for your implementation
 */
 typedef double FindMinimumFun(size_t i, void* context);
 
+typedef struct SplitCostContext {
+  const ZopfliLZ77Store* lz77;
+  const ZopfliOptions* options;
+  size_t start;
+  size_t end;
+} SplitCostContext;
+
 /*
 Finds minimum of function f(i) where i is of type size_t, f(i) is of type
 double, i is in range start-end (excluding end).
@@ -48,7 +55,8 @@ Also prints some garbage at verbosity level 6+.
 */
 static size_t FindMinimum(FindMinimumFun f, void* context,
                           size_t start, size_t end,
-                          const ZopfliOptions* options, double* smallest) {
+                          double* smallest) {
+  SplitCostContext* c = (SplitCostContext*)context;
   if (end - start < 1024) {
     double best = ZOPFLI_LARGE_FLOAT;
     size_t result = start;
@@ -60,45 +68,45 @@ static size_t FindMinimum(FindMinimumFun f, void* context,
         result = i;
       }
     }
-    if(options->verbose>5) fprintf(stderr," [%lu - %lu] Best: %.0f\n",(unsigned long)start,(unsigned long)end,best);
+    if(c->options->verbose>5) fprintf(stderr," [%lu - %lu] Best: %.0f\n",(unsigned long)start,(unsigned long)end,best);
     *smallest = best;
     return result;
   } else {
     /* Try to find minimum faster by recursively checking multiple points. */
     size_t i;
-    size_t *p = malloc(options->findminimumrec * sizeof(size_t));
-    double *vp = malloc(options->findminimumrec * sizeof(double));
+    size_t *p = malloc(c->options->findminimumrec * sizeof(size_t));
+    double *vp = malloc(c->options->findminimumrec * sizeof(double));
     size_t besti;
     double best;
     double lastbest = ZOPFLI_LARGE_FLOAT;
     size_t pos = start;
 
     for (;;) {
-      if (end - start <= options->findminimumrec) break;
+      if (end - start <= c->options->findminimumrec) break;
 
-      for (i = 0; i < options->findminimumrec; i++) {
-        p[i] = start + (i + 1) * ((end - start) / (options->findminimumrec + 1));
+      for (i = 0; i < c->options->findminimumrec; i++) {
+        p[i] = start + (i + 1) * ((end - start) / (c->options->findminimumrec + 1));
         vp[i] = f(p[i], context);
       }
       besti = 0;
       best = vp[0];
-      for (i = 1; i < options->findminimumrec; i++) {
+      for (i = 1; i < c->options->findminimumrec; i++) {
         if (vp[i] < best) {
           best = vp[i];
           besti = i;
         }
       }
       if (best > lastbest) {
-        if(options->verbose>5) fprintf(stderr," [%lu - %lu]\n",(unsigned long)start,(unsigned long)end);
+        if(c->options->verbose>5) fprintf(stderr," [%lu - %lu]\n",(unsigned long)start,(unsigned long)end);
         break;
       }
 
       start = besti == 0 ? start : p[besti - 1];
-      end = besti == options->findminimumrec - 1 ? end : p[besti + 1];
+      end = besti == c->options->findminimumrec - 1 ? end : p[besti + 1];
 
       pos = p[besti];
       lastbest = best;
-      if(options->verbose>5) fprintf(stderr," [%lu - %lu] Best: %.0f\n",(unsigned long)start,(unsigned long)end,best);
+      if(c->options->verbose>5) fprintf(stderr," [%lu - %lu] Best: %.0f\n",(unsigned long)start,(unsigned long)end,best);
     }
     *smallest = lastbest;
     free(p);
@@ -117,22 +125,11 @@ dists: ll77 distances
 lstart: start of block
 lend: end of block (not inclusive)
 */
-static double EstimateCost(const ZopfliLZ77Store* lz77,
-                           size_t lstart, size_t lend, int ohh,
-                           int usebrotli, int revcounts) {
-  return ZopfliCalculateBlockSizeAutoType(lz77, lstart, lend, ohh,
-                                          usebrotli, revcounts);
+static double EstimateCost(const ZopfliOptions* options,
+                           const ZopfliLZ77Store* lz77,
+                           size_t lstart, size_t lend) {
+  return ZopfliCalculateBlockSizeAutoType(options, lz77, lstart, lend, 0);
 }
-
-typedef struct SplitCostContext {
-  const ZopfliLZ77Store* lz77;
-  size_t start;
-  size_t end;
-  int ohh;
-  int usebrotli;
-  int revcounts;
-} SplitCostContext;
-
 
 /*
 Gets the cost which is the sum of the cost of the left and the right section
@@ -141,8 +138,8 @@ type: FindMinimumFun
 */
 static double SplitCost(size_t i, void* context) {
   SplitCostContext* c = (SplitCostContext*)context;
-  return EstimateCost(c->lz77, c->start, i, c->ohh, c->usebrotli, c->revcounts) +
-      EstimateCost(c->lz77, i, c->end, c->ohh, c->usebrotli, c->revcounts);
+  return EstimateCost(c->options, c->lz77, c->start, i) +
+      EstimateCost(c->options, c->lz77, i, c->end);
 }
 
 static void AddSorted(size_t value, size_t** out, size_t* outsize) {
@@ -270,18 +267,16 @@ void ZopfliBlockSplitLZ77(const ZopfliOptions* options,
     }
 
     c.lz77 = lz77;
+    c.options = options;
     c.start = lstart;
     c.end = lend;
-    c.ohh = options->optimizehuffmanheader;
-    c.usebrotli = options->usebrotli;
-    c.revcounts = options->revcounts;
     assert(lstart < lend);
-    llpos = FindMinimum(SplitCost, &c, lstart + 1, lend, options, &splitcost);
+    llpos = FindMinimum(SplitCost, &c, lstart + 1, lend, &splitcost);
 
     assert(llpos > lstart);
     assert(llpos < lend);
 
-    origcost = EstimateCost(lz77, lstart, lend, c.ohh, c.usebrotli, c.revcounts);
+    origcost = EstimateCost(options, lz77, lstart, lend);
 
     if (splitcost > origcost || llpos == lstart + 1 || llpos == lend) {
       done[lstart] = 1;

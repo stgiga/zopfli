@@ -243,4 +243,5 @@ void ZopfliInitOptions(ZopfliOptions* options) {
   options->revcounts = 0;
   options->pass = 0;
   options->restorepoints = 0;
+  options->noblocksplittinglast = 0;
 }
