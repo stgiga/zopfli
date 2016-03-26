@@ -116,37 +116,32 @@ Description of new commands list in Zopfli KrzYmod:
 
 11. --cbs#
 
-   Manually pass block start positions with optional block type. The list must be
-   passed in hexadecimal format, separated by commas while optionally adding
-   = sign and block type of 0-2 after each start position. This can be used to tell
-   Zopfli which parts of data should be stored in uncompressed block types (0) or
-   forced as fixed (1), as currently Zopfli is unable to tell which data should
-   not be compressed and left in uncompressed blocks. It should be noted that
-   first typed block split is REALLY omitted so can be anything or even empty,
-   however, a comma should be passed then. Example: ,513=0,5555,fe89=0,14532 .
+   Manually pass block start positions. The list must be passed in hexadecimal format,
+   separated with commas. Note that first typed block split is REALLY omitted so can
+   be anything or even empty, however, a comma should be passed then.
+   Example: ,513,5555,fe89,14532.
 
 12. --cbsfile#
 
    Same as above but instead of typing manually block start positions a file
    can be prepared holding that data. The contents MUST be the same as it would
    be passed with command line parameter, this means no new lines or any other
-   characters than [0-f],[,],[=] should be used. Otherwise undefined behaviour
+   characters than [0-f],[,] should be used. Otherwise undefined behaviour
    may occur.
 
 13. --cbd#
 
-   Save block start positons to a file and exit without compressing any data.
-   This is useful in case of testing various options while preserving block
-   boundaries by feeding --cbsfile with that file data. This option works
-   in auto splitting mode, manual splitting mode and manual+auto splitting mode.
+   Save block start positons to a file. In --lessmem mode it will use splitting
+   first and exit. When --lessmem is NOT passed it will compress a file as usual
+   and dump best split points found.
 
 14. --aas
 
    Enables additional auto splitting mode when custom block start positions are passed
-   so Zopfli can still decide between the boundaries if the data should be split
+   so Zopfli can still decide between boundaries if the data should be split
    further while preserving start positions that were passed by other command
    line switches. Each data between manually passed block start positions is
-   analysed separately as if it were separate stream inputs (files).
+   analysed separately as if it was separate stream input.
 
 15. --bsr#
 
