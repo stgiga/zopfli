@@ -1401,7 +1401,7 @@ DLL_PUBLIC void ZopfliDeflatePart(const ZopfliOptions* options, int btype, int f
           free(splitunctemp);
         }
       }
-      splitpoints = (size_t*)malloc(sizeof(*splitpoints) * npoints);
+      splitpoints = (size_t*)calloc(npoints, sizeof(*splitpoints));
     }
     i = 0;
   }
