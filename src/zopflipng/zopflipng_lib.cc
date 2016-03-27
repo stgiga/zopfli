@@ -69,7 +69,9 @@ ZopfliPNGOptions::ZopfliPNGOptions()
   , revcounts(0)
   , pass(0)
   , restorepoints(0)
-  , noblocksplittinglast(0) {
+  , noblocksplittinglast(0)
+  , tryall(0)
+  , slowsplit(0) {
 }
 
 // Deflate compressor passed as fuction pointer to LodePNG to have it use Zopfli
@@ -100,6 +102,8 @@ unsigned CustomPNGDeflate(unsigned char** out, size_t* outsize,
   options.pass                  = png_options->pass;
   options.restorepoints         = png_options->restorepoints;
   options.noblocksplittinglast  = png_options->noblocksplittinglast;
+  options.tryall                = png_options->tryall;
+  options.slowsplit             = png_options->slowsplit;
 
   ZopfliDeflate(&options, 2 /* Dynamic */, 1, in, insize, &bp, out, outsize, 0);
 
@@ -944,6 +948,8 @@ extern "C" void CZopfliPNGSetDefaults(CZopfliPNGOptions* png_options) {
   png_options->pass                  = opts.pass;
   png_options->restorepoints         = opts.restorepoints;
   png_options->noblocksplittinglast  = opts.noblocksplittinglast;
+  png_options->tryall                = opts.tryall;
+  png_options->slowsplit             = opts.slowsplit;
 }
 
 extern "C" int CZopfliPNGOptimize(const unsigned char* origpng,
@@ -977,6 +983,8 @@ extern "C" int CZopfliPNGOptimize(const unsigned char* origpng,
   opts.pass                  = png_options->pass;
   opts.restorepoints         = png_options->restorepoints;
   opts.noblocksplittinglast  = png_options->noblocksplittinglast;
+  opts.tryall                = png_options->tryall;
+  opts.slowsplit             = png_options->slowsplit;
 
   for (int i = 0; i < png_options->num_filter_strategies; i++) {
     opts.filter_strategies.push_back(png_options->filter_strategies[i]);

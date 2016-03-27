@@ -140,14 +140,17 @@ void ShowHelp() {
          "--mb=[number]:   maximum blocks, 0 = unlimited (d: 15)\n"
          "--bsr=[number]:  block splitting recursion (min: 2, d: 9)\n"
          "--mls=[number]:  maximum length score (d: 1024)\n"
-         "--pass=[number]: recompress last split points max # times (d: 0)\n"
-         "--rw=[number]:   initial random W for iterations (1-65535, d: 1)\n"
-         "--rz=[number]:   initial random Z for iterations (1-65535, d: 2)\n"
+         "--slowsplit:     use expensive fixed block calculations\n"
+         "--nosplitlast:   don't use last splitting after compression\n"
+         "--all:           use 16 combinations per block and take smallest size\n"
          "--brotli:        use Brotli Huffman optimization\n"
          "--lazy:          lazy matching in Greedy LZ77\n"
          "--ohh:           optymize huffman header\n"
          "--rc:            reverse counts ordering in bit length calculations\n"
+         "--pass=[number]: recompress last split points max # times (d: 0)\n"
          "--rp:            use restore points\n"
+         "--rw=[number]:   initial random W for iterations (1-65535, d: 1)\n"
+         "--rz=[number]:   initial random Z for iterations (1-65535, d: 2)\n"
          "   more options available only in Zopfli\n"
          "\n"
          "Usage examples:\n"
@@ -171,7 +174,7 @@ void PrintResultSize(const char* label, size_t oldsize, size_t newsize) {
 
 int main(int argc, char *argv[]) {
 printf("ZopfliPNG, a Portable Network Graphics (PNG) image optimizer.\n"
-         "KrzYmod extends ZopfliPNG functionality - version 16 rc2\n\n");
+         "KrzYmod extends ZopfliPNG functionality - version 16 rc3\n\n");
   if (argc < 2) {
     ShowHelp();
     return 0;
@@ -252,6 +255,8 @@ printf("ZopfliPNG, a Portable Network Graphics (PNG) image optimizer.\n"
         png_options.restorepoints = 1;
       } else if (name == "--ohh") {
         png_options.optimizehuffmanheader = 1;
+      } else if (name == "--all") {
+        png_options.tryall = 1;
       } else if (name == "--iterations") {
         if (num < 1) num = 1;
         png_options.num_iterations = num;
@@ -284,6 +289,8 @@ printf("ZopfliPNG, a Portable Network Graphics (PNG) image optimizer.\n"
         // ignored
       } else if (name == "--nosplitlast") {
         png_options.noblocksplittinglast = 1;
+      } else if (name == "--slowsplit") {
+        png_options.slowsplit = 1;
       } else if (name == "--filters") {
         for (size_t j = 0; j < value.size(); j++) {
           ZopfliPNGFilterStrategy strategy = kStrategyZero;

@@ -100,6 +100,10 @@ typedef struct CZopfliPNGOptions {
   int restorepoints;
 
   int noblocksplittinglast;
+
+  int tryall;
+
+  int slowsplit;
 } CZopfliPNGOptions;
 
 // Sets the default options
@@ -229,6 +233,21 @@ struct ZopfliPNGOptions {
   Disables block splitting last after compression.
   */
   int noblocksplittinglast;
+
+  /*
+  Tries 16 cominations of brotli, ohh, lazy and rc per block and
+  picks smallest block size. This doesn't impact block splitting
+  model. To make Zopfli calculate different block split points
+  You need to additionally pass brotli, ohh, lazy and/or rc switches.
+  */
+  int tryall;
+
+  /*
+  Run expensive fixed calculations in block splitter. Slows down
+  splitting A LOT, but will better find data that is good for fixed
+  blocks compression.
+  */
+  int slowsplit;
 
 };
 

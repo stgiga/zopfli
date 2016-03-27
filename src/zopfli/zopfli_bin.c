@@ -684,9 +684,6 @@ static int Compress(ZopfliOptions* options, const ZopfliBinOptions* binoptions,
       fprintf(stderr,"Hex split points successfully saved to file: %s\n",binoptions->dumpsplitsfile);
       free(tempfilename);
     }
-    if(options->verbose>2) {
-      fprintf(stderr, "Total blocks: %lu                 \n",(unsigned long)(npoints+1));
-    }
   }
 
   compsize = outsize+soffset-offset-initsoffset;
@@ -879,7 +876,7 @@ static void ParseCustomBlockBoundaries(size_t** bs, const char* data) {
 static void VersionInfo(void) {
   fprintf(stderr,
   "Zopfli, a Compression Algorithm to produce Deflate streams.\n"
-  "KrzYmod extends Zopfli functionality - version 16 rc2\n\n");
+  "KrzYmod extends Zopfli functionality - version 16 rc3\n\n");
 }
 
 int main(int argc, char* argv[]) {
@@ -903,6 +900,7 @@ int main(int argc, char* argv[]) {
     else if (StringsEqual(arg, "--gzip")) output_type = ZOPFLI_FORMAT_GZIP;
     else if (StringsEqual(arg, "--gzipname")) output_type = ZOPFLI_FORMAT_GZIP_NAME;
     else if (StringsEqual(arg, "--zip")) output_type = ZOPFLI_FORMAT_ZIP;
+    else if (StringsEqual(arg, "--slowsplit")) options.slowsplit = 1;
     else if (StringsEqual(arg, "--nosplitlast")) options.noblocksplittinglast = 1;
     else if (StringsEqual(arg, "--brotli")) options.usebrotli = 1;
     else if (StringsEqual(arg, "--lessmem")) binoptions.legacy = 0;
@@ -912,6 +910,7 @@ int main(int argc, char* argv[]) {
     else if (StringsEqual(arg, "--rp")) options.restorepoints = 1;
     else if (StringsEqual(arg, "--dir")) binoptions.usescandir = 1;
     else if (StringsEqual(arg, "--aas")) binoptions.additionalautosplits = 1;
+    else if (StringsEqual(arg, "--all")) options.tryall = 1;
     else if (arg[0] == '-' && arg[1] == '-' && arg[2] == 'i'
           && arg[3] >= '0' && arg[3] <= '9') {
       options.numiterations = atoi(arg + 3);
@@ -998,6 +997,7 @@ int main(int argc, char* argv[]) {
           "  --mb#         maximum blocks, 0 = unlimited (d: 15)\n"
           "  --bsr#        block splitting recursion (min: 2, d: 9)\n"
           "  --mls#        maximum length score (d: 1024)\n"
+          "  --slowsplit   use expensive fixed block calculations\n"
           "  --nosplitlast don't use last splitting after compression\n\n");
       fprintf(stderr,
           "      MANUAL BLOCK SPLITTING CONTROL:\n"
@@ -1019,6 +1019,7 @@ int main(int argc, char* argv[]) {
           "  --deflate     output to deflate format\n\n");
       fprintf(stderr,
           "      MISCELLANEOUS:\n"
+          "  --all         use 16 combinations per block and take smallest size\n"
           "  --brotli      use Brotli Huffman optimization\n"
           "  --lessmem     use less memory algorithm\n"
           "  --lazy        lazy matching in Greedy LZ77\n"
