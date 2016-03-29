@@ -23,6 +23,26 @@ Command line tool to recompress and optimize PNG images, using zopflipng_lib.
 #include <signal.h>
 #include <stdlib.h>
 #include <stdio.h>
+/* Windows priority setter. */
+#if _WIN32
+#include <windows.h>
+static void IdlePriority() {
+ if(SetPriorityClass(GetCurrentProcess(), IDLE_PRIORITY_CLASS)==0) {
+  fprintf(stderr,"ERROR! Failed setting priority!\n\n");
+ } else {
+  fprintf(stderr,"INFO: Idle priority successfully set.\n\n");
+ }
+}
+#else
+#include <sys/resource.h>
+static void IdlePriority() {
+ if(setpriority(PRIO_PROCESS, 0, 19)==-1) {
+  fprintf(stderr,"ERROR! Failed setting priority!\n\n");
+ } else {
+  fprintf(stderr,"INFO: Idle priority successfully set.\n\n");
+ }
+}
+#endif
 
 #include "lodepng/lodepng.h"
 #include "zopflipng_lib.h"
@@ -171,6 +191,7 @@ void ShowHelp() {
          "--rp:            use restore points\n"
          "--rw=[number]:   initial random W for iterations (1-65535, d: 1)\n"
          "--rz=[number]:   initial random Z for iterations (1-65535, d: 2)\n"
+         "--idle           use idle process priority\n"
          "   more options available only in Zopfli\n"
          "\n"
          "Usage examples:\n"
@@ -194,7 +215,7 @@ void PrintResultSize(const char* label, size_t oldsize, size_t newsize) {
 
 int main(int argc, char *argv[]) {
 printf("ZopfliPNG, a Portable Network Graphics (PNG) image optimizer.\n"
-         "KrzYmod extends ZopfliPNG functionality - version 16 rc3\n\n");
+         "KrzYmod extends ZopfliPNG functionality - version 16 rc4\n\n");
   if (argc < 2) {
     ShowHelp();
     return 0;
@@ -305,6 +326,8 @@ printf("ZopfliPNG, a Portable Network Graphics (PNG) image optimizer.\n"
       } else if (name == "--rz") {
         if (num < 1) num = 1;
         png_options.ranstatez = num;
+      } else if (name == "--idle") {
+        IdlePriority();
       } else if (name == "--splitting") {
         // ignored
       } else if (name == "--nosplitlast") {

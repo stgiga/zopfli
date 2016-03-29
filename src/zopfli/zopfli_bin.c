@@ -35,9 +35,26 @@ decompressor.
 #include <sys/stat.h>
 #include <string.h>
 #include <time.h>
-/* Windows workaround for stdout output. */
+/* Windows priority setter & stdout fix. */
 #if _WIN32
 #include <fcntl.h>
+#include <windows.h>
+static void IdlePriority() {
+ if(SetPriorityClass(GetCurrentProcess(), IDLE_PRIORITY_CLASS)==0) {
+  fprintf(stderr,"ERROR! Failed setting priority!\n\n");
+ } else {
+  fprintf(stderr,"INFO: Idle priority successfully set.\n\n");
+ }
+}
+#else
+#include <sys/resource.h>
+static void IdlePriority() {
+ if(setpriority(PRIO_PROCESS, 0, 19)==-1) {
+  fprintf(stderr,"ERROR! Failed setting priority!\n\n");
+ } else {
+  fprintf(stderr,"INFO: Idle priority successfully set.\n\n");
+ }
+}
 #endif
 
 #include "zopfli_bin.h"
@@ -876,7 +893,7 @@ static void ParseCustomBlockBoundaries(size_t** bs, const char* data) {
 static void VersionInfo(void) {
   fprintf(stderr,
   "Zopfli, a Compression Algorithm to produce Deflate streams.\n"
-  "KrzYmod extends Zopfli functionality - version 16 rc3\n\n");
+  "KrzYmod extends Zopfli functionality - version 16 rc4\n\n");
 }
 
 int main(int argc, char* argv[]) {
@@ -904,6 +921,7 @@ int main(int argc, char* argv[]) {
     else if (StringsEqual(arg, "--nosplitlast")) options.noblocksplittinglast = 1;
     else if (StringsEqual(arg, "--brotli")) options.usebrotli = 1;
     else if (StringsEqual(arg, "--lessmem")) binoptions.legacy = 0;
+    else if (StringsEqual(arg, "--idle")) IdlePriority();
     else if (StringsEqual(arg, "--lazy")) options.lazymatching = 1;
     else if (StringsEqual(arg, "--ohh")) options.optimizehuffmanheader = 1;
     else if (StringsEqual(arg, "--rc")) options.revcounts = 1;
@@ -985,24 +1003,24 @@ int main(int argc, char* argv[]) {
       fprintf(stderr,
           "Usage: zopfli [OPTIONS] FILE\n\n"
           "      GENERAL OPTIONS:\n"
+          "  --dir         accept directory as input, requires: --zip\n"
           "  --h           shows this help (--?, -h, -?)\n"
-          "  --v#          verbose level (0-5, d: 2)\n"
-          "  --dir         accept directory as input, requires: --zip\n\n");
+          "  --v#          verbose level (0-5, d: 2)\n\n");
       fprintf(stderr,
-          "      COMPRESSION TIME CONTROL:\n"
+          "      TIME SPENT CONTROL:\n"
           "  --i#          perform # iterations (d: 15)\n"
           "  --mui#        maximum unsucessful iterations after last best (d: 0)\n\n");
       fprintf(stderr,
-          "      AUTO BLOCK SPLITTING CONTROL:\n"
-          "  --mb#         maximum blocks, 0 = unlimited (d: 15)\n"
+          "      AUTOMATIC BLOCK SPLITTER CONTROL:\n"
           "  --bsr#        block splitting recursion (min: 2, d: 9)\n"
+          "  --mb#         maximum blocks, 0 = unlimited (d: 15)\n"
           "  --mls#        maximum length score (d: 1024)\n"
-          "  --slowsplit   use expensive fixed block calculations\n"
-          "  --nosplitlast don't use last splitting after compression\n\n");
+          "  --nosplitlast don't use last splitting after compression\n"
+          "  --slowsplit   always use expensive fixed block calculations\n\n");
       fprintf(stderr,
-          "      MANUAL BLOCK SPLITTING CONTROL:\n"
-          "  --n#          number of blocks\n"
+          "      MANUAL BLOCK SPLITTER CONTROL:\n"
           "  --b#          block size in bytes\n"
+          "  --n#          number of blocks\n"
           "  --cbs#        customize block start points\n"
           "                format: hex_startb1,hex_startb2\n"
           "                example: 0,33f0,56dd,8799,22220\n"
@@ -1010,24 +1028,26 @@ int main(int argc, char* argv[]) {
           "  --cbd#        dump block start points to # file and exit\n"
           "  --aas         additional automatic splitting between manual points\n\n");
       fprintf(stderr,
-          "      OUTPUT CONTROL:\n"
-          "  --c           output to stdout\n"
-          "  --zip         output to zip format\n"
-          "  --gzip        output to gzip format (default)\n"
-          "  --gzipname    output to gzip format with filename\n"
-          "  --zlib        output to zlib format\n"
-          "  --deflate     output to deflate format\n\n");
-      fprintf(stderr,
-          "      MISCELLANEOUS:\n"
-          "  --all         use 16 combinations per block and take smallest size\n"
+          "      COMPRESSION CONTROL (MAY AFFECT SPLITTER AS WELL):\n"
+          "  --all         use 16 combinations of 4 switches below\n"
           "  --brotli      use Brotli Huffman optimization\n"
-          "  --lessmem     use less memory algorithm\n"
           "  --lazy        lazy matching in Greedy LZ77\n"
           "  --ohh         optymize huffman header\n"
-          "  --pass#       recompress last split points max # times (d: 0)\n"
-          "  --rc          reverse counts ordering in bit length calculations\n"
-          "  --rp          use restore points\n");
+          "  --rc          reverse counts ordering in bit length calculations\n\n");
       fprintf(stderr,
+          "      OUTPUT CONTROL:\n"
+          "  --c           output to stdout\n"
+          "  --deflate     output to deflate format\n"
+          "  --gzip        output to gzip format (default)\n"
+          "  --gzipname    output to gzip format with filename\n"
+          "  --zip         output to zip format\n"
+          "  --zlib        output to zlib format\n\n");
+      fprintf(stderr,
+          "      MISCELLANEOUS:\n"
+          "  --idle        use idle process priority\n"
+          "  --lessmem     use less memory algorithm\n"
+          "  --pass#       recompress last split points max # times (d: 0)\n"
+          "  --rp          use restore points\n"
           "  --rw#         initial random W for iterations (1-65535, d: 1)\n"
           "  --rz#         initial random Z for iterations (1-65535, d: 2)\n\n"
           " Pressing CTRL+C will set maximum unsuccessful iterations to 1.\n"
