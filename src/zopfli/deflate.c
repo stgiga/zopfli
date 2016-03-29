@@ -844,7 +844,7 @@ double ZopfliCalculateBlockSizeAutoType(const ZopfliOptions* options,
 
   /* Don't do the expensive fixed cost calculation for larger blocks that are
      unlikely to use it.
-     We allow user to enable exensive fixed calculations */
+     We allow user to enable expensive fixed calculations */
   if (options->slowsplit) {
     /* Recalculate the LZ77 with ZopfliLZ77OptimalFixed */
     size_t instart = lz77->pos[lstart];

@@ -127,7 +127,7 @@ void ShowHelp() {
          " strategy)\n"
          " b: brute force (slow)\n"
          " i: incremental brute force (very slow)\n"
-         " g: genetic algorithm* [not fully implemented yet]\n"
+         " g: genetic algorithm*\n"
          " By default, if this argument is not given, one that is most likely"
          " the best for this image is chosen by trying faster compression with"
          " each type.\n"
