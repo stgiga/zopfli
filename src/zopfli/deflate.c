@@ -838,14 +838,13 @@ double ZopfliCalculateBlockSizeAutoType(const ZopfliOptions* options,
                                         size_t lstart, size_t lend, int v) {
   double bestcost;
   double uncompressedcost = ZopfliCalculateBlockSize(options, lz77, lstart, lend, 0);
-  /* Don't do the expensive fixed cost calculation for larger blocks that are
-     unlikely to use it.
-     In KrzYmod Zopfli we will run expensive calculations everytime since
-     we care more for smallest results, not speed. */
   double fixedcost = ZOPFLI_LARGE_FLOAT;
   double dyncost = ZopfliCalculateBlockSize(options, lz77, lstart, lend, 2);
   ZopfliLZ77Store fixedstore;
 
+  /* Don't do the expensive fixed cost calculation for larger blocks that are
+     unlikely to use it.
+     We allow user to enable exensive fixed calculations */
   if (options->slowsplit) {
     /* Recalculate the LZ77 with ZopfliLZ77OptimalFixed */
     size_t instart = lz77->pos[lstart];

@@ -29,6 +29,7 @@ strategies.
 
 #include <string>
 #include <vector>
+#include <algorithm>
 
 extern "C" {
 
@@ -43,9 +44,13 @@ enum ZopfliPNGFilterStrategy {
   kStrategyThree = 3,
   kStrategyFour = 4,
   kStrategyMinSum,
+  kStrategyDistinctBytes,
+  kStrategyDistinctBigrams,
   kStrategyEntropy,
   kStrategyPredefined,
   kStrategyBruteForce,
+  kStrategyIncremental,
+  kStrategyGeneticAlgorithm,
   kNumFilterStrategies /* Not a strategy but used for the size of this enum */
 };
 
@@ -104,6 +109,18 @@ typedef struct CZopfliPNGOptions {
   int tryall;
 
   int slowsplit;
+
+  int ga_population_size;
+
+  int ga_max_evaluations;
+
+  int ga_stagnate_evaluations;
+
+  float ga_mutation_probability;
+
+  float ga_crossover_probability;
+
+  int ga_number_of_offspring;
 } CZopfliPNGOptions;
 
 // Sets the default options
@@ -249,6 +266,23 @@ struct ZopfliPNGOptions {
   */
   int slowsplit;
 
+  // Genetic algorithm: number of genomes in pool
+  int ga_population_size;
+
+  // Genetic algorithm: overall maximum number of evaluations
+  int ga_max_evaluations;
+
+  // Genetic algorithm: number of sequential evaluations without improvement
+  int ga_stagnate_evaluations;
+
+  // Genetic algorithm: probability of mutation per gene per generation
+  float ga_mutation_probability;
+
+  // Genetic algorithm: probability of crossover per generation
+  float ga_crossover_probability;
+
+  // Genetic algorithm: number of offspring per generation
+  int ga_number_of_offspring;
 };
 
 // Returns 0 on success, error code otherwise.

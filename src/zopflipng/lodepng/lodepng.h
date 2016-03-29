@@ -27,6 +27,9 @@ freely, subject to the following restrictions:
 #define LODEPNG_H
 
 #include <string.h> /*for size_t*/
+#include <limits.h>
+#include <cstdint>
+
 
 extern const char* LODEPNG_VERSION_STRING;
 
@@ -542,6 +545,10 @@ typedef enum LodePNGFilterStrategy
   LFS_ZERO,
   /*Use filter that gives minimum sum, as described in the official PNG filter heuristic.*/
   LFS_MINSUM,
+  /*Use the filter type that gives the least number of distinct bytes*/
+  LFS_DISTINCT_BYTES,
+  /*Use the filter type that gives the least number of distinct bigrams*/
+  LFS_DISTINCT_BIGRAMS,
   /*Use the filter type that gives smallest Shannon entropy for this scanline. Depending
   on the image, this is better or worse than minsum.*/
   LFS_ENTROPY,
@@ -551,7 +558,14 @@ typedef enum LodePNGFilterStrategy
   */
   LFS_BRUTE_FORCE,
   /*use predefined_filters buffer: you specify the filter type for each scanline*/
-  LFS_PREDEFINED
+  LFS_PREDEFINED,
+  /*
+  Brute force search PNG filters by comprssing each filter and preceeding filters for each scanline.
+  Extremely slow.
+  */
+  LFS_INCREMENTAL,
+  /*Use genetic algorithm to search for filters (like pngwolf)*/
+  LFS_GENETIC_ALGORITHM
 } LodePNGFilterStrategy;
 
 /*Gives characteristics about the colors of the image, which helps decide which color model to use for encoding.
@@ -580,6 +594,16 @@ Chooses an optimal color model, e.g. grey if only grey pixels, palette if < 256 
 unsigned lodepng_auto_choose_color(LodePNGColorMode* mode_out,
                                    const unsigned char* image, unsigned w, unsigned h,
                                    const LodePNGColorMode* mode_in);
+
+typedef struct GeneticAlgorithmSettings
+{
+  unsigned number_of_generations;
+  unsigned number_of_stagnations;
+  unsigned population_size;
+  float mutation_probability;
+  float crossover_probability;
+  unsigned number_of_offspring;
+} GeneticAlgorithmSettings;
 
 /*Settings for the encoder.*/
 typedef struct LodePNGEncoderSettings
@@ -611,6 +635,8 @@ typedef struct LodePNGEncoderSettings
   /*encode text chunks as zTXt chunks instead of tEXt chunks, and use compression in iTXt chunks*/
   unsigned text_compression;
 #endif /*LODEPNG_COMPILE_ANCILLARY_CHUNKS*/
+  GeneticAlgorithmSettings ga;
+  bool verbose;
 } LodePNGEncoderSettings;
 
 void lodepng_encoder_settings_init(LodePNGEncoderSettings* settings);

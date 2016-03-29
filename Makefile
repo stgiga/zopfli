@@ -2,7 +2,7 @@ CC = gcc
 CXX = g++
 
 CFLAGS = -W -Wall -Wextra -ansi -pedantic -lm
-CXXFLAGS = -W -Wall -Wextra -ansi -pedantic
+CXXFLAGS = -W -Wall -Wextra -ansi -pedantic -std=gnu++11
 
 ZDEFOPT = -Ofast
 ZARMOPT = -O2
@@ -59,20 +59,20 @@ libzopflineon:
 # ZopfliPNG binary
 zopflipng:
 	$(CC) $(ZOPFLILIB_SRC) $(CFLAGS) $(ZDEFOPT) $(ZADDOPT) -c
-	$(CXX) -static -static-libgcc $(ZOPFLILIB_OBJ) $(LODEPNG_SRC) $(ZOPFLIPNGLIB_SRC) $(ZOPFLIPNGBIN_SRC) $(CFLAGS) $(ZDEFOPT) $(ZADDOPT) -o zopflipng
+	$(CXX) -static -static-libgcc $(ZOPFLILIB_OBJ) $(LODEPNG_SRC) $(ZOPFLIPNGLIB_SRC) $(ZOPFLIPNGBIN_SRC) $(CXXFLAGS) $(ZDEFOPT) $(ZADDOPT) -o zopflipng
 	
 zopflipngavx:
 	$(CC) $(ZOPFLILIB_SRC) $(CFLAGS) $(ZDEFOPT) $(CAVXFLAGS) $(ZADDOPT) -c
-	$(CXX) -static -static-libgcc $(ZOPFLILIB_OBJ) $(LODEPNG_SRC) $(ZOPFLIPNGLIB_SRC) $(ZOPFLIPNGBIN_SRC) $(CFLAGS) $(ZDEFOPT) $(CAVXFLAGS) $(ZADDOPT) -o zopflipng
+	$(CXX) -static -static-libgcc $(ZOPFLILIB_OBJ) $(LODEPNG_SRC) $(ZOPFLIPNGLIB_SRC) $(ZOPFLIPNGBIN_SRC) $(CXXFLAGS) $(ZDEFOPT) $(CAVXFLAGS) $(ZADDOPT) -o zopflipng
 
 zopflipngneon:
 	$(CC) $(ZOPFLILIB_SRC) $(CFLAGS) $(ZARMOPT) $(CNEONFLAGS) $(ZADDOPT) -c
-	$(CXX) -static -static-libgcc $(ZOPFLILIB_OBJ) $(LODEPNG_SRC) $(ZOPFLIPNGLIB_SRC) $(ZOPFLIPNGBIN_SRC) $(CFLAGS) $(ZARMOPT) $(CNEONFLAGS) $(ZADDOPT) -o zopflipng
+	$(CXX) -static -static-libgcc $(ZOPFLILIB_OBJ) $(LODEPNG_SRC) $(ZOPFLIPNGLIB_SRC) $(ZOPFLIPNGBIN_SRC) $(CXXFLAGS) $(ZARMOPT) $(CNEONFLAGS) $(ZADDOPT) -o zopflipng
 
 # ZopfliPNG shared library
 libzopflipng:
 	$(CC) $(ZOPFLILIB_SRC) $(CFLAGS) $(ZDEFOPT) $(ZADDOPT) -fPIC -c
-	$(CXX) $(ZOPFLILIB_OBJ) $(LODEPNG_SRC) $(ZOPFLIPNGLIB_SRC) $(CFLAGS) $(ZDEFOPT) $(ZADDOPT) -fPIC --shared -Wl,-soname,libzopflipng.so.1 -o libzopflipng.so.1.0.0
+	$(CXX) $(ZOPFLILIB_OBJ) $(LODEPNG_SRC) $(ZOPFLIPNGLIB_SRC) $(CXXLAGS) $(ZDEFOPT) $(ZADDOPT) -fPIC --shared -Wl,-soname,libzopflipng.so.1 -o libzopflipng.so.1.0.0
 
 # Remove all libraries and binaries
 clean:

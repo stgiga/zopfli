@@ -5132,6 +5132,24 @@ static float flog2(float f)
   return result + 1.442695f * (f * f * f / 3 - 3 * f * f / 2 + 3 * f - 1.83333f);
 }
 
+static void InitXORShift128Plus(uint64_t* s) {
+  s[0] = 1;
+  s[1] = 2;
+}
+
+static uint64_t XORShift128Plus(uint64_t* s) {
+  uint64_t x = s[0];
+  uint64_t const y = s[1];
+  s[0] = y;
+  x ^= x << 23;
+  s[1] = x ^ y ^ (x >> 17) ^ (y >> 26);
+  return s[1] + y;
+}
+
+static double XORShift128PlusNorm(uint64_t* s) {
+  return double(XORShift128Plus(s)) / UINT64_MAX;
+}
+
 static unsigned filter(unsigned char* out, const unsigned char* in, unsigned w, unsigned h,
                        const LodePNGColorMode* info, const LodePNGEncoderSettings* settings)
 {
@@ -5150,6 +5168,8 @@ static unsigned filter(unsigned char* out, const unsigned char* in, unsigned w, 
   unsigned x, y;
   unsigned error = 0;
   LodePNGFilterStrategy strategy = settings->filter_strategy;
+  uint64_t r[2];
+  InitXORShift128Plus(r);
 
   /*
   There is a heuristic called the minimum sum of absolute differences heuristic, suggested by the PNG standard:
@@ -5239,6 +5259,98 @@ static unsigned filter(unsigned char* out, const unsigned char* in, unsigned w, 
 
     for(type = 0; type != 5; ++type) lodepng_free(attempt[type]);
   }
+  else if(strategy == LFS_DISTINCT_BYTES)
+  {
+    size_t sum[5];
+    unsigned char* attempt[5]; /*five filtering attempts, one for each filter type*/
+    size_t smallest;
+    unsigned type, bestType = 0;
+    unsigned count[256];
+
+    for(type = 0; type != 5; ++type)
+    {
+      attempt[type] = (unsigned char*)lodepng_malloc(linebytes);
+      if(!attempt[type]) return 83; /*alloc fail*/
+    }
+
+    for(y = 0; y != h; ++y)
+    {
+      smallest = SIZE_MAX;
+      /*try the 5 filter types*/
+      for(type = 0; type != 5; ++type)
+      {
+        filterScanline(attempt[type], &in[y * linebytes], prevline, linebytes, bytewidth, type);
+        for(x = 0; x != 256; ++x) count[x] = 0;
+        for(x = 0; x != linebytes; ++x) count[attempt[type][x]] = 1;
+        count[type] = 1; /*the filter type itself is part of the scanline*/
+        sum[type] = 0;
+        for(x = 0; x != 256; ++x)
+        {
+          if(count[x] != 0) ++sum[type];
+        }
+        /*check if this is smallest sum (or if type == 0 it's the first case so always store the values)*/
+        if(sum[type] < smallest)
+        {
+          bestType = type;
+          smallest = sum[type];
+        }
+      }
+
+      prevline = &in[y * linebytes];
+
+      /*now fill the out values*/
+      out[y * (linebytes + 1)] = bestType; /*the first byte of a scanline will be the filter type*/
+      for(x = 0; x != linebytes; ++x) out[y * (linebytes + 1) + 1 + x] = attempt[bestType][x];
+    }
+
+    for(type = 0; type != 5; ++type) lodepng_free(attempt[type]);
+  }
+  else if(strategy == LFS_DISTINCT_BIGRAMS)
+  {
+    size_t sum[5];
+    unsigned char* attempt[5]; /*five filtering attempts, one for each filter type*/
+    size_t smallest;
+    unsigned type, bestType = 0;
+    unsigned count[65536];
+
+    for(type = 0; type != 5; ++type)
+    {
+      attempt[type] = (unsigned char*)lodepng_malloc(linebytes);
+      if(!attempt[type]) return 83; /*alloc fail*/
+    }
+
+    for(y = 0; y != h; ++y)
+    {
+      smallest = SIZE_MAX;
+      /*try the 5 filter types*/
+      for(type = 0; type != 5; ++type)
+      {
+        filterScanline(attempt[type], &in[y * linebytes], prevline, linebytes, bytewidth, type);
+        for(x = 0; x != 65536; ++x) count[x] = 0;
+        for(x = 1; x != linebytes; ++x) count[(attempt[type][x - 1] << 8) + attempt[type][x]] = 1;
+        count[type] = 1; /*the filter type itself is part of the scanline*/
+        sum[type] = 0;
+        for(x = 0; x != 65536; ++x)
+        {
+          if(count[x] != 0) ++sum[type];
+        }
+        /*check if this is smallest sum (or if type == 0 it's the first case so always store the values)*/
+        if(sum[type] < smallest)
+        {
+          bestType = type;
+          smallest = sum[type];
+        }
+      }
+
+      prevline = &in[y * linebytes];
+
+      /*now fill the out values*/
+      out[y * (linebytes + 1)] = bestType; /*the first byte of a scanline will be the filter type*/
+      for(x = 0; x != linebytes; ++x) out[y * (linebytes + 1) + 1 + x] = attempt[bestType][x];
+    }
+
+    for(type = 0; type != 5; ++type) lodepng_free(attempt[type]);
+  }
   else if(strategy == LFS_ENTROPY)
   {
     float sum[5];
@@ -5308,13 +5420,7 @@ static unsigned filter(unsigned char* out, const unsigned char* in, unsigned w, 
     unsigned type = 0, bestType = 0;
     unsigned char* dummy;
     LodePNGCompressSettings zlibsettings = settings->zlibsettings;
-    /*use fixed tree on the attempts so that the tree is not adapted to the filtertype on purpose,
-    to simulate the true case where the tree is the same for the whole image. Sometimes it gives
-    better result with dynamic tree anyway. Using the fixed tree sometimes gives worse, but in rare
-    cases better compression. It does make this a bit less slow, so it's worth doing this.*/
-    zlibsettings.btype = 1;
-    /*a custom encoder likely doesn't read the btype setting and is optimized for complete PNG
-    images only, so disable it*/
+    /*disable custom encoder for speed -- just get an estimate*/
     zlibsettings.custom_zlib = 0;
     zlibsettings.custom_deflate = 0;
     for(type = 0; type != 5; ++type)
@@ -5345,7 +5451,189 @@ static unsigned filter(unsigned char* out, const unsigned char* in, unsigned w, 
       out[y * (linebytes + 1)] = bestType; /*the first byte of a scanline will be the filter type*/
       for(x = 0; x != linebytes; ++x) out[y * (linebytes + 1) + 1 + x] = attempt[bestType][x];
     }
-    for(type = 0; type != 5; ++type) free(attempt[type]);
+    for(type = 0; type != 5; ++type) lodepng_free(attempt[type]);
+  }
+  else if(strategy == LFS_INCREMENTAL)
+  {
+    /*Incremental brute force filter chooser.
+      Keep a buffer of each tested scanline and deflate the entire buffer after every filter attempt to see which one deflates best.
+      This is extremely slow.*/
+    size_t size[5];
+    unsigned char* attempt[5]; /*five filtering attempts, one for each filter type*/
+    size_t smallest;
+    unsigned type, bestType = 0;
+    unsigned char* dummy;
+    LodePNGCompressSettings zlibsettings = settings->zlibsettings;
+    /*disable custom encoder for speed -- just get an estimate*/
+    zlibsettings.custom_zlib = 0;
+    zlibsettings.custom_deflate = 0;
+    for(type = 0; type != 5; ++type)
+    {
+      attempt[type] = (unsigned char*)lodepng_malloc(linebytes);
+      if(!attempt[type]) return 83; /*alloc fail*/
+    }
+    for(y = 0; y != h; ++y) /*try the 5 filter types*/
+    {
+      smallest = SIZE_MAX;
+      for(type = 4; type + 1 != 0; --type) /*type 0 is most likely, so end with that to reduce copying*/
+      {
+        unsigned testsize = (y + 1) * (linebytes + 1);
+        filterScanline(attempt[type], &in[y * linebytes], prevline, linebytes, bytewidth, type);
+        /*copy result to output buffer temporarily to include compression test*/
+        out[y * (linebytes + 1)] = type; /*the first byte of a scanline will be the filter type*/
+        for(x = 0; x != linebytes; ++x) out[y * (linebytes + 1) + 1 + x] = attempt[type][x];
+        size[type] = 0;
+        dummy = 0;
+        zlib_compress(&dummy, &size[type], out, testsize, &zlibsettings);
+        lodepng_free(dummy);
+        /*check if this is smallest size (or if type == 4 it's the first case so always store the values)*/
+        if(size[type] < smallest)
+        {
+          bestType = type;
+          smallest = size[type];
+        }
+      }
+      prevline = &in[y * linebytes];
+      out[y * (linebytes + 1)] = bestType; /*the first byte of a scanline will be the filter type*/
+      if (type != 0) /*last attempt is type 0, so no copying necessary*/
+      {
+        for(x = 0; x != linebytes; ++x) out[y * (linebytes + 1) + 1 + x] = attempt[bestType][x];
+      }
+    }
+    for(type = 0; type != 5; ++type) lodepng_free(attempt[type]);
+  }
+  else if(strategy == LFS_GENETIC_ALGORITHM)
+  {
+    /*Genetic algorithm filter finder. Attempts to find better filters through mutation and recombination.*/
+    unsigned char* dummy;
+    LodePNGCompressSettings zlibsettings = settings->zlibsettings;
+    /*disable custom encoder for speed -- just get an estimate*/
+    zlibsettings.custom_zlib = 0;
+    zlibsettings.custom_deflate = 0;
+    const size_t population_size = settings->ga.population_size;
+    const size_t last = population_size - 1;
+    unsigned char* population = (unsigned char*)lodepng_malloc(h * population_size);
+    size_t* size = (size_t*)lodepng_malloc(population_size * sizeof(size_t));
+    unsigned* ranking = (unsigned*)lodepng_malloc(population_size * sizeof(int));
+    unsigned g, i, j, e, t, c, type, crossover1, crossover2, selection_size, size_sum;
+    unsigned char* parent1, *parent2, *child;
+    unsigned best_size = UINT_MAX;
+    unsigned total_size = 0;
+    unsigned e_since_best = 0;
+    unsigned tournament_size = 2;
+
+    /*evaluate initial population*/
+    memcpy(population, settings->predefined_filters, h * population_size);
+    for(g = 0; g <= last; ++g)
+    {
+      prevline = 0;
+      for(y = 0; y < h; ++y)
+      {
+        type = population[g * h + y];
+        out[y * (linebytes + 1)] = type;
+        filterScanline(&out[y * (linebytes + 1) + 1], &in[y * linebytes], prevline, linebytes, bytewidth, type);
+        prevline = &in[y * linebytes];
+      }
+      size[g] = 0;
+      dummy = 0;
+      zlib_compress(&dummy, &size[g], out, h * (linebytes + 1), &zlibsettings);
+      lodepng_free(dummy);
+      total_size += size[g];
+      ranking[g] = g;
+    }
+
+    for(e = 0; (settings->ga.number_of_generations == 0 || e < settings->ga.number_of_generations) && e_since_best < settings->ga.number_of_stagnations; ++e)
+    {
+      /*resort rankings*/
+      for(i = 1; i < population_size; ++i)
+      {
+        t = ranking[i];
+        for(j = i - 1; j + 1 > 0 && size[ranking[j]] > size[t]; --j) ranking[j + 1] = ranking[j];
+        ranking[j + 1] = t;
+      }
+      if(size[ranking[0]] < best_size)
+      {
+        best_size = size[ranking[0]];
+        e_since_best = 0;
+        if(settings->verbose) printf("Generation %d: %d bytes\n", e, best_size);
+      }
+      else ++e_since_best;
+
+      for(c = 0; c < settings->ga.number_of_offspring; ++c)
+      {
+        /*tournament selection*/
+        /*parent 1*/
+        selection_size = UINT_MAX;
+        for(t = 0; t < tournament_size; ++t) selection_size = std::min(unsigned(XORShift128PlusNorm(r) * total_size), selection_size);
+        size_sum = 0;
+        for(j = 0; size_sum <= selection_size; ++j) size_sum += size[ranking[j]];
+        parent1 = &population[ranking[j - 1] * h];
+
+        /*parent 2*/
+        selection_size = UINT_MAX;
+        for(t = 0; t < tournament_size; ++t) selection_size = std::min(unsigned(XORShift128PlusNorm(r) * total_size), selection_size);
+        size_sum = 0;
+        for(j = 0; size_sum <= selection_size; ++j) size_sum += size[ranking[j]];
+        parent2 = &population[ranking[j - 1] * h];
+
+        /*two-point crossover*/
+        child = &population[(ranking[last - c]) * h];
+        if(XORShift128PlusNorm(r) < settings->ga.crossover_probability)
+        {
+          crossover1 = XORShift128Plus(r) % h;
+          crossover2 = XORShift128Plus(r) % h;
+          if(crossover1 > crossover2)
+          {
+            crossover1 ^= crossover2;
+            crossover2 ^= crossover1;
+            crossover1 ^= crossover2;
+          }
+          if(child != parent1) {
+            memcpy(child, parent1, crossover1);
+            memcpy(&child[crossover2], &parent1[crossover2], h - crossover2);
+          }
+          if(child != parent2) memcpy(&child[crossover1], &parent2[crossover1], crossover2 - crossover1);
+        }
+        else if(XORShift128Plus(r) & 1) memcpy(child, parent1, h);
+        else memcpy(child, parent2, h);
+
+        /*mutation*/
+        for(y = 0; y < h; ++y)
+        {
+          if(XORShift128PlusNorm(r) < settings->ga.mutation_probability) child[y] = XORShift128Plus(r) % 5;
+        }
+
+        /*evaluate new genome*/
+        total_size -= size[ranking[last - c]];
+        prevline = 0;
+        for(y = 0; y < h; ++y)
+        {
+          type = child[y];
+          out[y * (linebytes + 1)] = type;
+          filterScanline(&out[y * (linebytes + 1) + 1], &in[y * linebytes], prevline, linebytes, bytewidth, type);
+          prevline = &in[y * linebytes];
+        }
+        size[ranking[last - c]] = 0;
+        dummy = 0;
+        zlib_compress(&dummy, &size[ranking[last - c]], out, h * (linebytes + 1), &zlibsettings);
+        lodepng_free(dummy);
+        total_size += size[ranking[last - c]];
+      }
+    }
+
+    /*final choice*/
+    prevline = 0;
+    for(y = 0; y < h; ++y)
+    {
+      type = population[ranking[0] * h + y];
+      out[y * (linebytes + 1)] = type;
+      filterScanline(&out[y * (linebytes + 1) + 1], &in[y * linebytes], prevline, linebytes, bytewidth, type);
+      prevline = &in[y * linebytes];
+    }
+
+    lodepng_free(population);
+    lodepng_free(size);
+    lodepng_free(ranking);
   }
   else return 88; /* unknown filter strategy */
 
