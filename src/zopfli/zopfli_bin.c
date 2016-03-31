@@ -91,9 +91,9 @@ static void ZopfliInitBinOptions(ZopfliBinOptions* options) {
   options->legacy = 1;
 }
 
-static size_t ceilz(float num) {
+static size_t ceilz(double num) {
     size_t inum = (size_t)num;
-    if (num == (float)inum) {
+    if (num == (double)inum) {
         return inum;
     }
     return inum + 1;
@@ -443,7 +443,7 @@ static int Compress(ZopfliOptions* options, const ZopfliBinOptions* binoptions,
         if(binoptions->numblocks>fullsize) {
           i = 1;
         } else {
-          i = ceilz((float)fullsize / (float)binoptions->numblocks);
+          i = ceilz((double)fullsize / (double)binoptions->numblocks);
         }
         l=i;
         do {
@@ -656,7 +656,7 @@ static int Compress(ZopfliOptions* options, const ZopfliBinOptions* binoptions,
         if(binoptions->numblocks>fullsize) {
           i = 1;
         } else {
-          i = ceilz((float)fullsize / (float)binoptions->numblocks);
+          i = ceilz((double)fullsize / (double)binoptions->numblocks);
         }
         l=i;
         do {
