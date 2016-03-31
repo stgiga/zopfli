@@ -1533,7 +1533,7 @@ DLL_PUBLIC void ZopfliDeflatePart(const ZopfliOptions* options, int btype, int f
     unsigned threadsrunning = 0;
     int neednext = 0;
     unsigned threnum = 0;
-    size_t nextblock = 0;
+    size_t nextblock = i;
     size_t n;
     unsigned char lastthread = 0;
     unsigned char* blockdone = calloc(npoints+1,sizeof(unsigned char));
@@ -1627,12 +1627,10 @@ DLL_PUBLIC void ZopfliDeflatePart(const ZopfliOptions* options, int btype, int f
         if(threnum>=options->numthreads) threnum=0;
         if(threadsrunning==0 &&
           (neednext==1 || lastthread==1)) break;
-        }
        }
        if(neednext==1) break;
       }
      } while(threadsrunning>0 && neednext==0);
-
     }
 
     mode = 1;
