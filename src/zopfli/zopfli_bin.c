@@ -932,6 +932,9 @@ int main(int argc, char* argv[]) {
     else if (arg[0] == '-' && arg[1] == '-' && arg[2] == 'i'
           && arg[3] >= '0' && arg[3] <= '9') {
       options.numiterations = atoi(arg + 3);
+    }  else if (arg[0] == '-' && arg[1] == '-' && arg[2] == 't'
+             && arg[3] >= '0' && arg[3] <= '9') {
+      options.numthreads = atoi(arg + 3);
     }  else if (arg[0] == '-' && arg[1] == '-' && arg[2] == 'm' && arg[3] == 'b'
              && arg[4] >= '0' && arg[4] <= '9') {
       options.blocksplittingmax = atoi(arg + 4);
@@ -1044,6 +1047,7 @@ int main(int argc, char* argv[]) {
           "  --zlib        output to zlib format\n\n");
       fprintf(stderr,
           "      MISCELLANEOUS:\n"
+          "  --t#          compress using # threads (d:1)\n"
           "  --idle        use idle process priority\n"
           "  --lessmem     use less memory algorithm\n"
           "  --pass#       recompress last split points max # times (d: 0)\n"
@@ -1058,6 +1062,8 @@ int main(int argc, char* argv[]) {
   }
 
   if(options.verbose) VersionInfo();
+
+  if (options.numthreads < 1) options.numthreads = 1;
 
   if (options.numiterations < 1) {
     fprintf(stderr, "Error: --i parameter must be at least 1.\n");
