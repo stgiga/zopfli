@@ -246,4 +246,5 @@ void ZopfliInitOptions(ZopfliOptions* options) {
   options->noblocksplittinglast = 0;
   options->tryall = 0;
   options->slowsplit = 0;
+  options->numthreads = 4;
 }

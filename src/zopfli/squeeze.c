@@ -461,7 +461,7 @@ iterations need to pass to give up in finding best parameters.
 */
 void ZopfliLZ77Optimal(ZopfliBlockState *s,
                        const unsigned char* in, size_t instart, size_t inend,
-                       ZopfliLZ77Store* store) {
+                       ZopfliLZ77Store* store, ZopfliIterations* iterations) {
   /* Dist to get to here with smallest cost. */
   size_t blocksize = inend - instart;
   unsigned short* length_array =
@@ -501,18 +501,15 @@ void ZopfliLZ77Optimal(ZopfliBlockState *s,
                    length_array, GetCostStat, (void*)&stats,
                    &currentstore);
     cost = ZopfliCalculateBlockSize(s->options, &currentstore, 0, currentstore.size, 2);
-    if (s->options->verbose>4 || (s->options->verbose>2 && cost < bestcost)) {
-      fprintf(stderr, "Iteration %d: %d bit      \r", i, (int) cost);
-    }
+    iterations->iteration = i;
+    iterations->cost = (int)cost;
     if (cost < bestcost) {
+      iterations->bestcost = (int)cost;
       /* Start: Copy to the output store. */
       ZopfliCopyLZ77Store(&currentstore, store);
       CopyStats(&stats, &beststats);
       bestcost = cost;
       /* End */
-      if(s->options->verbose>3) {
-        fprintf(stderr, "\n");
-      }
       fails=0;
     } else {
       ++fails;
@@ -535,8 +532,10 @@ void ZopfliLZ77Optimal(ZopfliBlockState *s,
     }
     lastcost = cost;
     if(mui>0 && fails>=mui) {
+/*
       if(s->options->verbose>3) fprintf(stderr, "Iteration %d: No further reduction"
                                                 " in the last %d tries.\n", i,fails);
+*/
       break;
     }
   }

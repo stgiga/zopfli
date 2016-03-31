@@ -144,6 +144,8 @@ typedef struct ZopfliOptions {
   */
   int slowsplit;
 
+  unsigned numthreads;
+
 } ZopfliOptions;
 
 /*
@@ -189,6 +191,17 @@ typedef struct ZopfliPredefinedSplits {
   int moresplitting;
 
 } ZopfliPredefinedSplits;
+
+typedef struct ZopfliIterations {
+
+  size_t block;
+
+  int iteration;
+
+  int cost;
+
+  int bestcost;
+} ZopfliIterations;
 
 /* Initializes shared options with default values. */
 void ZopfliInitOptions(ZopfliOptions* options);
