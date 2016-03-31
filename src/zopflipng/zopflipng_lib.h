@@ -121,6 +121,8 @@ typedef struct CZopfliPNGOptions {
   float ga_crossover_probability;
 
   int ga_number_of_offspring;
+
+  unsigned numthreads;
 } CZopfliPNGOptions;
 
 // Sets the default options
@@ -283,6 +285,12 @@ struct ZopfliPNGOptions {
 
   // Genetic algorithm: number of offspring per generation
   int ga_number_of_offspring;
+
+  /*
+  Iterate multiple dynamic blocks at once using pthreads, aka.
+  multi-threading mode.
+  */
+  unsigned numthreads;
 };
 
 // Returns 0 on success, error code otherwise.

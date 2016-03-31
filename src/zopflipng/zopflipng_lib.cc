@@ -78,7 +78,8 @@ ZopfliPNGOptions::ZopfliPNGOptions()
   , ga_stagnate_evaluations(15)
   , ga_mutation_probability(0.01)
   , ga_crossover_probability(0.9)
-  , ga_number_of_offspring(2) {
+  , ga_number_of_offspring(2)
+  , numthreads(1) {
 }
 
 // Deflate compressor passed as fuction pointer to LodePNG to have it use Zopfli
@@ -111,6 +112,7 @@ unsigned CustomPNGDeflate(unsigned char** out, size_t* outsize,
   options.noblocksplittinglast  = png_options->noblocksplittinglast;
   options.tryall                = png_options->tryall;
   options.slowsplit             = png_options->slowsplit;
+  options.numthreads            = png_options->numthreads;
 
   ZopfliDeflate(&options, 2 /* Dynamic */, 1, in, insize, &bp, out, outsize, 0);
 
@@ -1121,6 +1123,7 @@ extern "C" void CZopfliPNGSetDefaults(CZopfliPNGOptions* png_options) {
   png_options->ga_mutation_probability  = opts.ga_mutation_probability;
   png_options->ga_crossover_probability = opts.ga_crossover_probability;
   png_options->ga_number_of_offspring   = opts.ga_number_of_offspring;
+  png_options->numthreads               = opts.numthreads;
 }
 
 extern "C" int CZopfliPNGOptimize(const unsigned char* origpng,
@@ -1162,6 +1165,7 @@ extern "C" int CZopfliPNGOptimize(const unsigned char* origpng,
   opts.ga_mutation_probability  = png_options->ga_mutation_probability;
   opts.ga_crossover_probability = png_options->ga_crossover_probability;
   opts.ga_number_of_offspring   = png_options->ga_number_of_offspring;
+  opts.numthreads               = png_options->numthreads;
 
 
   for (int i = 0; i < png_options->num_filter_strategies; i++) {

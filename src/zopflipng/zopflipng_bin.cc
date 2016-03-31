@@ -191,6 +191,7 @@ void ShowHelp() {
          "--rp:            use restore points\n"
          "--rw=[number]:   initial random W for iterations (1-65535, d: 1)\n"
          "--rz=[number]:   initial random Z for iterations (1-65535, d: 2)\n"
+         "--t=[number]:    compress using # threads (d:1)\n"
          "--idle           use idle process priority\n"
          "   more options available only in Zopfli\n"
          "\n"
@@ -328,6 +329,9 @@ printf("ZopfliPNG, a Portable Network Graphics (PNG) image optimizer.\n"
         png_options.ranstatez = num;
       } else if (name == "--idle") {
         IdlePriority();
+      } else if (name == "--t") {
+        if (num < 1) num = 1;
+        png_options.numthreads = num;
       } else if (name == "--splitting") {
         // ignored
       } else if (name == "--nosplitlast") {

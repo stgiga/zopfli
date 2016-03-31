@@ -144,6 +144,10 @@ typedef struct ZopfliOptions {
   */
   int slowsplit;
 
+  /*
+  Iterate multiple dynamic blocks at once using pthreads, aka.
+  multi-threading mode.
+  */
   unsigned numthreads;
 
 } ZopfliOptions;

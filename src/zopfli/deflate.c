@@ -1367,9 +1367,10 @@ void *threading(void *a) {
       o.usebrotli=BITSET(tries,1);
       o.lazymatching=BITSET(tries,0);
       if(b->options->verbose>2) {
-        fprintf(stderr,"Trying #%02d [ ohh: %-3s | rc: %-3s | brotli: %-3s | lazy: %-3s ]\n",
+        fprintf(stderr,"Trying #%02d [ ohh: %-3s | rc: %-3s | brotli: %-3s | lazy: %-3s ]\r",
         17-tries,o.optimizehuffmanheader?"ON":"OFF",o.revcounts?"ON":"OFF",
         o.usebrotli?"ON":"OFF",o.lazymatching?"ON":"OFF");
+        sleep(1);
       }
     }
 

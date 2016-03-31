@@ -1,8 +1,8 @@
 CC = gcc
 CXX = g++
 
-CFLAGS = -W -Wall -Wextra -ansi -pedantic -lm
-CXXFLAGS = -W -Wall -Wextra -ansi -pedantic -std=gnu++11
+CFLAGS = -W -Wall -Wextra -ansi -pedantic -lm -pthread
+CXXFLAGS = -W -Wall -Wextra -ansi -pedantic -std=gnu++11 -pthread
 
 ZDEFOPT = -Ofast
 ZARMOPT = -O2
