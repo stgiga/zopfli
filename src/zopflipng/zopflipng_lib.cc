@@ -490,6 +490,15 @@ void LossyOptimizeTransparentCryo(unsigned char* image, unsigned w, unsigned h, 
         i+=(w*4);
       }
     }
+  } else if (cleaner & 32) {  // None filter (white)
+    for (size_t i = 0; i < w * h; i++) {
+      if (image[i * 4 + 3] == 0) {
+        // if alpha is 0, set the RGB values to 255 (white).
+        image[i * 4 + 0] = 255;
+        image[i * 4 + 1] = 255;
+        image[i * 4 + 2] = 255;
+      }
+    }
   }
 }
 
@@ -832,8 +841,8 @@ int ZopfliPNGOptimize(const std::vector<unsigned char>& origpng,
   ZopfliPNGFilterStrategy filterstrategies[kNumFilterStrategies] = {
     kStrategyZero, kStrategyOne, kStrategyTwo, kStrategyThree, kStrategyFour,
     kStrategyMinSum, kStrategyDistinctBytes, kStrategyDistinctBigrams,
-    kStrategyEntropy, kStrategyPredefined, kStrategyBruteForce,
-    kStrategyIncremental, kStrategyGeneticAlgorithm
+    kStrategyEntropy, kStrategyBruteForce, kStrategyIncremental,
+    kStrategyPredefined, kStrategyGeneticAlgorithm
   };
   bool strategy_enable[kNumFilterStrategies] = {
     false, false, false, false, false, false, false, false, false, false, false,
@@ -841,9 +850,9 @@ int ZopfliPNGOptimize(const std::vector<unsigned char>& origpng,
   };
   unsigned int strategy_enable_cryo = 0;
   std::string strategy_name[kNumFilterStrategies] = {
-    "zero", "one", "two", "three", "four",
-    "minimum sum", "distinct bytes", "distinct bigrams", "entropy",
-    "predefined", "brute force", "incremental brute force", "genetic algorithm"
+    "zero", "one", "two", "three", "four", "minimum sum", "distinct bytes",
+    "distinct bigrams", "entropy", "brute force", "incremental brute force",
+    "predefined", "genetic algorithm"
   };
   for (size_t i = 0; i < png_options.filter_strategies.size(); i++) {
     if(png_options.alpha_cleaner!=0) {
@@ -919,7 +928,7 @@ int ZopfliPNGOptimize(const std::vector<unsigned char>& origpng,
         unsigned int secondbestfilter = 0;
         unsigned int tempfilter;
         int mode = 1;
-        int maxcleaners = 5;
+        int maxcleaners = 6;
         size_t tempsize = 0;
         size_t bestsize = 0;
         size_t secondbestsize = 0;
