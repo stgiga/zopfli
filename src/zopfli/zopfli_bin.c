@@ -89,6 +89,7 @@ static void ZopfliInitBinOptions(ZopfliBinOptions* options) {
   options->custblocksplit = NULL;
   options->dumpsplitsfile = NULL;
   options->legacy = 1;
+  options->additionalautosplits = 0;
 }
 
 static size_t ceilz(double num) {
