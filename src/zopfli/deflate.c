@@ -1550,17 +1550,21 @@ DLL_PUBLIC void ZopfliDeflatePart(const ZopfliOptions* options, int btype, int f
       for(;threnum<options->numthreads;) {
        if(t[threnum].is_running==1) {
         usleep(100000);
-        if(showcntr>9) {
-          if(t[showthread].is_running==1) {
-            fprintf(stderr,"{T#%d} BLOCK: %d - Iteration %d: %d bit [%d bit]         \r",
-                    showthread, ((int)t[showthread].iterations.block+1),t[showthread].iterations.iteration,
-                    t[showthread].iterations.cost,t[showthread].iterations.bestcost);
-            showcntr=0;
-          } else if(lastthread || options->numthreads==1) {
-            showcntr=0;
-          }
+        if(t[showthread].is_running==1) {
+          fprintf(stderr,"{T#%d} BLOCK: %d - Iteration %d: %d bit [%d bit]         \r",
+                  showthread, ((int)t[showthread].iterations.block+1),t[showthread].iterations.iteration,
+                  t[showthread].iterations.cost,t[showthread].iterations.bestcost);
+        } else {
           ++showthread;
           if(showthread>=options->numthreads) showthread=0;
+          showcntr=0;
+        }
+        if(showcntr>9) {
+          if(!lastthread && options->numthreads>1) {
+            ++showthread;
+            if(showthread>=options->numthreads) showthread=0;
+          }
+          showcntr=0;
         } else {
           ++showcntr;
         }
@@ -1728,17 +1732,21 @@ DLL_PUBLIC void ZopfliDeflatePart(const ZopfliOptions* options, int btype, int f
               for(;threnum<options->numthreads;) {
                 if(t[threnum].is_running==1) {
                   usleep(100000);
-                  if(showcntr>9) {
-                    if(t[showthread].is_running==1) {
-                      fprintf(stderr,"{T#%d} BLOCK: %d - Iteration %d: %d bit [%d bit]         \r",
-                                     showthread, ((int)t[showthread].iterations.block+1),t[showthread].iterations.iteration,
-                                     t[showthread].iterations.cost,t[showthread].iterations.bestcost);
-                      showcntr=0;
-                    } else if(lastthread || options->numthreads==1) {
-                      showcntr=0;
-                    }
+                  if(t[showthread].is_running==1) {
+                    fprintf(stderr,"{T#%d} BLOCK: %d - Iteration %d: %d bit [%d bit]         \r",
+                    showthread, ((int)t[showthread].iterations.block+1),t[showthread].iterations.iteration,
+                    t[showthread].iterations.cost,t[showthread].iterations.bestcost);
+                  } else {
                     ++showthread;
                     if(showthread>=options->numthreads) showthread=0;
+                    showcntr=0;
+                  }
+                  if(showcntr>9) {
+                    if(!lastthread && options->numthreads>1) {
+                      ++showthread;
+                      if(showthread>=options->numthreads) showthread=0;
+                    }
+                    showcntr=0;
                   } else {
                     ++showcntr;
                   }
