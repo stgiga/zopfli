@@ -438,6 +438,7 @@ static int Compress(ZopfliOptions* options, const ZopfliBinOptions* binoptions,
         }
         ++i;
       }
+      free(binoptions->custblocksplit);
     } else if(binoptions->numblocks>0) {
       if(binoptions->numblocks>1) {
         size_t l;
@@ -651,6 +652,7 @@ static int Compress(ZopfliOptions* options, const ZopfliBinOptions* binoptions,
         ZOPFLI_APPEND_DATA(binoptions->custblocksplit[i],&sp.splitpoints,&sp.npoints);
         ++i;
       }
+      free(binoptions->custblocksplit);
     } else if(binoptions->numblocks>0) {
       if(binoptions->numblocks>1) {
         size_t l;
@@ -681,6 +683,7 @@ static int Compress(ZopfliOptions* options, const ZopfliBinOptions* binoptions,
       adler32u(in,insize,&checksum);
     }
     ZopfliDeflate(options, 2, final, in, insize, &bp, &out, &outsize, &sp);
+    free(in);
     if (!outfilename) {
       ConsoleOutput(out,outsize-1);
     } else {
@@ -702,6 +705,8 @@ static int Compress(ZopfliOptions* options, const ZopfliBinOptions* binoptions,
       fprintf(stderr,"Hex split points successfully saved to file: %s\n",binoptions->dumpsplitsfile);
       free(tempfilename);
     }
+    if(sp.splitpoints!=NULL)
+      free(sp.splitpoints);
   }
 
   compsize = outsize+soffset-offset-initsoffset;
