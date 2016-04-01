@@ -80,6 +80,7 @@ static void InitCDIR(ZipCDIR *zipcdir) {
 
 static void CleanCDIR(ZipCDIR *zipcdir) {
   free(zipcdir->data);
+  zipcdir->data = 0;
 }
 
 static void ZopfliInitBinOptions(ZopfliBinOptions* options) {
@@ -237,6 +238,7 @@ static int ListDir(const char* filename, char ***filesindir,
         statfile=AddStrings(initdir,ent->d_name);
         stat(statfile, &attrib);
         free(statfile);
+        statfile = 0;
         if((attrib.st_mode & S_IFDIR)==0) {
           *filesindir = realloc(*filesindir,((unsigned int)*j+1)*(sizeof(char*)));
           if(isroot==1) {
@@ -253,12 +255,14 @@ static int ListDir(const char* filename, char ***filesindir,
             statfile=AddStrings(initdir+i,ent->d_name);
             strcpy((*filesindir)[*j], statfile);
             free(statfile);
+            statfile = 0;
           }
           ++*j;
         } else {
           statfile=AddStrings(initdir,ent->d_name);
           ListDir(statfile, filesindir, j,0);
           free(statfile);
+          statfile = 0;
         }
       }
     }
@@ -416,6 +420,7 @@ static int Compress(ZopfliOptions* options, const ZopfliBinOptions* binoptions,
               LoadFile(infilename, &in, &insize, &loffset, &fullsize, amount, 1);
               tempnumblocks = SplitInput(options,in,insize,oldloffset,&splitpoints,&npoints);
               free(in);
+              in = 0;
               if(amount > ZOPFLI_MASTER_BLOCK_SIZE || (loffset<fullsize && tempnumblocks>1)) {
                 loffset=splitpoints[npoints-1];
               }
@@ -430,6 +435,7 @@ static int Compress(ZopfliOptions* options, const ZopfliBinOptions* binoptions,
               LoadFile(infilename, &in, &insize, &loffset, &fullsize, 0, 1);
               tempnumblocks = SplitInput(options,in,insize,oldloffset,&splitpoints,&npoints);
               free(in);
+              in = 0;
               if(loffset<fullsize && tempnumblocks>1) {
                 loffset=splitpoints[npoints-1];
               }
@@ -469,6 +475,7 @@ static int Compress(ZopfliOptions* options, const ZopfliBinOptions* binoptions,
         LoadFile(infilename, &in, &insize, &loffset, &fullsize, 0, 1);
         tempnumblocks = SplitInput(options,in,insize,oldloffset,&splitpoints,&npoints);
         free(in);
+        in = 0;
         if(loffset<fullsize && tempnumblocks>1) {
           loffset=splitpoints[npoints-1];
         }
@@ -599,6 +606,7 @@ static int Compress(ZopfliOptions* options, const ZopfliBinOptions* binoptions,
           ZOPFLI_APPEND_DATA(WindowData[j], &inAndWindow, &inAndWindowSize);
         }
         free(WindowData);
+        WindowData = 0;
         for(j=0;j<insize;++j) {
           ZOPFLI_APPEND_DATA(in[j], &inAndWindow, &inAndWindowSize);
         }
@@ -608,6 +616,7 @@ static int Compress(ZopfliOptions* options, const ZopfliBinOptions* binoptions,
         inAndWindowSize = insize;
       }
       free(in);
+      in = 0;
 
       if(options->verbose==1) fprintf(stderr,"                                     \r");
       if(options->verbose>0) fprintf(stderr, "Progress: %.1f%%",100.0 * (double)processed / (double)fullsize);
@@ -637,6 +646,7 @@ static int Compress(ZopfliOptions* options, const ZopfliBinOptions* binoptions,
         }
       }
       free(inAndWindow);
+      inAndWindow = 0;
       inAndWindowSize = 0;
     }
   } else {
@@ -705,8 +715,7 @@ static int Compress(ZopfliOptions* options, const ZopfliBinOptions* binoptions,
       fprintf(stderr,"Hex split points successfully saved to file: %s\n",binoptions->dumpsplitsfile);
       free(tempfilename);
     }
-    if(sp.splitpoints!=NULL)
-      free(sp.splitpoints);
+    free(sp.splitpoints);
   }
 
   compsize = outsize+soffset-offset-initsoffset;
@@ -861,6 +870,7 @@ static void CompressMultiFile(ZopfliOptions* options, const ZopfliBinOptions* bi
 
     free(filesindir[i]);
     free(fileindir);
+    fileindir = 0;
 
   }
 
@@ -868,6 +878,7 @@ static void CompressMultiFile(ZopfliOptions* options, const ZopfliBinOptions* bi
 
   RenameFile(tempfilename,outfilename);
 
+  free(filesindir);
   free(tempfilename);
     
 }

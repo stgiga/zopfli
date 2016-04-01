@@ -63,15 +63,22 @@ void ZopfliCleanHash(ZopfliHash* h) {
   free(h->head);
   free(h->prev);
   free(h->hashval);
+  h->head     = 0;
+  h->prev     = 0;
+  h->hashval  = 0;
 
 #ifdef ZOPFLI_HASH_SAME_HASH
   free(h->head2);
   free(h->prev2);
   free(h->hashval2);
+  h->head2    = 0;
+  h->prev2    = 0;
+  h->hashval2 = 0;
 #endif
 
 #ifdef ZOPFLI_HASH_SAME
   free(h->same);
+  h->same     = 0;
 #endif
 }
 

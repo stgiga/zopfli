@@ -63,16 +63,12 @@ void ZopfliInitCache(size_t blocksize, ZopfliLongestMatchCache* lmc) {
 }
 
 void ZopfliCleanCache(ZopfliLongestMatchCache* lmc) {
-/*
-  Fix by cngzhnp: 
-  All variables should be checked for availability to release.
-  Mr_KrzYch00's note:
-  On Windows OS it's not really necessary to do this though.
-  Double-free is usually disallowed on Unix/Linux.
-*/
-  if(lmc->length != NULL) free(lmc->length);
-  if(lmc->dist   != NULL) free(lmc->dist);
-  if(lmc->sublen != NULL) free(lmc->sublen);
+  free(lmc->length);
+  free(lmc->dist);
+  free(lmc->sublen);
+  lmc->length = 0;
+  lmc->dist   = 0;
+  lmc->sublen = 0;
 }
 
 void ZopfliSublenToCache(const unsigned short* sublen,

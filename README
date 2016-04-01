@@ -2,6 +2,7 @@ Zopfli KrzYmod is a Zopfli fork that heavly modifies original Zopfli
 project for power-user control and more features.
 
 Features:
+- Multi-threading application,
 - ZIP container support,
 - Separate GZIP with filename stored support,
 - Stores file modification time inside archive,
@@ -104,24 +105,29 @@ Description of new commands list in Zopfli KrzYmod:
    Use descending sorting for lit/len and dist symbols' counts as per GCC 5.3 qsort
    behavior. Impacts compression and block splitting. Default is GCC 4.8 behavior.
 
-9. --n#
+10. --all
+
+   Run 16 cominations of --lazy, --ohh, --brotli and --rc per block and pick
+   smallest result.
+
+11. --n#
 
    Use dumb block splitting by telling zopfli to how many blocks split stream to.
 
-10. --b#
+12. --b#
 
    Same as above but instead use size in bytes as delimeter. This and above option
    are most likely useless unless it's required for stream to use certain amount
    of blocks or certain uncompressed block size.
 
-11. --cbs#
+13. --cbs#
 
    Manually pass block start positions. The list must be passed in hexadecimal format,
    separated with commas. Note that first typed block split is REALLY omitted so can
    be anything or even empty, however, a comma should be passed then.
    Example: ,513,5555,fe89,14532.
 
-12. --cbsfile#
+14. --cbsfile#
 
    Same as above but instead of typing manually block start positions a file
    can be prepared holding that data. The contents MUST be the same as it would
@@ -129,13 +135,13 @@ Description of new commands list in Zopfli KrzYmod:
    characters than [0-f],[,] should be used. Otherwise undefined behaviour
    may occur.
 
-13. --cbd#
+15. --cbd#
 
    Save block start positons to a file. In --lessmem mode it will use splitting
    first and exit. When --lessmem is NOT passed it will compress a file as usual
    and dump best split points found.
 
-14. --aas
+16. --aas
 
    Enables additional auto splitting mode when custom block start positions are passed
    so Zopfli can still decide between boundaries if the data should be split
@@ -143,7 +149,7 @@ Description of new commands list in Zopfli KrzYmod:
    line switches. Each data between manually passed block start positions is
    analysed separately as if it was separate stream input.
 
-15. --bsr#
+17. --bsr#
 
    Block splitting recursion. Changing this options will alter block splitting
    model. The default is 9 and this is another try&error option. Setting this
@@ -151,7 +157,7 @@ Description of new commands list in Zopfli KrzYmod:
    blocks, as well as, may cause Zopfli to use fewer blocks without properly
    checking if the decissions are optimal enough.
 
-16. --mls#
+18. --mls#
 
    This command alters the GetLengthScore function. Changing this parameter
    will alter certain Zopfli compression decissions and block splitting model
@@ -160,19 +166,19 @@ Description of new commands list in Zopfli KrzYmod:
    However during my tests on 16KB BMP file chaging this parameter reduced
    compressed file further by 5 bytes (NOT bits).
 
-17. --nosplitlast
+19. --nosplitlast
 
    Disables splitting last after compression. This mode is useful when custom split
    points need to stay the same. For example to huffmix results later.
 
-18. --pass#
+20. --pass#
 
    Multiple splitting last & recompression attempts to check if resulting deflate stream
    gets smaller. It will run # times or until no size was reduced in the last recompression
    attempt. This mode doesn't work when --lessmem or --nosplitlast is used, or when the
    compressed input is only 1 block long.
 
-19. --rw# and --rz#
+21. --rw# and --rz#
 
    Initial random W and Z for iterations. These parameters are 1 for W and 2 for Z
    by default and they are locked in original Zopfli. They are used to init
@@ -188,7 +194,7 @@ Description of new commands list in Zopfli KrzYmod:
    1 bit reduction when changing these parameters on --mui999 when previously
    the file was created doing as many as 99,999 unsucessful iteration.
 
-20. --rp
+22. --rp
 
    Use Restore Points. This mode let's Zopfli save special Restore Point files named
    Zopfli-[current input CRC32]-[C/R].lz77rp for resuming compression after Zopfli
@@ -199,7 +205,23 @@ Description of new commands list in Zopfli KrzYmod:
    to 100MB. Restore Points can take few times more than uncompressed data. Up to 2
    Restore Point files are used for given input, one for compression, one for recompression.
 
-21. --lessmem
+23. --t#
+
+   Use # threads for compression. Limited by number of blocks in stream as each
+   block is sent to a separate thread for compression. Most useful if there are many
+   blocks to compress. Will use more memory as each thread needs separate LZ77 block
+   store + cache, and main thread needs additional LZ77 temporary stores for
+   out-of-order blocks returned by threads that are then processed and merged when they
+   follow in-order block returned by given thread. Restore points are saved only after
+   in-order blocks are joined together into main LZ77 store, if You abort the work,
+   all out-of-order blocks in memory will be lost. Always uses one thread in
+   --lessmem mode.
+
+24. --idle
+
+   Run Zopfli in lowest priority to not slow down other processes.
+
+25. --lessmem
 
    By default Zopfli KrzYmod uses most of improved original Zopfli algorithm by
    keeping full input, output and LZ77 Store in memory.
@@ -207,7 +229,7 @@ Description of new commands list in Zopfli KrzYmod:
    usage for input, output and LZ77 Store at the cost of limited features.
    Splitting last, Recompression and Restore Points are not supported in this mode.
 
-22. --v#
+26. --v#
 
    This option is formerly known as just -v and it extends control over Zopfli
    verbosity. The default is 2 and it can be set from 0 (quiet) to 5 (most verbose):

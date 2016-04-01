@@ -44,6 +44,13 @@ void ZopfliCleanLZ77Store(ZopfliLZ77Store* store) {
   free(store->d_symbol);
   free(store->ll_counts);
   free(store->d_counts);
+  store->litlens   = 0;
+  store->dists     = 0;
+  store->pos       = 0;
+  store->ll_symbol = 0;
+  store->d_symbol  = 0;
+  store->ll_counts = 0;
+  store->d_counts  = 0;
 }
 
 static size_t CeilDiv(size_t a, size_t b) {
@@ -236,6 +243,7 @@ void ZopfliCleanBlockState(ZopfliBlockState* s) {
   if (s->lmc) {
     ZopfliCleanCache(s->lmc);
     free(s->lmc);
+    s->lmc = 0;
   }
 #endif
 }
