@@ -20,6 +20,7 @@ Author: jyrki.alakuijala@gmail.com (Jyrki Alakuijala)
 */
 
 #define BITSET(v,p) (((v)>>(p)) & 1)
+#define _XOPEN_SOURCE 500
 
 #include "deflate.h"
 
