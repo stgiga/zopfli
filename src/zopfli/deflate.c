@@ -1344,7 +1344,7 @@ typedef struct ZopfliThread {
   ZopfliLZ77Store store;
 } ZopfliThread;
 
-void *threading(void *a) {
+static void *threading(void *a) {
 
   int tries = 1;
   ZopfliThread *b = (ZopfliThread *)a;
@@ -1385,8 +1385,6 @@ void *threading(void *a) {
   } while(tries>1);
 
   b->is_running = 2;
-
-  pthread_exit(NULL);
 
   return 0;
 
@@ -1433,11 +1431,8 @@ DLL_PUBLIC void ZopfliDeflatePart(const ZopfliOptions* options, int btype, int f
   char* rpfile1 = (char*)malloc((sizeof(lz77file)+sizeof(lz77ext)+10) * sizeof(char));
   char* rpfile2 = (char*)malloc((sizeof(lz77file)+sizeof(lz77ext)+10) * sizeof(char));
   ZopfliLZ77Store lz77;
-  ZopfliThread *t;
-  pthread_t *thr;
-
-  t = malloc(sizeof(ZopfliThread) * options->numthreads);
-  thr = malloc(sizeof(pthread_t) * options->numthreads);
+  ZopfliThread *t = malloc(sizeof(ZopfliThread) * options->numthreads);
+  pthread_t *thr = malloc(sizeof(pthread_t) * options->numthreads);
 
   for(i=0;i<options->numthreads;++i)
    t[i].is_running=0;
@@ -1561,7 +1556,7 @@ DLL_PUBLIC void ZopfliDeflatePart(const ZopfliOptions* options, int btype, int f
           showcntr=0;
         }
         if(showcntr>9) {
-          if(!lastthread && options->numthreads>1) {
+          if(threadsrunning>1) {
             ++showthread;
             if(showthread>=options->numthreads) showthread=0;
           }
@@ -1597,7 +1592,6 @@ DLL_PUBLIC void ZopfliDeflatePart(const ZopfliOptions* options, int btype, int f
         if(threnum>=options->numthreads) threnum=0;
        }
        if(t[threnum].is_running==2) {
-        pthread_join(thr[threnum],NULL);
         if(options->tryall == 1) {
           bestperblock[t[threnum].iterations.block][0] = t[threnum].bestperblock[0];
           bestperblock[t[threnum].iterations.block][1] = t[threnum].bestperblock[1];
@@ -1743,7 +1737,7 @@ DLL_PUBLIC void ZopfliDeflatePart(const ZopfliOptions* options, int btype, int f
                     showcntr=0;
                   }
                   if(showcntr>9) {
-                    if(!lastthread && options->numthreads>1) {
+                    if(threadsrunning>1) {
                       ++showthread;
                       if(showthread>=options->numthreads) showthread=0;
                     }
@@ -1779,7 +1773,6 @@ DLL_PUBLIC void ZopfliDeflatePart(const ZopfliOptions* options, int btype, int f
                   if(threnum>=options->numthreads) threnum=0;
                 }
                 if(t[threnum].is_running==2) {
-                  pthread_join(thr[threnum],NULL);
                   if(options->tryall == 1) {
                     bestperblock2[t[threnum].iterations.block][0] = t[threnum].bestperblock[0];
                     bestperblock2[t[threnum].iterations.block][1] = t[threnum].bestperblock[1];
