@@ -4,7 +4,7 @@ CXX = g++
 CFLAGS = -W -Wall -Wextra -ansi -pedantic -lm -pthread
 CXXFLAGS = -W -Wall -Wextra -ansi -pedantic -std=gnu++11 -pthread
 
-ZDEFOPT = -Ofast
+ZDEFOPT = -Ofast -fno-ipa-cp-clone
 ZARMOPT = -O2
 ZADDOPT = -g0 -s -flto -fuse-linker-plugin -ffat-lto-objects -flto-compression-level=0 -finline-functions -funswitch-loops -fpredictive-commoning -ftree-loop-distribute-patterns -ftree-slp-vectorize -ffast-math -fomit-frame-pointer -ftracer -ftree-loop-ivcanon -ftree-loop-distribution -fselective-scheduling2 -fsel-sched-pipelining -fira-region=all -fira-hoist-pressure -free -fno-crossjumping -fno-cx-limited-range -fno-defer-pop -fno-function-cse -fno-rerun-cse-after-loop -fno-sched-interblock -fno-sched-last-insn-heuristic -fno-sched-spec -fno-sel-sched-pipelining-outer-loops -fno-tree-fre -fno-tree-loop-im -fno-zero-initialized-in-bss
 # -flto-partition=max - provides ~1% speed up on linux but doesn't work with mingw32 
