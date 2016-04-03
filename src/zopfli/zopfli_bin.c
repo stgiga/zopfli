@@ -24,7 +24,7 @@ data. By default it creates a .gz file. This tool can only compress, not
 decompress. Decompression can be done by any standard gzip, zlib or deflate
 decompressor.
 */
-
+#define _XOPEN_SOURCE 500
 #define _FILE_OFFSET_BITS 64
 
 #include <stdio.h>
@@ -1063,7 +1063,7 @@ int main(int argc, char* argv[]) {
           "  --zlib        output to zlib format\n\n");
       fprintf(stderr,
           "      MISCELLANEOUS:\n"
-          "  --t#          compress using # threads (d:1)\n"
+          "  --t#          compress using # threads, 0 = compat. (d:1)\n"
           "  --idle        use idle process priority\n"
           "  --lessmem     use less memory algorithm\n"
           "  --pass#       recompress last split points max # times (d: 0)\n"
@@ -1078,8 +1078,6 @@ int main(int argc, char* argv[]) {
   }
 
   if(options.verbose) VersionInfo();
-
-  if (options.numthreads < 1) options.numthreads = 1;
 
   if (options.numiterations < 1) {
     fprintf(stderr, "Error: --i parameter must be at least 1.\n");

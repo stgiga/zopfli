@@ -501,10 +501,18 @@ void ZopfliLZ77Optimal(ZopfliBlockState *s,
                    length_array, GetCostStat, (void*)&stats,
                    &currentstore);
     cost = ZopfliCalculateBlockSize(s->options, &currentstore, 0, currentstore.size, 2);
-    iterations->iteration = i;
-    iterations->cost = (int)cost;
+    if(s->options->numthreads) {
+      iterations->iteration = i;
+      iterations->cost = (int)cost;
+    } else if (s->options->verbose>4 || (s->options->verbose>2 && cost < bestcost)) {
+       fprintf(stderr, "Iteration %d: %d bit      \r", i, (int) cost);
+    }
     if (cost < bestcost) {
-      iterations->bestcost = (int)cost;
+      if(s->options->numthreads) {
+        iterations->bestcost = (int)cost;
+      } else if(!s->options->numthreads && s->options->verbose>3) {
+        fprintf(stderr, "\n");
+      }
       /* Start: Copy to the output store. */
       ZopfliCopyLZ77Store(&currentstore, store);
       CopyStats(&stats, &beststats);

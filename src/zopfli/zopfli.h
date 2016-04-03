@@ -21,6 +21,8 @@ Author: jyrki.alakuijala@gmail.com (Jyrki Alakuijala)
 #ifndef ZOPFLI_ZOPFLI_H_
 #define ZOPFLI_ZOPFLI_H_
 
+#define _XOPEN_SOURCE 500
+
 #include <stddef.h>
 
 #ifdef __cplusplus
@@ -146,7 +148,9 @@ typedef struct ZopfliOptions {
 
   /*
   Iterate multiple dynamic blocks at once using pthreads, aka.
-  multi-threading mode.
+  multi-threading mode. Passing 0 forces compatibility behavior
+  by running Block processing function with MASTER thread and
+  displaying old fashioned statistics.
   */
   unsigned numthreads;
 

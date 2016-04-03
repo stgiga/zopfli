@@ -20,6 +20,7 @@ Author: jyrki.alakuijala@gmail.com (Jyrki Alakuijala)
 */
 
 #define BITSET(v,p) (((v)>>(p)) & 1)
+#define _XOPEN_SOURCE 500
 
 #include "deflate.h"
 
@@ -1404,6 +1405,7 @@ static void ZopfliUseThreads(const ZopfliOptions* options,
   unsigned showthread = 0;
   unsigned threadsrunning = 0;
   unsigned threnum = 0;
+  unsigned numthreads = options->numthreads>0?options->numthreads:1;
   int neednext = 0;
   size_t nextblock = bkstart;
   size_t n, i;
@@ -1411,11 +1413,15 @@ static void ZopfliUseThreads(const ZopfliOptions* options,
   unsigned char lastthread = 0;
   unsigned char* blockdone = calloc(bkend+1,sizeof(unsigned char));
   pthread_t *thr = malloc(sizeof(pthread_t) * options->numthreads);
-  ZopfliThread *t = malloc(sizeof(ZopfliThread) * options->numthreads);
+  pthread_attr_t thr_attr;
+  ZopfliThread *t = malloc(sizeof(ZopfliThread) * numthreads);
   ZopfliLZ77Store *tempstore = malloc(sizeof(ZopfliLZ77Store) * (bkend+1));
 
-  for(i=0;i<options->numthreads;++i)
+  for(i=0;i<numthreads;++i)
    t[i].is_running=0;
+
+  pthread_attr_init(&thr_attr);
+  pthread_attr_setdetachstate(&thr_attr, PTHREAD_CREATE_DETACHED);
 
   for (i = bkstart; i <= bkend; ++i) {
     size_t start = i == 0 ? instart : (*splitpoints_uncompressed)[i - 1];
@@ -1423,7 +1429,7 @@ static void ZopfliUseThreads(const ZopfliOptions* options,
 
     do {
       neednext=0;
-      for(;threnum<options->numthreads;) {
+      for(;threnum<numthreads;) {
         if(t[threnum].is_running==1) {
           usleep(100000);
           if(t[showthread].is_running==1) {
@@ -1432,14 +1438,14 @@ static void ZopfliUseThreads(const ZopfliOptions* options,
                     t[showthread].iterations.cost,t[showthread].iterations.bestcost);
           } else {
             ++showthread;
-            if(showthread>=options->numthreads)
+            if(showthread>=numthreads)
               showthread=0;
             showcntr=0;
           }
           if(showcntr>9) {
             if(threadsrunning>1) {
               ++showthread;
-              if(showthread>=options->numthreads)
+              if(showthread>=numthreads)
                 showthread=0;
             }
             showcntr=0;
@@ -1447,7 +1453,7 @@ static void ZopfliUseThreads(const ZopfliOptions* options,
             ++showcntr;
           }
           ++threnum;
-          if(threnum>=options->numthreads)
+          if(threnum>=numthreads)
             threnum=0;
         }
         if(t[threnum].is_running==0) {
@@ -1462,16 +1468,20 @@ static void ZopfliUseThreads(const ZopfliOptions* options,
             t[threnum].iterations.cost = 0;
             t[threnum].iterations.iteration = 0;
             t[threnum].is_running = 1;
-            pthread_create(&thr[threnum], NULL, threading, &t[threnum]);
-            ++threadsrunning;
             PrintProgress(v, start, inend, i, bkend);
+            if(options->numthreads) {
+              pthread_create(&thr[threnum], &thr_attr, threading, &t[threnum]);
+            } else {
+              (*threading)(&t[threnum]);
+            }
+            ++threadsrunning;
             if(i>=bkend)
               lastthread = 1;
             else
               neednext=1;
           }
           ++threnum;
-          if(threnum>=options->numthreads)
+          if(threnum>=numthreads)
             threnum=0;
         }
         if(t[threnum].is_running==2) {
@@ -1514,7 +1524,7 @@ static void ZopfliUseThreads(const ZopfliOptions* options,
           t[threnum].is_running=0;
           --threadsrunning;
           ++threnum;
-          if(threnum>=options->numthreads) threnum=0;
+          if(threnum>=numthreads) threnum=0;
           if(threadsrunning==0 &&
             (neednext==1 || lastthread==1)) break;
         }

@@ -191,7 +191,7 @@ void ShowHelp() {
          "--rp:            use restore points\n"
          "--rw=[number]:   initial random W for iterations (1-65535, d: 1)\n"
          "--rz=[number]:   initial random Z for iterations (1-65535, d: 2)\n"
-         "--t=[number]:    compress using # threads (d:1)\n"
+         "--t=[number]:    compress using # threads, 0 = compat. (d:1)\n"
          "--idle           use idle process priority\n"
          "   more options available only in Zopfli\n"
          "\n"
@@ -272,7 +272,7 @@ printf("ZopfliPNG, a Portable Network Graphics (PNG) image optimizer.\n"
       } else if (name == "--alpha_cleaner") {
         for (size_t j = 0; j < value.size(); j++) {
           char f = value[j] - '0';
-          if(f >= 0 && <= 5) {
+          if(f >= 0 && f <= 5) {
             png_options.alpha_cleaner |= (1 << f);
           } else {
             printf("Unknown alpha cleaning method: %i\n", f);
@@ -324,7 +324,6 @@ printf("ZopfliPNG, a Portable Network Graphics (PNG) image optimizer.\n"
       } else if (name == "--idle") {
         IdlePriority();
       } else if (name == "--t") {
-        if (num < 1) num = 1;
         png_options.numthreads = num;
       } else if (name == "--splitting") {
         // ignored

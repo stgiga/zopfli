@@ -47,9 +47,9 @@ enum ZopfliPNGFilterStrategy {
   kStrategyDistinctBytes,
   kStrategyDistinctBigrams,
   kStrategyEntropy,
-  kStrategyPredefined,
   kStrategyBruteForce,
   kStrategyIncremental,
+  kStrategyPredefined,
   kStrategyGeneticAlgorithm,
   kNumFilterStrategies /* Not a strategy but used for the size of this enum */
 };
@@ -288,7 +288,9 @@ struct ZopfliPNGOptions {
 
   /*
   Iterate multiple dynamic blocks at once using pthreads, aka.
-  multi-threading mode.
+  multi-threading mode. Passing 0 forces compatibility behavior
+  by running Block processing function with MASTER thread and
+  displaying old fashioned statistics.
   */
   unsigned numthreads;
 };
