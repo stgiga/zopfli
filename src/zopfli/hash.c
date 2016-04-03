@@ -23,12 +23,51 @@ Author: jyrki.alakuijala@gmail.com (Jyrki Alakuijala)
 #define HASH_MASK 32767
 
 void ZopfliInitHash(size_t window_size, ZopfliHash* h) {
-  size_t i;
+  size_t i = 0;
 
   h->val = 0;
-  h->head = (int*)malloc(sizeof(*h->head) * 65536);
-  h->prev = (unsigned short*)malloc(sizeof(*h->prev) * window_size);
-  h->hashval = (int*)malloc(sizeof(*h->hashval) * window_size);
+
+/* 
+   Some systems may refuse to give memory to many line-by-line
+   mallocs called from threads, usually caused by memory fragmentation.
+   If we face such scenario, try again every second up to 60 failed
+   attempts in a row which will cause program abort.
+   Memory fragmentation is usually fixed by rebooting.
+*/
+  do {
+    h->head = (int*)malloc(sizeof(*h->head) * 65536);
+    h->prev = (unsigned short*)malloc(sizeof(*h->prev) * window_size);
+    h->hashval = (int*)malloc(sizeof(*h->hashval) * window_size);
+
+#ifdef ZOPFLI_HASH_SAME
+    h->same = (unsigned short*)calloc(window_size, sizeof(*h->same));
+#endif
+
+#ifdef ZOPFLI_HASH_SAME_HASH
+    h->val2 = 0;
+    h->head2 = (int*)malloc(sizeof(*h->head2) * 65536);
+    h->prev2 = (unsigned short*)malloc(sizeof(*h->prev2) * window_size);
+    h->hashval2 = (int*)malloc(sizeof(*h->hashval2) * window_size);
+#endif
+    if(h->head == NULL || h->prev == NULL || h->hashval == NULL
+#ifdef ZOPFLI_HASH_SAME
+    || h->same == NULL
+#endif
+#ifdef ZOPFLI_HASH_SAME_HASH
+    || h->head2 == NULL || h->prev2 == NULL || h->hashval2 == NULL
+#endif
+  ) {
+      ZopfliCleanHash(h);
+      fprintf(stderr,"Can't init hash (memory fragmentation?)  \n");
+      ++i;
+      if(i==60) exit(EXIT_FAILURE);
+      sleep(1);
+    } else {
+      i=0;
+    }
+  } while(i!=0);
+
+
   for (i = 0; i < 65536; i++) {
     h->head[i] = -1;  /* -1 indicates no head so far. */
   }
@@ -36,19 +75,7 @@ void ZopfliInitHash(size_t window_size, ZopfliHash* h) {
     h->prev[i] = i;  /* If prev[j] == j, then prev[j] is uninitialized. */
     h->hashval[i] = -1;
   }
-
-#ifdef ZOPFLI_HASH_SAME
-  h->same = (unsigned short*)malloc(sizeof(*h->same) * window_size);
-  for (i = 0; i < window_size; i++) {
-    h->same[i] = 0;
-  }
-#endif
-
 #ifdef ZOPFLI_HASH_SAME_HASH
-  h->val2 = 0;
-  h->head2 = (int*)malloc(sizeof(*h->head2) * 65536);
-  h->prev2 = (unsigned short*)malloc(sizeof(*h->prev2) * window_size);
-  h->hashval2 = (int*)malloc(sizeof(*h->hashval2) * window_size);
   for (i = 0; i < 65536; i++) {
     h->head2[i] = -1;
   }

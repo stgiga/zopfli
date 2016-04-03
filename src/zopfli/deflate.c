@@ -522,7 +522,7 @@ more efficiently. length containts the size of the histogram.
 static void OptimizeHuffmanForRle(unsigned int length, size_t* counts) {
   unsigned int i, k, stride;
   size_t symbol, sum, limit;
-  int* good_for_rle;
+  unsigned char* good_for_rle;
 
   /* 1) We don't want to touch the trailing zeros. We may break the
   rules of the format by adding more data in the distance codes. */
@@ -537,8 +537,7 @@ static void OptimizeHuffmanForRle(unsigned int length, size_t* counts) {
   }
   /* 2) Let's mark all population counts that already can be encoded
   with an rle code.*/
-  good_for_rle = (int*)malloc(length * sizeof(int));
-  for (i = 0; i < length; ++i) good_for_rle[i] = 0;
+  good_for_rle = (unsigned char*)calloc(length, 1);
 
   /* Let's not spoil any of the existing good rle codes.
   Mark any seq of 0's that is longer than 5 as a good_for_rle.
@@ -1389,6 +1388,148 @@ static void *threading(void *a) {
 
 }
 
+static void ZopfliUseThreads(const ZopfliOptions* options,
+                               ZopfliLZ77Store* lz77,
+                               const unsigned char* in,
+                               size_t instart, size_t inend,
+                               size_t bkstart, size_t bkend,
+                               size_t** splitpoints,
+                               size_t** splitpoints_uncompressed,
+                               unsigned char*** bestperblock,
+                               double *totalcost,
+                               const char* rpfile,
+                               unsigned long crc,
+                               unsigned char mode, int v) {
+  unsigned showcntr = 10;
+  unsigned showthread = 0;
+  unsigned threadsrunning = 0;
+  unsigned threnum = 0;
+  int neednext = 0;
+  size_t nextblock = bkstart;
+  size_t n, i;
+  double *tempcost = malloc(sizeof(double) * (bkend+1));
+  unsigned char lastthread = 0;
+  unsigned char* blockdone = calloc(bkend+1,sizeof(unsigned char));
+  pthread_t *thr = malloc(sizeof(pthread_t) * options->numthreads);
+  ZopfliThread *t = malloc(sizeof(ZopfliThread) * options->numthreads);
+  ZopfliLZ77Store *tempstore = malloc(sizeof(ZopfliLZ77Store) * (bkend+1));
+
+  for(i=0;i<options->numthreads;++i)
+   t[i].is_running=0;
+
+  for (i = bkstart; i <= bkend; ++i) {
+    size_t start = i == 0 ? instart : (*splitpoints_uncompressed)[i - 1];
+    size_t end = i == bkend ? inend : (*splitpoints_uncompressed)[i];
+
+    do {
+      neednext=0;
+      for(;threnum<options->numthreads;) {
+        if(t[threnum].is_running==1) {
+          usleep(100000);
+          if(t[showthread].is_running==1) {
+            fprintf(stderr,"{T#%d} BLOCK: %d - Iteration %d: %d bit [%d bit]         \r",
+                    showthread, ((int)t[showthread].iterations.block+1),t[showthread].iterations.iteration,
+                    t[showthread].iterations.cost,t[showthread].iterations.bestcost);
+          } else {
+            ++showthread;
+            if(showthread>=options->numthreads)
+              showthread=0;
+            showcntr=0;
+          }
+          if(showcntr>9) {
+            if(threadsrunning>1) {
+              ++showthread;
+              if(showthread>=options->numthreads)
+                showthread=0;
+            }
+            showcntr=0;
+          } else {
+            ++showcntr;
+          }
+          ++threnum;
+          if(threnum>=options->numthreads)
+            threnum=0;
+        }
+        if(t[threnum].is_running==0) {
+          if(lastthread == 0) {
+            t[threnum].options = options;
+            t[threnum].start = start;
+            t[threnum].end = end;
+            t[threnum].in = in;
+            t[threnum].cost = 0;
+            t[threnum].iterations.block = i;
+            t[threnum].iterations.bestcost = 0;
+            t[threnum].iterations.cost = 0;
+            t[threnum].iterations.iteration = 0;
+            t[threnum].is_running = 1;
+            pthread_create(&thr[threnum], NULL, threading, &t[threnum]);
+            ++threadsrunning;
+            PrintProgress(v, start, inend, i, bkend);
+            if(i>=bkend)
+              lastthread = 1;
+            else
+              neednext=1;
+          }
+          ++threnum;
+          if(threnum>=options->numthreads)
+            threnum=0;
+        }
+        if(t[threnum].is_running==2) {
+          if(options->tryall == 1) {
+            (*bestperblock)[t[threnum].iterations.block][0] = t[threnum].bestperblock[0];
+            (*bestperblock)[t[threnum].iterations.block][1] = t[threnum].bestperblock[1];
+            (*bestperblock)[t[threnum].iterations.block][2] = t[threnum].bestperblock[2];
+            (*bestperblock)[t[threnum].iterations.block][3] = t[threnum].bestperblock[3];
+          }
+          if(nextblock==t[threnum].iterations.block) {
+            *totalcost += t[threnum].cost;
+            ZopfliAppendLZ77Store(&t[threnum].store, lz77);
+            ZopfliCleanLZ77Store(&t[threnum].store);
+            if(t[threnum].iterations.block < bkend) (*splitpoints)[t[threnum].iterations.block] = lz77->size;
+            for(n=(nextblock+1);n<=i;++n) {
+              if(blockdone[n]==0) break;
+               ZopfliAppendLZ77Store(&tempstore[n], lz77);
+              ZopfliCleanLZ77Store(&tempstore[n]);
+              if(n < bkend) (*splitpoints)[n] = lz77->size;
+              *totalcost += tempcost[n];
+              blockdone[n]=0;
+              ++nextblock;
+            }
+            if(options->restorepoints && mui!=1) {
+              int rp_error;
+              if(nextblock==bkend) mode=1;
+              rp_error = SaveRestore(rpfile, &crc, &nextblock, &bkend, splitpoints,
+                                     splitpoints_uncompressed, totalcost,
+                                     mode, lz77, options->verbose);
+              ErrorRestore(rpfile, rp_error);
+            }
+            ++nextblock;
+          } else {
+            ZopfliInitLZ77Store(in,&tempstore[(t[threnum].iterations.block)]);
+            ZopfliCopyLZ77Store(&t[threnum].store, &tempstore[(t[threnum].iterations.block)]);
+            ZopfliCleanLZ77Store(&t[threnum].store);
+            tempcost[(t[threnum].iterations.block)] = t[threnum].cost;
+            blockdone[(t[threnum].iterations.block)] = 1;
+          }
+          t[threnum].is_running=0;
+          --threadsrunning;
+          ++threnum;
+          if(threnum>=options->numthreads) threnum=0;
+          if(threadsrunning==0 &&
+            (neednext==1 || lastthread==1)) break;
+        }
+        if(neednext==1) break;
+      } 
+    } while(threadsrunning>0 && neednext==0);
+  }
+
+  free(blockdone);
+  free(tempcost);
+  free(tempstore);
+  free(thr);
+  free(t);
+}
+
 /*
 Deflate a part, to allow ZopfliDeflate() to use multiple master blocks if
 needed.
@@ -1416,8 +1557,6 @@ DLL_PUBLIC void ZopfliDeflatePart(const ZopfliOptions* options, int btype, int f
   size_t npoints = 0;
   size_t* splitpoints = 0;
   double totalcost = 0;
-  unsigned showcntr = 10;
-  unsigned showthread = 0;
   int pass = 0;
   double alltimebest = 0;
   int rp_error = 0;
@@ -1430,11 +1569,6 @@ DLL_PUBLIC void ZopfliDeflatePart(const ZopfliOptions* options, int btype, int f
   char* rpfile1 = (char*)malloc((sizeof(lz77file)+sizeof(lz77ext)+10) * sizeof(char));
   char* rpfile2 = (char*)malloc((sizeof(lz77file)+sizeof(lz77ext)+10) * sizeof(char));
   ZopfliLZ77Store lz77;
-  ZopfliThread *t = malloc(sizeof(ZopfliThread) * options->numthreads);
-  pthread_t *thr = malloc(sizeof(pthread_t) * options->numthreads);
-
-  for(i=0;i<options->numthreads;++i)
-   t[i].is_running=0;
 
   /* If btype=2 is specified, it tries all block types. If a lesser btype is
   given, then however it forces that one. Neither of the lesser types needs
@@ -1527,120 +1661,11 @@ DLL_PUBLIC void ZopfliDeflatePart(const ZopfliOptions* options, int btype, int f
   }
 
   if(mode == 0) {
-    unsigned threadsrunning = 0;
-    int neednext = 0;
-    unsigned threnum = 0;
-    size_t nextblock = i;
-    size_t n;
-    unsigned char lastthread = 0;
-    unsigned char* blockdone = calloc(npoints+1,sizeof(unsigned char));
-    double *tempcost = malloc(sizeof(double) * (npoints+1));
-    ZopfliLZ77Store *tempstore = malloc(sizeof(ZopfliLZ77Store) * (npoints+1));
-    for (; i <= npoints; i++) {
-     size_t start = i == 0 ? instart : splitpoints_uncompressed[i - 1];
-     size_t end = i == npoints ? inend : splitpoints_uncompressed[i];
-
-     do {
-      neednext=0;
-      for(;threnum<options->numthreads;) {
-       if(t[threnum].is_running==1) {
-        usleep(100000);
-        if(t[showthread].is_running==1) {
-          fprintf(stderr,"{T#%d} BLOCK: %d - Iteration %d: %d bit [%d bit]         \r",
-                  showthread, ((int)t[showthread].iterations.block+1),t[showthread].iterations.iteration,
-                  t[showthread].iterations.cost,t[showthread].iterations.bestcost);
-        } else {
-          ++showthread;
-          if(showthread>=options->numthreads) showthread=0;
-          showcntr=0;
-        }
-        if(showcntr>9) {
-          if(threadsrunning>1) {
-            ++showthread;
-            if(showthread>=options->numthreads) showthread=0;
-          }
-          showcntr=0;
-        } else {
-          ++showcntr;
-        }
-        ++threnum;
-        if(threnum>=options->numthreads) threnum=0;
-       }
-       if(t[threnum].is_running==0) {
-        if(lastthread == 0) {
-         t[threnum].options = options;
-         t[threnum].start = start;
-         t[threnum].end = end;
-         t[threnum].in = in;
-         t[threnum].cost = 0;
-         t[threnum].iterations.block = i;
-         t[threnum].iterations.bestcost = 0;
-         t[threnum].iterations.cost = 0;
-         t[threnum].iterations.iteration = 0;
-         t[threnum].is_running = 1;
-         pthread_create(&thr[threnum], NULL, threading, &t[threnum]);
-         ++threadsrunning;
-         PrintProgress(v, start, inend, i, npoints);
-         if(i>=npoints) {
-          lastthread = 1;
-         } else {
-          neednext=1;
-         }
-        }
-        ++threnum;
-        if(threnum>=options->numthreads) threnum=0;
-       }
-       if(t[threnum].is_running==2) {
-        if(options->tryall == 1) {
-          bestperblock[t[threnum].iterations.block][0] = t[threnum].bestperblock[0];
-          bestperblock[t[threnum].iterations.block][1] = t[threnum].bestperblock[1];
-          bestperblock[t[threnum].iterations.block][2] = t[threnum].bestperblock[2];
-          bestperblock[t[threnum].iterations.block][3] = t[threnum].bestperblock[3];
-        }
-        if(nextblock==t[threnum].iterations.block) {
-         totalcost += t[threnum].cost;
-         ZopfliAppendLZ77Store(&t[threnum].store, &lz77);
-         ZopfliCleanLZ77Store(&t[threnum].store);
-         if(t[threnum].iterations.block < npoints) splitpoints[t[threnum].iterations.block] = lz77.size;
-         for(n=(nextblock+1);n<=i;++n) {
-           if(blockdone[n]==0) break;
-           ZopfliAppendLZ77Store(&tempstore[n], &lz77);
-           ZopfliCleanLZ77Store(&tempstore[n]);
-           if(n < npoints) splitpoints[n] = lz77.size;
-           totalcost += tempcost[n];
-           blockdone[n]=0;
-           ++nextblock;
-         }
-         if(options->restorepoints && mui!=1) {
-          rp_error = SaveRestore(rpfile1, &crc, &nextblock, &npoints, &splitpoints,
-                                 &splitpoints_uncompressed, &totalcost,
-                                 0, &lz77, options->verbose);
-          ErrorRestore(rpfile1, rp_error);
-         }
-         ++nextblock;
-        } else {
-         ZopfliInitLZ77Store(in,&tempstore[(t[threnum].iterations.block)]);
-         ZopfliCopyLZ77Store(&t[threnum].store, &tempstore[(t[threnum].iterations.block)]);
-         ZopfliCleanLZ77Store(&t[threnum].store);
-         tempcost[(t[threnum].iterations.block)] = t[threnum].cost;
-         blockdone[(t[threnum].iterations.block)] = 1;
-        }
-        t[threnum].is_running=0;
-        --threadsrunning;
-        ++threnum;
-        if(threnum>=options->numthreads) threnum=0;
-        if(threadsrunning==0 &&
-          (neednext==1 || lastthread==1)) break;
-       }
-       if(neednext==1) break;
-      }
-     } while(threadsrunning>0 && neednext==0);
-    }
+    ZopfliUseThreads(options, &lz77, in, instart, inend, i, npoints,
+                     &splitpoints, &splitpoints_uncompressed, &bestperblock,
+                     &totalcost,rpfile1,crc,mode,v);
 
     mode = 1;
-    free(blockdone);
-    free(tempcost);
-    free(tempstore);
   }
 
   alltimebest = totalcost;
@@ -1650,6 +1675,7 @@ DLL_PUBLIC void ZopfliDeflatePart(const ZopfliOptions* options, int btype, int f
     size_t* splitpoints2;
     size_t npoints2;
     double totalcost2;
+    unsigned char mode2 = 1;
     do {
       splitpoints2 = 0;
       npoints2 = 0;
@@ -1668,12 +1694,10 @@ DLL_PUBLIC void ZopfliDeflatePart(const ZopfliOptions* options, int btype, int f
       ++pass;
       if(pass <= options->pass) {
         size_t* splitpoints_uncompressed2 = 0;
-        size_t npointstemp = 0;
         size_t j = 0;
         ZopfliLZ77Store lz77temp;
         totalcost = 0;
         ZopfliInitLZ77Store(in, &lz77temp);
-
 
         if(options->restorepoints && pass==1) {
           unsigned char dummy;
@@ -1683,8 +1707,8 @@ DLL_PUBLIC void ZopfliDeflatePart(const ZopfliOptions* options, int btype, int f
           ErrorRestore(rpfile2, rp_error);
         }
 
-        if (v>2) fprintf(stderr," Recompressing, pass #%d.\n",pass);
-        if(npoints2 > 0) {
+        if(npoints2 > 0 && splitpoints_uncompressed2==0) {
+          size_t npointstemp = 0;
           size_t postemp = 0;
           for (i = 0; i < lz77.size; ++i) {
             size_t length = lz77.dists[i] == 0 ? 1 : lz77.litlens[i];
@@ -1694,8 +1718,10 @@ DLL_PUBLIC void ZopfliDeflatePart(const ZopfliOptions* options, int btype, int f
             }
             postemp += length;
           }
+          assert(npointstemp == npoints2);
         }
-        assert(npointstemp == npoints2);
+
+        if (v>2) fprintf(stderr," Recompressing, pass #%d.\n",pass);
 
         if(options->tryall == 1) {
           size_t n = 0, m;
@@ -1706,121 +1732,10 @@ DLL_PUBLIC void ZopfliDeflatePart(const ZopfliOptions* options, int btype, int f
           }
         }
 
-        {
-          unsigned threadsrunning = 0;
-          int neednext = 0;
-          unsigned threnum = 0;
-          size_t nextblock = j;
-          size_t n;
-          unsigned char lastthread = 0;
-          unsigned char* blockdone = calloc(npoints2+1,sizeof(unsigned char));
-          double *tempcost = malloc(sizeof(double) * (npoints2+1));
-          ZopfliLZ77Store *tempstore = malloc(sizeof(ZopfliLZ77Store) * (npoints2+1));
+        ZopfliUseThreads(options, &lz77temp, in, instart, inend, j, npoints2,
+                         &splitpoints2, &splitpoints_uncompressed2, &bestperblock2,
+                         &totalcost,rpfile2,crc,mode2,v);
 
-          for (i = j; i <= npoints2; ++i) {
-            size_t start = i == 0 ? instart : splitpoints_uncompressed2[i - 1];
-            size_t end = i == npoints2 ? inend : splitpoints_uncompressed2[i];
-
-            do {
-              neednext=0;
-              for(;threnum<options->numthreads;) {
-                if(t[threnum].is_running==1) {
-                  usleep(100000);
-                  if(t[showthread].is_running==1) {
-                    fprintf(stderr,"{T#%d} BLOCK: %d - Iteration %d: %d bit [%d bit]         \r",
-                    showthread, ((int)t[showthread].iterations.block+1),t[showthread].iterations.iteration,
-                    t[showthread].iterations.cost,t[showthread].iterations.bestcost);
-                  } else {
-                    ++showthread;
-                    if(showthread>=options->numthreads) showthread=0;
-                    showcntr=0;
-                  }
-                  if(showcntr>9) {
-                    if(threadsrunning>1) {
-                      ++showthread;
-                      if(showthread>=options->numthreads) showthread=0;
-                    }
-                    showcntr=0;
-                  } else {
-                    ++showcntr;
-                  }
-                  ++threnum;
-                  if(threnum>=options->numthreads) threnum=0;
-                }
-                if(t[threnum].is_running==0) {
-                  if(lastthread == 0) {
-                    t[threnum].options = options;
-                    t[threnum].start = start;
-                    t[threnum].end = end;
-                    t[threnum].in = in;
-                    t[threnum].cost = 0;
-                    t[threnum].iterations.block = i;
-                    t[threnum].iterations.bestcost = 0;
-                    t[threnum].iterations.cost = 0;
-                    t[threnum].iterations.iteration = 0;
-                    t[threnum].is_running = 1;
-                    pthread_create(&thr[threnum], NULL, threading, &t[threnum]);
-                    ++threadsrunning;
-                    PrintProgress(v, start, inend, i, npoints2);
-                    if(i>=npoints2) {
-                      lastthread = 1;
-                    } else {
-                      neednext=1;
-                    }
-                  }
-                  ++threnum;
-                  if(threnum>=options->numthreads) threnum=0;
-                }
-                if(t[threnum].is_running==2) {
-                  if(options->tryall == 1) {
-                    bestperblock2[t[threnum].iterations.block][0] = t[threnum].bestperblock[0];
-                    bestperblock2[t[threnum].iterations.block][1] = t[threnum].bestperblock[1];
-                    bestperblock2[t[threnum].iterations.block][2] = t[threnum].bestperblock[2];
-                    bestperblock2[t[threnum].iterations.block][3] = t[threnum].bestperblock[3];
-                  }
-                  if(nextblock==t[threnum].iterations.block) {
-                    totalcost += t[threnum].cost;
-                    ZopfliAppendLZ77Store(&t[threnum].store, &lz77temp);
-                    ZopfliCleanLZ77Store(&t[threnum].store);
-                    if(t[threnum].iterations.block < npoints2) splitpoints2[t[threnum].iterations.block] = lz77temp.size;
-                    for(n=(nextblock+1);n<=i;++n) {
-                      if(blockdone[n]==0) break;
-                      ZopfliAppendLZ77Store(&tempstore[n], &lz77temp);
-                      ZopfliCleanLZ77Store(&tempstore[n]);
-                      if(n < npoints2) splitpoints2[n] = lz77temp.size;
-                      totalcost += tempcost[n];
-                      blockdone[n]=0;
-                      ++nextblock;
-                    }
-                    if(options->restorepoints && mui!=1) {
-                      rp_error = SaveRestore(rpfile2, &crc, &nextblock, &npoints2, &splitpoints2,
-                                             &splitpoints_uncompressed2, &totalcost,
-                                             1, &lz77temp, options->verbose);
-                      ErrorRestore(rpfile1, rp_error);
-                    }
-                    ++nextblock;
-                  } else {
-                    ZopfliInitLZ77Store(in,&tempstore[(t[threnum].iterations.block)]);
-                    ZopfliCopyLZ77Store(&t[threnum].store, &tempstore[(t[threnum].iterations.block)]);
-                    ZopfliCleanLZ77Store(&t[threnum].store);
-                    tempcost[(t[threnum].iterations.block)] = t[threnum].cost;
-                    blockdone[(t[threnum].iterations.block)] = 1;
-                  }
-                  t[threnum].is_running=0;
-                  --threadsrunning;
-                  ++threnum;
-                  if(threnum>=options->numthreads) threnum=0;
-                  if(threadsrunning==0 &&
-                    (neednext==1 || lastthread==1)) break;
-                }
-                if(neednext==1) break;
-              }
-            } while(threadsrunning>0 && neednext==0);
-          }
-          free(blockdone);
-          free(tempcost);
-          free(tempstore);
-        }
         if (v>2) fprintf(stderr,"!! RECOMPRESS: ");
         if(totalcost < alltimebest) {
           if (v>2) fprintf(stderr,"Smaller (%lu bit < %lu bit) !\n",(unsigned long)totalcost,(unsigned long)alltimebest);
@@ -1829,6 +1744,7 @@ DLL_PUBLIC void ZopfliDeflatePart(const ZopfliOptions* options, int btype, int f
           ZopfliCleanLZ77Store(&lz77temp);
 
           if(options->restorepoints && mui!=1) {
+            rp_error = 10;
             unlink(rpfile1);
             if(rename(rpfile2,rpfile1)) rp_error=11;
             ErrorRestore(rpfile1, rp_error);
@@ -1950,8 +1866,6 @@ DLL_PUBLIC void ZopfliDeflatePart(const ZopfliOptions* options, int btype, int f
   freeArray(&bestperblock, npoints+1);
   free(rpfile1);
   free(rpfile2);
-  free(t);
-  free(thr);
 
 }
 
