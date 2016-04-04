@@ -24,9 +24,8 @@ data. By default it creates a .gz file. This tool can only compress, not
 decompress. Decompression can be done by any standard gzip, zlib or deflate
 decompressor.
 */
-#define _XOPEN_SOURCE 500
-#define _FILE_OFFSET_BITS 64
 
+#include "defines.h"
 #include <stdio.h>
 #include <errno.h>
 #include <signal.h>
@@ -60,7 +59,6 @@ static void IdlePriority() {
 #include "util.h"
 #include "inthandler.h"
 #include "deflate.h"
-
 #include "adler.h"
 #include "crc32.h"
 #include "blocksplitter.h"

@@ -17,9 +17,9 @@ Author: lode.vandevenne@gmail.com (Lode Vandevenne)
 Author: jyrki.alakuijala@gmail.com (Jyrki Alakuijala)
 */
 
+#include "defines.h"
 #include "crc32.h"
 #include "util.h"
-#include "dllspec.h"
 
 /* Table of CRCs of all 8-bit messages. */
 static unsigned long crc_table[256];

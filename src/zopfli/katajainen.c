@@ -23,6 +23,7 @@ Bounded package merge algorithm, based on the paper
 Jyrki Katajainen, Alistair Moffat, Andrew Turpin".
 */
 
+#include "defines.h"
 #include "katajainen.h"
 #include <stdlib.h>
 

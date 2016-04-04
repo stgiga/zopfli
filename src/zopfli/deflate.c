@@ -19,24 +19,18 @@ Author: lode.vandevenne@gmail.com (Lode Vandevenne)
 Author: jyrki.alakuijala@gmail.com (Jyrki Alakuijala)
 */
 
-#define BITSET(v,p) (((v)>>(p)) & 1)
-#define _XOPEN_SOURCE 500
-
+#include "defines.h"
 #include "deflate.h"
 
 #include <assert.h>
 #include <stdio.h>
 #include <pthread.h>
-
-/* #if !(_WIN32) */
 #include <unistd.h>
-/* #endif */
 
 #include "inthandler.h"
 #include "blocksplitter.h"
 #include "squeeze.h"
 #include "tree.h"
-#include "dllspec.h"
 #include "crc32.h"
 
 static size_t CeilDiv(size_t a, size_t b) {
@@ -1160,23 +1154,8 @@ static int LoadRestore(const char* infile, unsigned long* crc,
     b += freadst(&lz77restore.d_counts[j], sizetsize1, 1, file);
 
   fclose(file);
-  if(v>4) {
-    fprintf(stderr,">------------------------\n"
-                   ">  RP STATE LOADED\n"
-                   ">------------------------\n"
-                   "> npoints:     %d\n"
-                   "> i:           %d\n"
-                   "> totalcost:   %.0f\n"
-                   "> mode:        %d\n"
-                   "> llsize:      %d\n"
-                   "> dsize:       %d\n"
-                   "> lz77.size:   %d\n"
-                   ">------------------------\n"
-                   ">   SIZE: %d bytes\n"
-                   ">------------------------\n",
-    (int)*npoints,(int)*i,*totalcost,(int)*mode,
-    (int)llsize,(int)dsize,(int)lz77restore.size,(int)b);
-  }
+  if(v>4)
+    fprintf(stderr,">> RP STATE LOADED   |   SIZE %d bytes   \n", (int)b);
   ZopfliAppendLZ77Store(&lz77restore, lz77);
   ZopfliCleanLZ77Store(&lz77restore);
   return 0;
@@ -1255,23 +1234,8 @@ static int SaveRestore(const char* infile, unsigned long* crc,
   for(j = 0; j < dsize; ++j)
     b += fwrite(&lz77->d_counts[j], sizetsize1, 1, file) * sizetsize1;
   fclose(file);
-  if(v>4) {
-    fprintf(stderr,"<------------------------\n"
-                   "<  RP STATE SAVED\n"
-                   "<------------------------\n"
-                   "< npoints:     %d\n"
-                   "< i:           %d\n"
-                   "< totalcost:   %.0f\n"
-                   "< mode:        %d\n"
-                   "< llsize:      %d\n"
-                   "< dsize:       %d\n"
-                   "< lz77.size:   %d\n"
-                   "<------------------------\n"
-                   "<   SIZE: %d bytes\n"
-                   "<------------------------\n",
-    (int)*npoints,(int)k,*totalcost,(int)mode,
-    (int)llsize,(int)dsize,(int)lz77->size,(int)b);
-  }
+  if(v>4)
+    fprintf(stderr,"<< RP STATE SAVED   |   SIZE: %d bytes   \n",(int)b);
   return 10;
 }
 

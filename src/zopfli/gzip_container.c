@@ -18,6 +18,7 @@ Author: lode.vandevenne@gmail.com (Lode Vandevenne)
 Author: jyrki.alakuijala@gmail.com (Jyrki Alakuijala)
 */
 
+#include "defines.h"
 #include "gzip_container.h"
 #include "util.h"
 #include "crc32.h"

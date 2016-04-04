@@ -18,6 +18,7 @@ Author: lode.vandevenne@gmail.com (Lode Vandevenne)
 Author: jyrki.alakuijala@gmail.com (Jyrki Alakuijala)
 */
 
+#include "defines.h"
 #include "squeeze.h"
 
 #include <assert.h>

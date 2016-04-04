@@ -18,14 +18,13 @@ Author: lode.vandevenne@gmail.com (Lode Vandevenne)
 Author: jyrki.alakuijala@gmail.com (Jyrki Alakuijala)
 */
 
+#include "defines.h"
 #include "zopfli.h"
-
 #include "deflate.h"
 #include "gzip_container.h"
 #include "zip_container.h"
 #include "zlib_container.h"
 #include "inthandler.h"
-#include "dllspec.h"
 #include <stdio.h>
 
 void intHandler(int exit_code);

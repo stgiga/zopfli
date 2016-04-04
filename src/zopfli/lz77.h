@@ -125,7 +125,7 @@ void ZopfliFindLongestMatch(
 Verifies if length and dist are indeed valid, only used for assertion.
 */
 void ZopfliVerifyLenDist(const unsigned char* data, size_t datasize, size_t pos,
-                         unsigned short dist, unsigned short length);
+                         unsigned short dist, unsigned short length) __attribute__((pure));
 
 /*
 Does LZ77 using an algorithm similar to gzip, with lazy matching, rather than

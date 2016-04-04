@@ -17,8 +17,8 @@ Author: lode.vandevenne@gmail.com (Lode Vandevenne)
 Author: jyrki.alakuijala@gmail.com (Jyrki Alakuijala)
 */
 
+#include "defines.h"
 #include "adler.h"
-#include "dllspec.h"
 
 /* Calculates the adler32 checksum of the data */
 

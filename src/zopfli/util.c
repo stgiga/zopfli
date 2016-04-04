@@ -18,8 +18,8 @@ Author: lode.vandevenne@gmail.com (Lode Vandevenne)
 Author: jyrki.alakuijala@gmail.com (Jyrki Alakuijala)
 */
 
+#include "defines.h"
 #include "util.h"
-
 #include "zopfli.h"
 
 /* __has_builtin available in clang */

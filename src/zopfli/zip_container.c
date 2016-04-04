@@ -18,10 +18,10 @@ Author: lode.vandevenne@gmail.com (Lode Vandevenne)
 Author: jyrki.alakuijala@gmail.com (Jyrki Alakuijala)
 */
 
+#include "defines.h"
 #include "util.h"
 #include "zip_container.h"
 #include "crc32.h"
-
 #include "deflate.h"
 
 /*

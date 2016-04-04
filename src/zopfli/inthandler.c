@@ -1,3 +1,4 @@
+#include "defines.h"
 #include <stdio.h>
 #include "inthandler.h"
 

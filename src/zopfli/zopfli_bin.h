@@ -21,8 +21,6 @@ Author: jyrki.alakuijala@gmail.com (Jyrki Alakuijala)
 #ifndef ZOPFLI_BIN_H_
 #define ZOPFLI_BIN_H_
 
-#define _XOPEN_SOURCE 500
-
 /*
 Options used by BIN only.
 */

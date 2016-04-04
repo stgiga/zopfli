@@ -1,11 +1,20 @@
 /*
 Copyright 2016 Mr_KrzYch00. All Rights Reserved.
 
-Implement OS-based DLL functions visibility.
+Define some additional information for compiler
+required by Zopfli KrzYmod.
 */
 
-#ifndef DLLSPEC_H_
-#define DLLSPEC_H_
+#ifndef DEFINES_H_
+#define DEFINES_H_
+
+#ifndef _THREAD_SAFE
+#define _THREAD_SAFE
+#endif
+
+#if (_XOPEN_SOURCE<500)
+#define _XOPEN_SOURCE 500
+#endif
 
 #if defined _WIN32 || defined __CYGWIN__
  #ifdef __GNUC__
@@ -20,5 +29,9 @@ Implement OS-based DLL functions visibility.
   #define DLL_PUBLIC
  #endif
 #endif
+
+#define _FILE_OFFSET_BITS 64
+
+#define BITSET(v,p) (((v)>>(p)) & 1)
 
 #endif

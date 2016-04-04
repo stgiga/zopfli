@@ -21,8 +21,6 @@ Author: jyrki.alakuijala@gmail.com (Jyrki Alakuijala)
 #ifndef ZOPFLI_ZOPFLI_H_
 #define ZOPFLI_ZOPFLI_H_
 
-#define _XOPEN_SOURCE 500
-
 #include <stddef.h>
 
 #ifdef __cplusplus
