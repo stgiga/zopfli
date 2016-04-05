@@ -284,8 +284,8 @@ static size_t EncodeTree(const unsigned* ll_lengths,
   result_size += clcounts[18] * 7;
 
   /* Note: in case of "size_only" these are null pointers so no effect. */
-  free(rle);
   free(rle_bits);
+  free(rle);
 
   return result_size;
 }
@@ -1277,9 +1277,9 @@ static void PrintProgress(int v, size_t start, size_t inend, size_t i, size_t np
 }
 
 static void freeArray(unsigned char ***a, int m) {
-  int i = 0;
+  int i = m-1;
   if(*a == NULL) return;
-  for (; i < m; ++i) {
+  for (; i >= 0; --i) {
     free((*a)[i]);
     (*a)[i]=0;
   }
@@ -1434,7 +1434,7 @@ static void ZopfliUseThreads(const ZopfliOptions* options,
             t[threnum].is_running = 1;
             PrintProgress(v, start, inend, i, bkend);
             if(options->numthreads) {
-              pthread_create(&thr[threnum], &thr_attr, threading, &t[threnum]);
+              pthread_create(&thr[threnum], &thr_attr, threading, (void *)&t[threnum]);
             } else {
               (*threading)(&t[threnum]);
             }
@@ -1498,10 +1498,10 @@ static void ZopfliUseThreads(const ZopfliOptions* options,
   }
 
   free(blockdone);
-  free(tempcost);
   free(tempstore);
-  free(thr);
   free(t);
+  free(thr);
+  free(tempcost);
 }
 
 /*
@@ -1838,8 +1838,8 @@ DLL_PUBLIC void ZopfliDeflatePart(const ZopfliOptions* options, int btype, int f
     }
   }
   freeArray(&bestperblock, npoints+1);
-  free(rpfile1);
   free(rpfile2);
+  free(rpfile1);
 
 }
 
@@ -1902,8 +1902,8 @@ DLL_PUBLIC void ZopfliDeflate(const ZopfliOptions* options, int btype, int final
     }
     free(finalsp->splitpoints);
   }
-  free(originalsp);
   free(finalsp);
+  free(originalsp);
 #endif
   if(options->verbose>1) PrintSummary(insize,0,*outsize-offset);
 }

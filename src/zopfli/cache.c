@@ -64,12 +64,12 @@ void ZopfliInitCache(size_t blocksize, ZopfliLongestMatchCache* lmc) {
 }
 
 void ZopfliCleanCache(ZopfliLongestMatchCache* lmc) {
-  free(lmc->length);
-  free(lmc->dist);
   free(lmc->sublen);
-  lmc->length = 0;
-  lmc->dist   = 0;
+  free(lmc->dist);
+  free(lmc->length);
   lmc->sublen = 0;
+  lmc->dist   = 0;
+  lmc->length = 0;
 }
 
 void ZopfliSublenToCache(const unsigned short* sublen,

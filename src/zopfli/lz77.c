@@ -38,20 +38,20 @@ void ZopfliInitLZ77Store(const unsigned char* data, ZopfliLZ77Store* store) {
 }
 
 void ZopfliCleanLZ77Store(ZopfliLZ77Store* store) {
-  free(store->litlens);
-  free(store->dists);
-  free(store->pos);
-  free(store->ll_symbol);
-  free(store->d_symbol);
-  free(store->ll_counts);
   free(store->d_counts);
-  store->litlens   = 0;
-  store->dists     = 0;
-  store->pos       = 0;
-  store->ll_symbol = 0;
-  store->d_symbol  = 0;
-  store->ll_counts = 0;
   store->d_counts  = 0;
+  free(store->ll_counts);
+  store->ll_counts = 0;
+  free(store->d_symbol);
+  store->d_symbol  = 0;
+  free(store->ll_symbol);
+  store->ll_symbol = 0;
+  free(store->pos);
+  store->pos       = 0;
+  free(store->dists);
+  store->dists     = 0;
+  free(store->litlens);
+  store->litlens   = 0;
 }
 
 static size_t CeilDiv(size_t a, size_t b) {
@@ -557,7 +557,7 @@ the program, by simply passing --lazy switch.
 */
 void ZopfliLZ77Greedy(ZopfliBlockState* s, const unsigned char* in,
                       size_t instart, size_t inend,
-                      ZopfliLZ77Store* store) {
+                      ZopfliLZ77Store* store, ZopfliHash *h) {
   size_t i = 0, j;
   unsigned short leng;
   unsigned short dist;
@@ -565,9 +565,6 @@ void ZopfliLZ77Greedy(ZopfliBlockState* s, const unsigned char* in,
   size_t windowstart = instart > ZOPFLI_WINDOW_SIZE
       ? instart - ZOPFLI_WINDOW_SIZE : 0;
   unsigned short dummysublen[259];
-
-  ZopfliHash hash;
-  ZopfliHash* h = &hash;
 
   /* Lazy matching. */
   unsigned prev_length = 0;
@@ -641,6 +638,4 @@ void ZopfliLZ77Greedy(ZopfliBlockState* s, const unsigned char* in,
       ZopfliUpdateHash(in, i, inend, h);
     }
   }
-
-  ZopfliCleanHash(h);
 }

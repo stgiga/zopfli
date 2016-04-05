@@ -63,8 +63,8 @@ void ZopfliLengthsToSymbols(const unsigned* lengths, size_t n, unsigned maxbits,
     }
   }
 
-  free(bl_count);
   free(next_code);
+  free(bl_count);
 }
 
 void ZopfliCalculateEntropy(const size_t* count, size_t n, double* bitlengths) {

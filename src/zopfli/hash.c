@@ -28,6 +28,38 @@ void ZopfliInitHash(size_t window_size, ZopfliHash* h) {
 
   h->val = 0;
 
+  for (i = 0; i < 65536; ++i) {
+    h->head[i] = -1;  /* -1 indicates no head so far. */
+  }
+  for (i = 0; i < window_size; ++i) {
+    h->prev[i] = i;  /* If prev[j] == j, then prev[j] is uninitialized. */
+    h->hashval[i] = -1;
+  }
+
+#ifdef ZOPFLI_HASH_SAME
+  for (i = 0; i < window_size; ++i) {
+    h->same[i] = 0;
+  }
+#endif
+
+#ifdef ZOPFLI_HASH_SAME_HASH
+  h->val2 = 0;
+  for (i = 0; i < 65536; ++i) {
+    h->head2[i] = -1;
+  }
+  for (i = 0; i < window_size; ++i) {
+    h->prev2[i] = i;
+    h->hashval2[i] = -1;
+  }
+#endif
+
+}
+
+void ZopfliMallocHash(size_t window_size, ZopfliHash* h) {
+  size_t i = 0;
+
+  h->val = 0;
+
 /* 
    Some systems may refuse to give memory to many line-by-line
    mallocs called from threads, usually caused by memory fragmentation.
@@ -41,11 +73,10 @@ void ZopfliInitHash(size_t window_size, ZopfliHash* h) {
     h->hashval = (int*)malloc(sizeof(*h->hashval) * window_size);
 
 #ifdef ZOPFLI_HASH_SAME
-    h->same = (unsigned short*)calloc(window_size, sizeof(*h->same));
+    h->same = (unsigned short*)malloc(sizeof(*h->same) * window_size);
 #endif
 
 #ifdef ZOPFLI_HASH_SAME_HASH
-    h->val2 = 0;
     h->head2 = (int*)malloc(sizeof(*h->head2) * 65536);
     h->prev2 = (unsigned short*)malloc(sizeof(*h->prev2) * window_size);
     h->hashval2 = (int*)malloc(sizeof(*h->hashval2) * window_size);
@@ -59,55 +90,39 @@ void ZopfliInitHash(size_t window_size, ZopfliHash* h) {
 #endif
   ) {
       ZopfliCleanHash(h);
-      fprintf(stderr,"Can't init hash (memory fragmentation?)  \n");
       ++i;
-      if(i==60) exit(EXIT_FAILURE);
+      if(i==10) {
+        fprintf(stderr,"Couldn't init hash (out of memory?)  \n");
+        exit(EXIT_FAILURE);
+      }
       sleep(1);
     } else {
       i=0;
     }
   } while(i!=0);
-
-
-  for (i = 0; i < 65536; i++) {
-    h->head[i] = -1;  /* -1 indicates no head so far. */
-  }
-  for (i = 0; i < window_size; i++) {
-    h->prev[i] = i;  /* If prev[j] == j, then prev[j] is uninitialized. */
-    h->hashval[i] = -1;
-  }
-#ifdef ZOPFLI_HASH_SAME_HASH
-  for (i = 0; i < 65536; i++) {
-    h->head2[i] = -1;
-  }
-  for (i = 0; i < window_size; i++) {
-    h->prev2[i] = i;
-    h->hashval2[i] = -1;
-  }
-#endif
 }
 
 void ZopfliCleanHash(ZopfliHash* h) {
-  free(h->head);
-  free(h->prev);
-  free(h->hashval);
-  h->head     = 0;
-  h->prev     = 0;
-  h->hashval  = 0;
-
 #ifdef ZOPFLI_HASH_SAME_HASH
-  free(h->head2);
-  free(h->prev2);
   free(h->hashval2);
-  h->head2    = 0;
-  h->prev2    = 0;
   h->hashval2 = 0;
+  free(h->prev2);
+  h->prev2    = 0;
+  free(h->head2);
+  h->head2    = 0;
 #endif
 
 #ifdef ZOPFLI_HASH_SAME
   free(h->same);
   h->same     = 0;
 #endif
+
+  free(h->hashval);
+  h->hashval  = 0;
+  free(h->prev);
+  h->prev     = 0;
+  free(h->head);
+  h->head     = 0;
 }
 
 /*

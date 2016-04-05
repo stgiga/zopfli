@@ -865,8 +865,8 @@ static void CompressMultiFile(ZopfliOptions* options, const ZopfliBinOptions* bi
       fprintf(stderr,"Error: couldn't add %s to archive -- next.\n",filesindir[i]);
     }
 
-    free(filesindir[i]);
     free(fileindir);
+    free(filesindir[i]);
     fileindir = 0;
 
   }
@@ -875,8 +875,8 @@ static void CompressMultiFile(ZopfliOptions* options, const ZopfliBinOptions* bi
 
   RenameFile(tempfilename,outfilename);
 
-  free(filesindir);
   free(tempfilename);
+  free(filesindir);
     
 }
 
