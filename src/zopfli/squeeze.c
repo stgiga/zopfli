@@ -221,10 +221,9 @@ static double GetBestLengths(ZopfliBlockState *s,
                              size_t instart, size_t inend,
                              CostModelFun* costmodel, void* costcontext,
                              unsigned short* length_array,
-                             ZopfliHash *h) {
+                             ZopfliHash *h, double *costs) {
   /* Best cost to get here so far. */
   size_t blocksize = inend - instart;
-  double* costs;
   size_t i = 0, k;
   unsigned short leng;
   unsigned short dist;
@@ -235,9 +234,6 @@ static double GetBestLengths(ZopfliBlockState *s,
   double mincost = GetCostModelMinCost(costmodel, costcontext);
 
   if (instart == inend) return 0;
-
-  costs = (double*)malloc(sizeof(double) * (blocksize + 1));
-  if (!costs) exit(-1); /* Allocation failed. */
 
   ZopfliInitHash(ZOPFLI_WINDOW_SIZE, h);
   ZopfliWarmupHash(in, windowstart, inend, h);
@@ -307,8 +303,6 @@ static double GetBestLengths(ZopfliBlockState *s,
 
   assert(costs[blocksize] >= 0);
   result = costs[blocksize];
-
-  free(costs);
 
   return result;
 }
@@ -437,9 +431,9 @@ static double LZ77OptimalRun(ZopfliBlockState* s,
     unsigned short** path, size_t* pathsize,
     unsigned short* length_array, CostModelFun* costmodel,
     void* costcontext, ZopfliLZ77Store* store,
-    ZopfliHash* h) {
+    ZopfliHash* h, double *costs) {
   double cost = GetBestLengths(
-      s, in, instart, inend, costmodel, costcontext, length_array, h);
+      s, in, instart, inend, costmodel, costcontext, length_array, h, costs);
   free(*path);
   *path = 0;
   *pathsize = 0;
@@ -468,6 +462,7 @@ void ZopfliLZ77Optimal(ZopfliBlockState *s,
   unsigned int i;
   unsigned int fails=0;
   double cost;
+  double *costs = (double*)malloc(sizeof(double) * (blocksize + 1));
   double bestcost = ZOPFLI_LARGE_FLOAT;
   double lastcost = 0;
   /* Try randomizing the costs a bit once the size stabilizes. */
@@ -477,6 +472,7 @@ void ZopfliLZ77Optimal(ZopfliBlockState *s,
   ZopfliHash* h = &hash;
 
   if (!length_array) exit(-1); /* Allocation failed. */
+  if (!costs) exit(-1); /* Allocation failed. */
 
   InitRanState(&ran_state,s->options->ranstatew,s->options->ranstatez);
   InitStats(&stats);
@@ -497,7 +493,7 @@ void ZopfliLZ77Optimal(ZopfliBlockState *s,
     ZopfliInitLZ77Store(in, &currentstore);
     LZ77OptimalRun(s, in, instart, inend, &path, &pathsize,
                    length_array, GetCostStat, (void*)&stats,
-                   &currentstore, h);
+                   &currentstore, h, costs);
     cost = ZopfliCalculateBlockSize(s->options, &currentstore, 0, currentstore.size, 2);
     if(s->options->numthreads) {
       iterations->iteration = i;
@@ -551,6 +547,7 @@ void ZopfliLZ77Optimal(ZopfliBlockState *s,
   }
 
   free(path);
+  free(costs);
   free(length_array);
   ZopfliCleanHash(h);
   ZopfliCleanLZ77Store(&currentstore);
@@ -567,11 +564,13 @@ void ZopfliLZ77OptimalFixed(ZopfliBlockState *s,
       (unsigned short*)malloc(sizeof(unsigned short) * (blocksize + 1));
   unsigned short* path = 0;
   size_t pathsize = 0;
+  double *costs = (double*)malloc(sizeof(double) * (blocksize + 1));
   ZopfliHash hash;
   ZopfliHash* h = &hash;
   ZopfliMallocHash(ZOPFLI_WINDOW_SIZE, h);
 
   if (!length_array) exit(-1); /* Allocation failed. */
+  if (!costs) exit(-1); /* Allocation failed. */
 
   s->blockstart = instart;
   s->blockend = inend;
@@ -579,9 +578,10 @@ void ZopfliLZ77OptimalFixed(ZopfliBlockState *s,
   /* Shortest path for fixed tree This one should give the shortest possible
   result for fixed tree, no repeated runs are needed since the tree is known. */
   LZ77OptimalRun(s, in, instart, inend, &path, &pathsize,
-                 length_array, GetCostFixed, 0, store, h);
+                 length_array, GetCostFixed, 0, store, h, costs);
 
   ZopfliCleanHash(h);
   free(path);
+  free(costs);
   free(length_array);
 }
