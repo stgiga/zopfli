@@ -272,7 +272,7 @@ printf("ZopfliPNG, a Portable Network Graphics (PNG) image optimizer.\n"
         always_zopflify = true;
       } else if (name == "--alpha_cleaner") {
         for (size_t j = 0; j < value.size(); j++) {
-          char f = value[j] - '0';
+          signed char f = value[j] - '0';
           if (f >= 0 && f <= 5) {
             png_options.lossy_transparent |= (1 << f);
           } else {
