@@ -1394,7 +1394,7 @@ static void ZopfliUseThreads(const ZopfliOptions* options,
     do {
       neednext=0;
       for(;threnum<numthreads;) {
-        if(t[threnum].is_running==1) {
+        if(t[threnum].is_running==1 && options->verbose>2) {
           usleep(100000);
           if(t[showthread].is_running==1) {
             unsigned calci, thrprogress;

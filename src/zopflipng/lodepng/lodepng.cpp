@@ -2,6 +2,7 @@
 LodePNG version 20160124
 
 Copyright (c) 2005-2016 Lode Vandevenne
+Copyright 2016 Aaron Kaluszka. All Rights Reserved.
 
 This software is provided 'as-is', without any express or implied
 warranty. In no event will the authors be held liable for any damages
@@ -5132,12 +5133,14 @@ static float flog2(float f)
   return result + 1.442695f * (f * f * f / 3 - 3 * f * f / 2 + 3 * f - 1.83333f);
 }
 
-static void InitXORShift128Plus(uint64_t* s) {
+static void initRandomUInt64(uint64_t* s) {
+  /* xorshift+ requires 128 bits of state */
   s[0] = 1;
   s[1] = 2;
 }
 
-static uint64_t XORShift128Plus(uint64_t* s) {
+/* xorshift+ pseudorandom number generator */
+static uint64_t randomUInt64(uint64_t* s) {
   uint64_t x = s[0];
   uint64_t const y = s[1];
   s[0] = y;
@@ -5146,8 +5149,9 @@ static uint64_t XORShift128Plus(uint64_t* s) {
   return s[1] + y;
 }
 
-static double XORShift128PlusNorm(uint64_t* s) {
-  return double(XORShift128Plus(s)) / UINT64_MAX;
+/* generate random number between 0 and 1 */
+static double randomDecimal(uint64_t* s) {
+  return double(randomUInt64(s)) / UINT64_MAX;
 }
 
 static unsigned filter(unsigned char* out, const unsigned char* in, unsigned w, unsigned h,
@@ -5169,7 +5173,7 @@ static unsigned filter(unsigned char* out, const unsigned char* in, unsigned w, 
   unsigned error = 0;
   LodePNGFilterStrategy strategy = settings->filter_strategy;
   uint64_t r[2];
-  InitXORShift128Plus(r);
+  initRandomUInt64(r);
 
   /*
   There is a heuristic called the minimum sum of absolute differences heuristic, suggested by the PNG standard:
@@ -5596,22 +5600,22 @@ static unsigned filter(unsigned char* out, const unsigned char* in, unsigned w, 
           /*tournament selection*/
           /*parent 1*/
           selection_size = UINT_MAX;
-          for(t = 0; t < tournament_size; ++t) selection_size = std::min(unsigned(XORShift128PlusNorm(r) * total_size), selection_size);
+          for(t = 0; t < tournament_size; ++t) selection_size = std::min(unsigned(randomDecimal(r) * total_size), selection_size);
           size_sum = 0;
           for(j = 0; size_sum <= selection_size; ++j) size_sum += size[ranking[j]];
           parent1 = &population[ranking[j - 1] * h];
           /*parent 2*/
           selection_size = UINT_MAX;
-          for(t = 0; t < tournament_size; ++t) selection_size = std::min(unsigned(XORShift128PlusNorm(r) * total_size), selection_size);
+          for(t = 0; t < tournament_size; ++t) selection_size = std::min(unsigned(randomDecimal(r) * total_size), selection_size);
           size_sum = 0;
           for(j = 0; size_sum <= selection_size; ++j) size_sum += size[ranking[j]];
           parent2 = &population[ranking[j - 1] * h];
           /*two-point crossover*/
           child = &population[(ranking[last - c]) * h];
-          if(XORShift128PlusNorm(r) < settings->ga.crossover_probability)
+          if(randomDecimal(r) < settings->ga.crossover_probability)
           {
-            crossover1 = XORShift128Plus(r) % h;
-            crossover2 = XORShift128Plus(r) % h;
+            crossover1 = randomUInt64(r) % h;
+            crossover2 = randomUInt64(r) % h;
             if(crossover1 > crossover2)
             {
               crossover1 ^= crossover2;
@@ -5625,12 +5629,12 @@ static unsigned filter(unsigned char* out, const unsigned char* in, unsigned w, 
             }
             if(child != parent2) memcpy(&child[crossover1], &parent2[crossover1], crossover2 - crossover1);
           }
-          else if(XORShift128Plus(r) & 1) memcpy(child, parent1, h);
+          else if(randomUInt64(r) & 1) memcpy(child, parent1, h);
           else memcpy(child, parent2, h);
           /*mutation*/
           for(y = 0; y < h; ++y)
           {
-            if(XORShift128PlusNorm(r) < settings->ga.mutation_probability) child[y] = XORShift128Plus(r) % 5;
+            if(randomDecimal(r) < settings->ga.mutation_probability) child[y] = randomUInt64(r) % 5;
           }
           /*evaluate new genome*/
           total_size -= size[ranking[last - c]];
@@ -6480,5 +6484,11 @@ unsigned encode(const std::string& filename,
 #endif /* LODEPNG_COMPILE_DISK */
 #endif /* LODEPNG_COMPILE_ENCODER */
 #endif /* LODEPNG_COMPILE_PNG */
+
+void randomFilter(std::vector<unsigned char>& filter) {
+  uint64_t r[2];
+  initRandomUInt64(r);
+  for(unsigned i = 0; i < filter.size(); ++i) filter[i] = randomUInt64(r) % 5;
+}
 } /* namespace lodepng */
 #endif /*LODEPNG_COMPILE_CPP*/

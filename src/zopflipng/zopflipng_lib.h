@@ -1,6 +1,8 @@
 /*
-Copyright 2013 Google Inc. All Rights Reserved.
-Copyright 2015 Mr_KrzYch00. All Rights Reserved.
+Copyright 2016 Google Inc. All Rights Reserved.
+Copyright 2016 Frédéric Kayser. All Rights Reserved.
+Copyright 2016 Aaron Kaluszka. All Rights Reserved.
+Copyright 2016 Mr_KrzYch00. All Rights Reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -56,8 +58,6 @@ enum ZopfliPNGFilterStrategy {
 
 typedef struct CZopfliPNGOptions {
   int lossy_transparent;
-
-  int alpha_cleaner;
 
   int lossy_8bit;
 
@@ -149,11 +149,7 @@ struct ZopfliPNGOptions {
   ZopfliPNGOptions();
 
   // Allow altering hidden colors of fully transparent pixels
-  bool lossy_transparent;
-
-  // Keep above for backwards compatibility and expose Cryopng
-  // cleaner separatelly.
-  int alpha_cleaner;
+  int lossy_transparent;
 
   // Convert 16-bit per channel images to 8-bit per channel
   bool lossy_8bit;

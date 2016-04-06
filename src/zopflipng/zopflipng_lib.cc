@@ -1,6 +1,8 @@
 /*
-Copyright 2013 Google Inc. All Rights Reserved.
-Copyright 2015 Mr_KrzYch00. All Rights Reserved.
+Copyright 2016 Google Inc. All Rights Reserved.
+Copyright 2016 Frédéric Kayser. All Rights Reserved.
+Copyright 2016 Aaron Kaluszka. All Rights Reserved.
+Copyright 2016 Mr_KrzYch00. All Rights Reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -36,21 +38,10 @@ See zopflipng_lib.h
 #include "../zopfli/deflate.h"
 #include "../zopfli/util.h"
 
-/* __has_builtin available in clang */
-#ifdef __has_builtin
-# if __has_builtin(__builtin_ctz)
-#   define HAS_BUILTIN_CTZ
-# endif
-/* __builtin_ctz available beginning with GCC 3.4 */
-#elif __GNUC__ * 100 + __GNUC_MINOR__ >= 304
-# define HAS_BUILTIN_CTZ
-#endif
-
 unsigned int mui;
 
 ZopfliPNGOptions::ZopfliPNGOptions()
-  : lossy_transparent(false)
-  , alpha_cleaner(0)
+  : lossy_transparent(0)
   , lossy_8bit(false)
   , auto_filter_strategy(true)
   , use_zopfli(true)
@@ -139,48 +130,9 @@ void CountColors(std::set<unsigned>* unique,
   }
 }
 
-// Way faster using CTZ intrinsic
-unsigned CountTrailingZeros(int x) {
-#ifdef HAS_BUILTIN_CTZ
-  return __builtin_ctz(x);
-#else
-  if (x == 0) {
-    return 32;
-  } else {
-    unsigned n = 0;
-    if ((x & 0x0000FFFF) == 0) {
-      n += 16;
-      x = x >> 16;
-    }
-    if ((x & 0x000000FF) == 0) {
-      n += 8;
-      x = x >> 8;
-    }
-    if ((x & 0x0000000F) == 0) {
-      n += 4;
-      x = x >> 4;
-    }
-    if ((x & 0x00000003) == 0) {
-      n += 2;
-      x = x >> 2;
-    }
-    if ((x & 0x00000001) == 0) {
-      n += 1;
-    }
-    return n;
-  }
-#endif
-}
-
-// Prepare image for PNG-32 to PNG-24(+tRNS) or PNG-8(+tRNS) reduction.
-
-// Remove RGB information from pixels with alpha=0
-// ZopfliPNG implementation working as a substitute for TryColorReduction
-// in CryoPNG alpha cleaner mode
-int LossyOptimizeTransparent(lodepng::State* inputstate, unsigned char* image,
-    unsigned w, unsigned h, int cleaner_enabled) {
-  // First check if we want to preserve potential color-key background color,
-  // or instead use the last encountered RGB value all the time to save bytes.
+int TryColorReduction(lodepng::State* inputstate, unsigned char* image,
+    unsigned w, unsigned h) {
+  // First look for binary (all or nothing) transparency color-key based.
   bool key = true;
   for (size_t i = 0; i < w * h; i++) {
     if (image[i * 4 + 3] > 0 && image[i * 4 + 3] < 255) {
@@ -190,13 +142,14 @@ int LossyOptimizeTransparent(lodepng::State* inputstate, unsigned char* image,
   }
   std::set<unsigned> count;  // Color count, up to 257.
   CountColors(&count, image, w, h, true);
-  // If true, means palette is possible so avoid using different RGB values for
-  // the transparent color.
+  // Less than 257 colors means a palette could be used.
   bool palette = count.size() <= 256;
 
   // Choose the color key or first initial background color.
-  int r = 0, g = 0, b = 0;
   if (key || palette) {
+    int r = 0;
+    int g = 0;
+    int b = 0;
     for (size_t i = 0; i < w * h; i++) {
       if (image[i * 4 + 3] == 0) {
         // Use RGB value of first encountered transparent pixel. This can be
@@ -208,91 +161,56 @@ int LossyOptimizeTransparent(lodepng::State* inputstate, unsigned char* image,
         break;
       }
     }
-    if(cleaner_enabled>0) {
-      for (size_t i = 0; i < w * h; i++) {
-        if (image[i * 4 + 3] == 0) {
-          // if alpha is 0, set the RGB value to the sole color-key.
-          image[i * 4 + 0] = r;
-          image[i * 4 + 1] = g;
-          image[i * 4 + 2] = b;
-        }
+    for (size_t i = 0; i < w * h; i++) {
+      if (image[i * 4 + 3] == 0) {
+        // if alpha is 0, set the RGB value to the sole color-key.
+        image[i * 4 + 0] = r;
+        image[i * 4 + 1] = g;
+        image[i * 4 + 2] = b;
       }
-      if (palette) {
-        // If there are now less colors, update palette of input image to match this.
-        if (palette && inputstate->info_png.color.palettesize > 0) {
-          CountColors(&count, image, w, h, false);
-          if (count.size() < inputstate->info_png.color.palettesize) {
-            std::vector<unsigned char> palette_out;
-            unsigned char* palette_in = inputstate->info_png.color.palette;
-            for (size_t i = 0; i < inputstate->info_png.color.palettesize; i++) {
-              if (count.count(ColorIndex(&palette_in[i * 4])) != 0) {
-                palette_out.push_back(palette_in[i * 4 + 0]);
-                palette_out.push_back(palette_in[i * 4 + 1]);
-                palette_out.push_back(palette_in[i * 4 + 2]);
-                palette_out.push_back(palette_in[i * 4 + 3]);
-              }
-            }
-            inputstate->info_png.color.palettesize = palette_out.size() / 4;
-            for (size_t i = 0; i < palette_out.size(); i++) {
-              palette_in[i] = palette_out[i];
+    }
+    if (palette) {
+      // If there are now less colors, update palette of input image to match
+      // this.
+      if (palette && inputstate->info_png.color.palettesize > 0) {
+        CountColors(&count, image, w, h, false);
+        if (count.size() < inputstate->info_png.color.palettesize) {
+          std::vector<unsigned char> palette_out;
+          unsigned char* palette_in = inputstate->info_png.color.palette;
+          for (size_t i = 0; i < inputstate->info_png.color.palettesize; i++) {
+            if (count.count(ColorIndex(&palette_in[i * 4])) != 0) {
+              palette_out.push_back(palette_in[i * 4 + 0]);
+              palette_out.push_back(palette_in[i * 4 + 1]);
+              palette_out.push_back(palette_in[i * 4 + 2]);
+              palette_out.push_back(palette_in[i * 4 + 3]);
             }
           }
+          inputstate->info_png.color.palettesize = palette_out.size() / 4;
+          for (size_t i = 0; i < palette_out.size(); i++) {
+            palette_in[i] = palette_out[i];
+          }
         }
-        return 2;
-      } else {
-        return 1;
       }
+      return 2;
+    } else {
+      return 1;
     }
-  } else if(cleaner_enabled>0) {
+  } else {
     return 0;
   }
-
-  for (size_t i = 0; i < w * h; i++) {
-    // if alpha is 0, alter the RGB value to a possibly more efficient one.
-    if (image[i * 4 + 3] == 0) {
-      image[i * 4 + 0] = r;
-      image[i * 4 + 1] = g;
-      image[i * 4 + 2] = b;
-    } else {
-      if (!key && !palette) {
-        // Use the last encountered RGB value if no key or palette is used: that
-        // way more values can be 0 thanks to the PNG filter types.
-        r = image[i * 4 + 0];
-        g = image[i * 4 + 1];
-        b = image[i * 4 + 2];
-      }
-    }
-  }
-
-  // If there are now less colors, update palette of input image to match this.
-  if (palette && inputstate->info_png.color.palettesize > 0) {
-    CountColors(&count, image, w, h, false);
-    if (count.size() < inputstate->info_png.color.palettesize) {
-      std::vector<unsigned char> palette_out;
-      unsigned char* palette_in = inputstate->info_png.color.palette;
-      for (size_t i = 0; i < inputstate->info_png.color.palettesize; i++) {
-        if (count.count(ColorIndex(&palette_in[i * 4])) != 0) {
-          palette_out.push_back(palette_in[i * 4 + 0]);
-          palette_out.push_back(palette_in[i * 4 + 1]);
-          palette_out.push_back(palette_in[i * 4 + 2]);
-          palette_out.push_back(palette_in[i * 4 + 3]);
-        }
-      }
-      inputstate->info_png.color.palettesize = palette_out.size() / 4;
-      for (size_t i = 0; i < palette_out.size(); i++) {
-        palette_in[i] = palette_out[i];
-      }
-    }
-  }
-  return 0;
 }
 
-// Remove RGB information from pixels with alpha=0 (cryoPNG implementation)
-void LossyOptimizeTransparentCryo(unsigned char* image, unsigned w, unsigned h, int cleaner) {
+// Remove RGB information from pixels with alpha=0 (does the same job as
+// cryopng)
+unsigned LossyOptimizeTransparent(unsigned char* image, unsigned w, unsigned h,
+                                  int cleaner) {
+  unsigned changes = 0;
   if (cleaner & 1) {  // None filter
     for (size_t i = 0; i < w * h; i++) {
       if (image[i * 4 + 3] == 0) {
         // if alpha is 0, set the RGB values to zero (black).
+        if (changes == 0 && (image[i * 4 + 0] != 0 || image[i * 4 + 1] != 0
+            || image[i * 4 + 2] != 0)) changes = 1;
         image[i * 4 + 0] = 0;
         image[i * 4 + 1] = 0;
         image[i * 4 + 2] = 0;
@@ -306,6 +224,8 @@ void LossyOptimizeTransparentCryo(unsigned char* image, unsigned w, unsigned h, 
       for (size_t j = 3; j < 4 * w;) {
         // if alpha is 0, set the RGB values to those of the pixel on the left.
         if (image[i + j] == 0) {
+          if (changes == 0 && (image[i + j - 3] != pr || image[i + j - 2] != pg
+              || image[i + j - 1] != pb)) changes = 1;
           image[i + j - 3] = pr;
           image[i + j - 2] = pg;
           image[i + j - 1] = pb;
@@ -320,8 +240,12 @@ void LossyOptimizeTransparentCryo(unsigned char* image, unsigned w, unsigned h, 
       if (w > 1)
       {
         for (size_t j = 4 * (w - 2) + 3; j + 1 > 0;) {
-          // if alpha is 0, set the RGB values to those of the pixel on the right.
+          // if alpha is 0, set the RGB values to those of the pixel on the
+          // right.
           if (image[i + j] == 0) {
+            if (changes == 0 && (image[i + j - 3] != pr
+                || image[i + j - 2] != pg
+                || image[i + j - 1] != pb)) changes = 1;
             image[i + j - 3] = pr;
             image[i + j - 2] = pg;
             image[i + j - 1] = pb;
@@ -341,6 +265,8 @@ void LossyOptimizeTransparentCryo(unsigned char* image, unsigned w, unsigned h, 
     for (size_t j = 3; j < 4 * w;) {
       // if alpha is 0, set the RGB values to zero (black), first line only.
       if (image[j] == 0) {
+        if (changes == 0 && (image[j - 3] != 0 || image[j - 2] != 0
+            || image[j - 1] != 0)) changes = 1;
         image[j - 3] = 0;
         image[j - 2] = 0;
         image[j - 1] = 0;
@@ -352,6 +278,9 @@ void LossyOptimizeTransparentCryo(unsigned char* image, unsigned w, unsigned h, 
         for (size_t i = w * 4; i < (4 * w * h); ) {
           // if alpha is 0, set the RGB values to those of the upper pixel.
           if (image[i + j] == 0) {
+            if (changes == 0 && (image[i + j - 3] != image[i + j - 3 - 4 * w]
+                || image[i + j - 2] != image[i + j - 2 - 4 * w]
+                || image[i + j - 1] != image[i + j - 1 - 4 * w])) changes = 1;
             image[i + j - 3] = image[i + j - 3 - 4 * w];
             image[i + j - 2] = image[i + j - 2 - 4 * w];
             image[i + j - 1] = image[i + j - 1 - 4 * w];
@@ -361,6 +290,9 @@ void LossyOptimizeTransparentCryo(unsigned char* image, unsigned w, unsigned h, 
         for (size_t i = 4 * w * (h - 2); i + w * 4 > 0;) {
           // if alpha is 0, set the RGB values to those of the lower pixel.
           if (image[i + j] == 0) {
+            if (changes == 0 && (image[i + j - 3] != image[i + j - 3 + 4 * w]
+                || image[i + j - 2] != image[i + j - 2 + 4 * w]
+                || image[i + j - 1] != image[i + j - 1 + 4 * w])) changes = 1;
             image[i + j - 3] = image[i + j - 3 + 4 * w];
             image[i + j - 2] = image[i + j - 2 + 4 * w];
             image[i + j - 1] = image[i + j - 1 + 4 * w];
@@ -375,12 +307,14 @@ void LossyOptimizeTransparentCryo(unsigned char* image, unsigned w, unsigned h, 
     int pg = 0;
     int pb = 0;
     for (size_t j = 3; j < 4*w;) {
-      // if alpha is 0, set the RGB values to the half of those of the pixel on the left,
-      // first line only.
+      // if alpha is 0, set the RGB values to the half of those of the pixel on
+      // the left, first line only.
       if (image[j] == 0) {
         pr = pr>>1;
         pg = pg>>1;
         pb = pb>>1;
+        if (changes == 0 && (image[j - 3] != pr || image[j - 2] != pg
+            || image[j - 1] != pb)) changes = 1;
         image[j - 3] = pr;
         image[j - 2] = pg;
         image[j - 1] = pb;
@@ -395,12 +329,15 @@ void LossyOptimizeTransparentCryo(unsigned char* image, unsigned w, unsigned h, 
       for (size_t i = w*4; i < (4 * w * h); ) {
         pr = pg = pb = 0;   // reset to zero at each new line
         for (size_t j = 3; j < 4*w;) {
-          // if alpha is 0, set the RGB values to the half of the sum of the pixel on the
-          // left and the upper pixel.
+          // if alpha is 0, set the RGB values to the half of the sum of the
+          // pixel on the left and the upper pixel.
           if (image[i + j] == 0) {
             pr = (pr+(int)image[i + j - (3 + 4*w)])>>1;
             pg = (pg+(int)image[i + j - (2 + 4*w)])>>1;
             pb = (pb+(int)image[i + j - (1 + 4*w)])>>1;
+            if (changes == 0 && (image[i + j - 3] != pr
+                || image[i + j - 2] != pg
+                || image[i + j - 1] != pb)) changes = 1;
             image[i + j - 3] = pr;
             image[i + j - 2] = pg;
             image[i + j - 1] = pb;
@@ -421,6 +358,8 @@ void LossyOptimizeTransparentCryo(unsigned char* image, unsigned w, unsigned h, 
     for (size_t j = 3; j < 4*w;) {  // First line (border effects)
       // if alpha is 0, alter the RGB value to a possibly more efficient one.
       if (image[j] == 0) {
+        if (changes == 0 && (image[j - 3] != pre || image[j - 2] != pgr
+            || image[j - 1] != pbl)) changes = 1;
         image[j - 3] = pre;
         image[j - 2] = pgr;
         image[j - 1] = pbl;
@@ -469,13 +408,20 @@ void LossyOptimizeTransparentCryo(unsigned char* image, unsigned w, unsigned h, 
               pc = abs(p + pc);
               pbl = (pa <= pb && pa <=pc) ? a : (pb <= pc) ? b : c;
 
+              if (changes == 0 && (image[i + j - 3] != pre
+                  || image[i + j - 2] != pgr
+                  || image[i + j - 1] != pbl)) changes = 1;
               image[i + j - 3] = pre;
               image[i + j - 2] = pgr;
               image[i + j - 1] = pbl;
-            } else {  // first column, set the RGB values to those of the upper pixel.
+            } else {
+              // first column, set the RGB values to those of the upper pixel.
               pre = (int)image[i + j - (3 + 4*w)];
               pgr = (int)image[i + j - (2 + 4*w)];
               pbl = (int)image[i + j - (1 + 4*w)];
+              if (changes == 0 && (image[i + j - 3] != pre
+                  || image[i + j - 2] != pgr
+                  || image[i + j - 1] != pbl)) changes = 1;
               image[i + j - 3] = pre;
               image[i + j - 2] = pgr;
               image[i + j - 1] = pbl;
@@ -494,12 +440,16 @@ void LossyOptimizeTransparentCryo(unsigned char* image, unsigned w, unsigned h, 
     for (size_t i = 0; i < w * h; i++) {
       if (image[i * 4 + 3] == 0) {
         // if alpha is 0, set the RGB values to 255 (white).
-        image[i * 4 + 0] = 255;
-        image[i * 4 + 1] = 255;
-        image[i * 4 + 2] = 255;
+        if (changes == 0 && (image[i * 4 + 0] != 255u
+            || image[i * 4 + 1] != 255u
+            || image[i * 4 + 2] != 255u)) changes = 1;
+        image[i * 4 + 0] = 255u;
+        image[i * 4 + 1] = 255u;
+        image[i * 4 + 2] = 255u;
       }
     }
   }
+  return changes;
 }
 
 // Tries to optimize given a single PNG filter strategy.
@@ -527,7 +477,6 @@ unsigned TryOptimize(
     state.encoder.auto_convert = 0;
     lodepng_color_mode_copy(&state.info_png.color, &inputstate.info_png.color);
   }
-
   if (inputstate.info_png.color.colortype == LCT_PALETTE) {
     // Make it preserve the original palette order
     lodepng_color_mode_copy(&state.info_raw, &inputstate.info_png.color);
@@ -578,7 +527,6 @@ unsigned TryOptimize(
         std::min(png_options->ga_number_of_offspring,
                  png_options->ga_population_size);
       break;
-      break;
     case kStrategyOne:
     case kStrategyTwo:
     case kStrategyThree:
@@ -595,8 +543,6 @@ unsigned TryOptimize(
       state.encoder.predefined_filters = &filters[0];
       break;
     default:
-      state.encoder.filter_strategy = LFS_PREDEFINED;
-      state.encoder.predefined_filters = filterbank;
       break;
   }
 
@@ -612,7 +558,7 @@ unsigned TryOptimize(
     std::vector<unsigned char> temp;
     lodepng::decode(temp, w, h, teststate, *out);
     if (teststate.info_png.color.colortype == LCT_PALETTE) {
-      if (png_options->verbosezopfli!=0) {
+      if (png_options->verbosezopfli) {
         printf("Palette was used,"
                " compressed result is small enough to also try RGB or grey.\n");
       }
@@ -644,143 +590,6 @@ unsigned TryOptimize(
   }
 
   return 0;
-}
-
-static void InitXORShift128Plus(uint64_t* s) {
-  s[0] = 1;
-  s[1] = 2;
-}
-
-static uint64_t XORShift128Plus(uint64_t* s) {
-  uint64_t x = s[0];
-  uint64_t const y = s[1];
-  s[0] = y;
-  x ^= x << 23;
-  s[1] = x ^ y ^ (x >> 17) ^ (y >> 26);
-  return s[1] + y;
-}
-
-// Use fast compression to check which PNG filter strategy gives the smallest
-// output. This allows to then do the slow and good compression only on that
-// filter type.
-unsigned AutoChooseFilterStrategy(const std::vector<unsigned char>& image,
-                                  unsigned w, unsigned h,
-                                  const lodepng::State& inputstate,
-                                  bool bit16, bool keep_colortype,
-                                  const std::vector<unsigned char>& origfile,
-                                  int numstrategies,
-                                  ZopfliPNGFilterStrategy* strategies,
-                                  const ZopfliPNGOptions* png_options,
-                                  std::vector<unsigned char>* resultpng) {
-  size_t bestsize = 0;
-  int bestfilter = 0;
-  std::vector<unsigned char> filterbank(
-      std::max(numstrategies, png_options->ga_population_size) * h);
-  std::vector<unsigned char> filter;
-  // random filters
-  uint64_t r[2];
-  InitXORShift128Plus(r);
-  for (unsigned i = 0; i < filterbank.size(); ++i) {
-    filterbank[i] = XORShift128Plus(r) % 5;
-  }
-  std::string strategy_name[kNumFilterStrategies] = {
-    "zero", "one", "two", "three", "four",
-    "minimum sum", "distinct bytes", "distinct bigrams", "entropy",
-    "predefined", "brute force", "incremental brute force", "genetic algorithm"
-  };
-  // A large window size should still be used to do the quick compression to
-  // try out filter strategies: which filter strategy is the best depends
-  // largely on the window size, the closer to the actual used window size the
-  // better.
-  int windowsize = 32768;
-  std::vector<unsigned char> out;
-
-  for (int i = 0; i < numstrategies; i++) {
-    out.clear();
-    unsigned error = TryOptimize(image, w, h, inputstate, bit16, keep_colortype,
-                                 origfile, strategies[i], false, windowsize,
-                                 png_options, &out, &filterbank[0]);
-    if (error) return error;
-    if (png_options->verbosezopfli) {
-      printf("Filter strategy %s: %d bytes\n",
-             strategy_name[i].c_str(), (int) out.size());
-    }
-    lodepng::getFilterTypes(filter, out);
-    std::copy(filter.begin(), filter.end(), filterbank.begin() + i * h);
-    if (bestsize == 0 || out.size() < bestsize) {
-      bestsize = out.size();
-      bestfilter = i;
-    }
-  }
-
-  out.clear();
-  unsigned error = TryOptimize(image, w, h, inputstate, bit16, keep_colortype,
-                               origfile, kNumFilterStrategies
-                               /* trigger precalculated default path */,
-                               true /* use_zopfli */, windowsize, png_options,
-                               &out, &filterbank[bestfilter * h]);
-  (*resultpng).swap(out);
-
-  return error;
-}
-
-// Use fast compression to check which PNG filter strategy gives the smallest
-// output. This allows to then do the slow and good compression only on that
-// filter type.
-unsigned AutoChooseFilterStrategyCryo(const std::vector<unsigned char>& image,
-                                  unsigned w, unsigned h,
-                                  const lodepng::State& inputstate,
-                                  bool bit16, bool keep_colortype,
-                                  const std::vector<unsigned char>& origfile,
-                                  int numstrategies,
-                                  ZopfliPNGFilterStrategy* strategies,
-                                  unsigned int *enable, const ZopfliPNGOptions* png_options,
-                                  size_t *returnbestsize) {
-  size_t bestsize = 0;
-  int bestfilter = 0;
-  std::vector<unsigned char> filterbank(
-      std::max(numstrategies, png_options->ga_population_size) * h);
-  std::vector<unsigned char> filter;
-  // random filters
-  uint64_t r[2];
-  InitXORShift128Plus(r);
-  for (unsigned i = 0; i < filterbank.size(); ++i) {
-    filterbank[i] = XORShift128Plus(r) % 5;
-  }
-  std::string strategy_name[kNumFilterStrategies] = {
-    "zero", "one", "two", "three", "four",
-    "minimum sum", "distinct bytes", "distinct bigrams", "entropy",
-    "predefined", "brute force", "incremental brute force", "genetic algorithm"
-  };
-  // A large window size should still be used to do the quick compression to
-  // try out filter strategies: which filter strategy is the best depends
-  // largely on the window size, the closer to the actual used window size the
-  // better.
-  int windowsize = 32768;
-  std::vector<unsigned char> out;
-
-  for (int i = 0; i < numstrategies; i++) {
-    out.clear();
-    unsigned error = TryOptimize(image, w, h, inputstate, bit16, keep_colortype,
-                                 origfile, strategies[i], false, windowsize, png_options,
-                                 &out, &filterbank[0]);
-    if (error) return error;
-    if (png_options->verbosezopfli) {
-      printf("Filter strategy %s: %d bytes\n",
-             strategy_name[i].c_str(), (int) out.size());
-    }
-    lodepng::getFilterTypes(filter, out);
-    std::copy(filter.begin(), filter.end(), filterbank.begin() + i * h);
-    if (bestsize == 0 || out.size() < bestsize) {
-      bestsize = out.size();
-      bestfilter = i;
-    }
-  }
-
-  *enable = 1<<bestfilter;
-  *returnbestsize = bestsize;
-
-  return 0;  /* OK */
 }
 
 // Outputs the intersection of keepnames and non-essential chunks which are in
@@ -844,21 +653,20 @@ int ZopfliPNGOptimize(const std::vector<unsigned char>& origpng,
     kStrategyEntropy, kStrategyBruteForce, kStrategyIncremental,
     kStrategyPredefined, kStrategyGeneticAlgorithm
   };
-  bool strategy_enable[kNumFilterStrategies] = {
-    false, false, false, false, false, false, false, false, false, false, false,
-    false, false
-  };
-  unsigned int strategy_enable_cryo = 0;
   std::string strategy_name[kNumFilterStrategies] = {
     "zero", "one", "two", "three", "four", "minimum sum", "distinct bytes",
     "distinct bigrams", "entropy", "brute force", "incremental brute force",
     "predefined", "genetic algorithm"
   };
-  for (size_t i = 0; i < png_options.filter_strategies.size(); i++) {
-    if(png_options.alpha_cleaner!=0) {
-      strategy_enable_cryo |= 1<<png_options.filter_strategies[i];
-    } else {
-      strategy_enable[png_options.filter_strategies[i]] = true;
+  const int pre_predefined = 10;
+  unsigned strategy_enable = 0;
+  if (png_options.filter_strategies.empty()) {
+    strategy_enable = (1 << kNumFilterStrategies) - 1;
+  }
+  else {
+    for (size_t i = 0; i < png_options.filter_strategies.size(); i++) {
+      strategy_enable |=
+        (1 << png_options.filter_strategies[filterstrategies[i]]);
     }
   }
 
@@ -908,184 +716,88 @@ int ZopfliPNGOptimize(const std::vector<unsigned char>& origpng,
   }
 
   if (!error) {
-    // If lossy_transparent, remove RGB information from pixels with alpha=0
-    if (png_options.lossy_transparent && !bit16) {
-      LossyOptimizeTransparent(&inputstate, &image[0], w, h, png_options.alpha_cleaner);
-    } else if(png_options.alpha_cleaner!=0 && !bit16) {
-      int oversizedcolortype;
-      if (verbose) printf("No 16-bits components\n");
-      oversizedcolortype = LossyOptimizeTransparent(&inputstate, &image[0], w, h, 0);
-      if (oversizedcolortype == 2 && verbose) {
-        printf("Less than 256 colors, will try paletted version.\n");
-      }
-      if (oversizedcolortype == 1 && verbose) printf("Full alpha not needed.\n");
-      if ((oversizedcolortype == 0) && (png_options.alpha_cleaner > 0)) {
-        printf("Starting alpha cleaning, with ");
-        char numcleaners = 0;
-        char bestcleaner = 0;
-        char secondbestcleaner = 0;
-        unsigned int bestfilter = 0;
-        unsigned int secondbestfilter = 0;
-        unsigned int tempfilter;
-        int mode = 1;
-        int maxcleaners = 6;
-        size_t tempsize = 0;
-        size_t bestsize = 0;
-        size_t secondbestsize = 0;
-        for(int i = 0; i<maxcleaners; ++i) {
-          if (png_options.alpha_cleaner & mode) numcleaners++;
-          mode <<= 1;
-        }
-        printf("%d cleaners\n", numcleaners);
-        mode = 1;
-        for(int i = 0; i<maxcleaners; ++i) {
-          if (png_options.alpha_cleaner & mode) {
-            if (verbose) printf("Cleaning alpha using method %i\n",i);
-            LossyOptimizeTransparentCryo(&image[0], w, h, (png_options.alpha_cleaner & mode));
-            if (png_options.auto_filter_strategy) {
-              tempfilter = strategy_enable_cryo;
-              error = AutoChooseFilterStrategyCryo(image, w, h, inputstate, bit16,
-                                               keep_colortype, origpng,
-                                               kNumFilterStrategies,
-                                               filterstrategies, &tempfilter,
-                                               &png_options, &tempsize);
-              if (!error) {
-                if (verbose) {
-                  printf("Best filter:%d, size:%d\n", CountTrailingZeros(tempfilter),
-                         (unsigned int)tempsize);
-                }
-                if (bestsize == 0 || tempsize < bestsize) {
-                  secondbestsize = bestsize;
-                  secondbestfilter = bestfilter;
-                  secondbestcleaner = bestcleaner;
-                  bestsize = tempsize;
-                  bestfilter = tempfilter;
-                  bestcleaner = mode;
-                } else if (secondbestsize == 0 || tempsize < secondbestsize) {
-                  secondbestsize = tempsize;
-                  secondbestfilter = tempfilter;
-                  secondbestcleaner = mode;
-                }
-              }
-            } else {
-              for (int i = 0; i < kNumFilterStrategies; i++) {
-                if (!(strategy_enable_cryo & (1<<i))) continue;
-                std::vector<unsigned char> filterbank(
-                    std::max((int)kNumFilterStrategies, png_options.ga_population_size) * h);
-                std::vector<unsigned char> filter;
-                // random filters
-                uint64_t r[2];
-                InitXORShift128Plus(r);
-                for (unsigned i = 0; i < filterbank.size(); ++i) {
-                  filterbank[i] = XORShift128Plus(r) % 5;
-                }
-                std::vector<unsigned char> temp;
-                error = TryOptimize(image, w, h, inputstate, bit16, keep_colortype,
-                            origpng, filterstrategies[i], true /* use_zopfli */,
-                            windowsize, &png_options, &temp, &filterbank[0]);
-                if (!error) {
-                  if (verbose) {
-                    printf("Filter strategy %s: %d bytes\n",
-                            strategy_name[i].c_str(), (int) temp.size());
-                  }
-                  if (bestsize == 0 || temp.size() < bestsize) {
-                    bestsize = temp.size();
-                    (*resultpng).swap(temp);  // Store best result so far in the output.
-                  }
-                }
-              }
-            }
-          }
-          mode <<= 1;
-        }
-        if (png_options.auto_filter_strategy) {
-          LossyOptimizeTransparentCryo(&image[0], w, h,
-                                   (png_options.alpha_cleaner & bestcleaner));
-          strategy_enable_cryo = bestfilter;
-          if (verbose) {
-            printf("Best cleaner/filter/size: %d,%d,%d\n",
-                   CountTrailingZeros(bestcleaner), CountTrailingZeros(bestfilter),
-                   (unsigned int)bestsize);
-            printf("Secondbest cleaner/filter/size: %d,%d,%d\n",
-                   CountTrailingZeros(secondbestcleaner),
-                   CountTrailingZeros(secondbestfilter), (unsigned int)secondbestsize);
-          }
-          bestsize = 0;
-          for (int i = 0; i < kNumFilterStrategies; i++) {
-            if (!(strategy_enable_cryo & (1<<i))) continue;
+    std::vector<unsigned char> filter;
+    std::vector<unsigned char> temp;
+    std::vector<unsigned char> predefined;
+    if (strategy_enable & (1 << kStrategyPredefined)) {
+      lodepng::getFilterTypes(predefined, origpng);
+    }
+    size_t bestsize = SIZE_MAX;
 
-                std::vector<unsigned char> filterbank(
-                    std::max((int)kNumFilterStrategies, png_options.ga_population_size) * h);
-                std::vector<unsigned char> filter;
-                // random filters
-                uint64_t r[2];
-                InitXORShift128Plus(r);
-                for (unsigned i = 0; i < filterbank.size(); ++i) {
-                  filterbank[i] = XORShift128Plus(r) % 5;
-                }
-            std::vector<unsigned char> temp;
-            error = TryOptimize(image, w, h, inputstate, bit16, keep_colortype, origpng,
-                                filterstrategies[i], true /* use_zopfli */,
-                                windowsize, &png_options, &temp, &filterbank[0]);
-            if (!error) {
-              if (verbose) {
-                printf("Filter strategy %s: %d bytes\n",
-                       strategy_name[i].c_str(), (int) temp.size());
-              }
-              if (bestsize == 0 || temp.size() < bestsize) {
-                bestsize = temp.size();
-                (*resultpng).swap(temp);  // Store best result so far in the output.
-              }
-            }
-          }
-        }
-        if (!png_options.keepchunks.empty()) {
-          KeepChunks(origpng, png_options.keepchunks, resultpng);
-        }
-        return error;
-      }
+    unsigned numcleaners = 1;
+    // If all criteria met, use cleaners
+    if (!bit16 && png_options.lossy_transparent > 0) {
+      if (TryColorReduction(&inputstate, &image[0], w, h) == 0) numcleaners = 6;
     }
 
-    if (png_options.auto_filter_strategy) {
-      error = AutoChooseFilterStrategy(image, w, h, inputstate, bit16, keep_colortype,
-                                       origpng, kNumFilterStrategies, filterstrategies,
-                                       &png_options, resultpng);
-    } else {
-      size_t bestsize = 0;
-      std::vector<unsigned char> filterbank(
-          std::max(int(kNumFilterStrategies),
-                   png_options.ga_population_size) * h);
-      std::vector<unsigned char> filter;
-      // random filters
-      uint64_t r[2];
-      InitXORShift128Plus(r);
-      for (unsigned i = 0; i < filterbank.size(); ++i) {
-        filterbank[i] = XORShift128Plus(r) % 5;
-      }
-      for (int i = 0; i < kNumFilterStrategies; i++) {
-        if(png_options.alpha_cleaner!=0) {
-          if (!(strategy_enable_cryo & (1<<i))) continue;
-        } else {
-          if (!strategy_enable[i]) continue;
+    unsigned bestcleaner = 0;
+    for (unsigned j = 0; j < numcleaners; ++j) {
+      unsigned cleaner = (1 << j);
+      if (png_options.lossy_transparent > 0) {
+        // If lossy_transparent, remove RGB information from pixels with alpha=0
+        if (png_options.lossy_transparent & cleaner) {
+          if (verbose) printf("Cleaning alpha using method %i\n", j);
+          if (LossyOptimizeTransparent(&image[0], w, h, cleaner) == 0
+              && cleaner > 1) continue;
         }
+        else continue;
+      }
 
-        std::vector<unsigned char> temp;
+      std::vector<unsigned char> filterbank;
+      // initialize random filters for genetic algorithm
+      if (strategy_enable & (1 << kStrategyGeneticAlgorithm)) {
+        filterbank.resize(h * std::max(int(kNumFilterStrategies),
+                                       png_options.ga_population_size));
+        lodepng::randomFilter(filterbank);
+      }
+
+      for (int i = 0; i < kNumFilterStrategies; ++i) {
+        if (!(strategy_enable & (1 << i))) continue;
+        temp.clear();
+        // If auto_filter_strategy, use fast compression to check which PNG
+        // filter strategy gives the smallest output. This allows to then do
+        // the slow and good compression only on that filter type.
         error = TryOptimize(image, w, h, inputstate, bit16, keep_colortype,
-                            origpng, filterstrategies[i], true /* use_zopfli */,
+                            origpng, filterstrategies[i],
+                            !png_options.auto_filter_strategy /* use_zopfli */,
                             windowsize, &png_options, &temp, &filterbank[0]);
         if (!error) {
           if (verbose) {
-            printf("Filter strategy %s: %d bytes\n",
-                   strategy_name[i].c_str(), (int) temp.size());
+            printf("Filter strategy %s: %d bytes\n", strategy_name[i].c_str(),
+                   (int) temp.size());
           }
-          lodepng::getFilterTypes(filter, temp);
-          std::copy(filter.begin(), filter.end(), filterbank.begin() + i * h);
-          if (bestsize == 0 || temp.size() < bestsize) {
+          if ((strategy_enable & (1 << kStrategyPredefined)
+              && i <= pre_predefined)
+              || strategy_enable & (1 << kStrategyGeneticAlgorithm)) {
+            lodepng::getFilterTypes(filter, temp);
+          }
+          // Skip predefined if already covered by another strategy
+          if (strategy_enable & (1 << kStrategyPredefined)
+              && i <= pre_predefined && predefined == filter) {
+            strategy_enable &= ~(1 << kStrategyPredefined);
+          }
+          // Store filter for use in genetic algorithm seeding
+          if (strategy_enable & (1 << kStrategyGeneticAlgorithm)) {
+            std::copy(filter.begin(), filter.end(), filterbank.begin() + i * h);
+          }
+          if (temp.size() < bestsize) {
             bestsize = temp.size();
+            bestcleaner = cleaner;
             (*resultpng).swap(temp);  // Store best result so far in the output.
           }
         }
       }
+    }
+    if (png_options.auto_filter_strategy) {
+      temp.clear();
+      if (png_options.lossy_transparent > 0) {
+        LossyOptimizeTransparent(&image[0], w, h, bestcleaner);
+      }
+      error = TryOptimize(image, w, h, inputstate, bit16, keep_colortype,
+                          *resultpng, kStrategyPredefined,
+                          true /* use_zopfli */, windowsize, &png_options,
+                          &temp, NULL);
+      if (!error && temp.size() < bestsize) (*resultpng).swap(temp);
     }
   }
 
@@ -1108,7 +820,6 @@ extern "C" void CZopfliPNGSetDefaults(CZopfliPNGOptions* png_options) {
   png_options->lossy_8bit               = opts.lossy_8bit;
   png_options->auto_filter_strategy     = opts.auto_filter_strategy;
   png_options->use_zopfli               = opts.use_zopfli;
-  png_options->alpha_cleaner            = opts.alpha_cleaner;
   png_options->num_iterations           = opts.num_iterations;
   png_options->num_iterations_large     = opts.num_iterations_large;
   png_options->block_split_strategy     = opts.block_split_strategy;
@@ -1144,11 +855,10 @@ extern "C" int CZopfliPNGOptimize(const unsigned char* origpng,
   ZopfliPNGOptions opts;
 
   // Copy over to the C++-style struct
-  opts.lossy_transparent        = !!png_options->lossy_transparent;
+  opts.lossy_transparent        = png_options->lossy_transparent;
   opts.lossy_8bit               = !!png_options->lossy_8bit;
   opts.auto_filter_strategy     = !!png_options->auto_filter_strategy;
   opts.use_zopfli               = !!png_options->use_zopfli;
-  opts.alpha_cleaner            = png_options->alpha_cleaner;
   opts.num_iterations           = png_options->num_iterations;
   opts.num_iterations_large     = png_options->num_iterations_large;
   opts.block_split_strategy     = png_options->block_split_strategy;

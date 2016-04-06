@@ -1,6 +1,8 @@
 /*
-Copyright 2013 Google Inc. All Rights Reserved.
-Copyright 2015 Mr_KrzYch00. All Rights Reserved.
+Copyright 2016 Google Inc. All Rights Reserved.
+Copyright 2016 Frédéric Kayser. All Rights Reserved.
+Copyright 2016 Aaron Kaluszka. All Rights Reserved.
+Copyright 2016 Mr_KrzYch00. All Rights Reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -121,9 +123,9 @@ void ShowHelp() {
          " considered as output from previous runs. This is handy when using"
          " *.png wildcard expansion with multiple runs.\n"
          "-y: do not ask about overwriting files.\n"
-         "--lossy_transparent: remove colors behind alpha channel 0. No visual"
-         " difference, removes hidden information.\n"
-         "--alpha_cleaner=[0-5]: same as above but based on CryoPNG\n"
+         "--alpha_cleaner=[0-5]: remove colors behind alpha channel 0. No"
+         " visual difference, removes hidden information, based on cryopng.\n"
+         "--lossy_transparent: backwards compat., same as alpha cleaner 1.\n"
          "--lossy_8bit: convert 16-bit per channel image to 8-bit per"
          " channel.\n"
          "-d: dry run: don't save any files, just see the console output"
@@ -148,12 +150,8 @@ void ShowHelp() {
          " p: predefined (keep from input, this likely overlaps another"
          " strategy)\n"
          " g: genetic algorithm*\n"
-         " By default, if this argument is not given, one that is most likely"
-         " the best for this image is chosen by trying faster compression with"
-         " each type.\n"
-         " If this argument is used, all given filter types"
-         " are tried with slow compression and the best result retained. A good"
-         " set of filters to try is --filters=0me.\n"
+         " By default, if this argument is not given, all strategies are tried."
+         "\n"
          " *Genetic algorithm filter options:\n"
          "  --ga_population_size: number of genomes in pool. Default: 19\n"
          "  --ga_max_evaluations: overall maximum number of evaluations (0 for"
@@ -167,11 +165,17 @@ void ShowHelp() {
          "  --ga_number_of_offspring: number of offspring per generation."
          "   Default: 2\n"
          "\n"
+         "--zopfli_filters: by default, if this argument is not given, the"
+         " filter that is most likely the best for this image is chosen by"
+         " trying faster compression with each given type. If this argument is"
+         " used, all given filter types are tried with slow compression and the"
+         " best result retained.\n"
          "--keepchunks=nAME,nAME,...: keep metadata chunks with these names"
+         " that would normally be removed, e.g. tEXt,zTXt,iTXt,gAMA, ... \n"
          " Due to adding extra data, this increases the result size. Keeping"
          " bKGD or sBIT chunks may cause additional worse compression due to"
          " forcing a certain color type, it is advised to not keep these for"
-         " web images because web browsers do not use these chunks. By default"
+         " web images because web browsers do not use these chunks. By default,"
          " ZopfliPNG only keeps (and losslessly modifies) the following chunks"
          " because they are essential: IHDR, PLTE, tRNS, IDAT and IEND.\n\n"
          "     CUSTOM ZOPFLIPNG OPTIONS:\n"
@@ -201,8 +205,8 @@ void ShowHelp() {
          "Compress more: zopflipng -m infile.png outfile.png\n"
          "Optimize multiple files: zopflipng --prefix a.png b.png c.png\n"
          "Compress really good and trying all filter strategies: zopflipng"
-         " --iterations=500 --filters=01234mywepbig --lossy_8bit"
-         " --lossy_transparent infile.png outfile.png\n");
+         " --iterations=500 --filters=01234mywebipg --lossy_8bit"
+         " --alpha_cleaner=012345 infile.png outfile.png\n");
 }
 
 void PrintSize(const char* label, size_t size) {
@@ -216,7 +220,7 @@ void PrintResultSize(const char* label, size_t oldsize, size_t newsize) {
 
 int main(int argc, char *argv[]) {
 printf("ZopfliPNG, a Portable Network Graphics (PNG) image optimizer.\n"
-         "KrzYmod extends ZopfliPNG functionality - version 16 rc4\n\n");
+         "KrzYmod extends ZopfliPNG functionality - version 16\n\n");
   if (argc < 2) {
     ShowHelp();
     return 0;
@@ -234,7 +238,6 @@ printf("ZopfliPNG, a Portable Network Graphics (PNG) image optimizer.\n"
   std::string prefix = "zopfli_";  // prefix for output filenames
 
   std::vector<std::string> files;
-  std::vector<char> options;
 
   signal(SIGINT, intHandlerpng);
 
@@ -267,18 +270,18 @@ printf("ZopfliPNG, a Portable Network Graphics (PNG) image optimizer.\n"
       int num = atoi(value.c_str());
       if (name == "--always_zopflify") {
         always_zopflify = true;
-      } else if (name == "--lossy_transparent") {
-        png_options.lossy_transparent = true;
       } else if (name == "--alpha_cleaner") {
         for (size_t j = 0; j < value.size(); j++) {
           char f = value[j] - '0';
-          if(f >= 0 && f <= 5) {
-            png_options.alpha_cleaner |= (1 << f);
+          if (f >= 0 && f <= 5) {
+            png_options.lossy_transparent |= (1 << f);
           } else {
             printf("Unknown alpha cleaning method: %i\n", f);
             return 1;
           }
         }
+      } else if (name == "--lossy_transparent") {
+        png_options.lossy_transparent |= 2;
       } else if (name == "--lossy_8bit") {
         png_options.lossy_8bit = true;
       } else if (name == "--brotli") {
@@ -358,6 +361,8 @@ printf("ZopfliPNG, a Portable Network Graphics (PNG) image optimizer.\n"
           // given.
           png_options.auto_filter_strategy = false;
         }
+      } else if (name == "--zopfli_filters") {
+          png_options.auto_filter_strategy = false;
       } else if (name == "--keepchunks") {
         bool correct = true;
         if ((value.size() + 1) % 5 != 0) correct = false;
@@ -372,6 +377,7 @@ printf("ZopfliPNG, a Portable Network Graphics (PNG) image optimizer.\n"
         }
       } else if (name == "--prefix") {
         use_prefix = true;
+        if (!value.empty()) prefix = value;
       } else if (name == "--ga_population_size") {
         if (num < 1) num = 1;
         png_options.ga_population_size = num;
@@ -392,7 +398,6 @@ printf("ZopfliPNG, a Portable Network Graphics (PNG) image optimizer.\n"
       } else if (name == "--ga_number_of_offspring") {
         if (num < 1) num = 1;
         png_options.ga_number_of_offspring = num;
-        if (!value.empty()) prefix = value;
       } else if (name == "--help") {
         ShowHelp();
         return 0;
@@ -507,10 +512,7 @@ printf("ZopfliPNG, a Portable Network Graphics (PNG) image optimizer.\n"
       if (use_prefix) {
         std::string dir, file, ext;
         GetFileNameParts(files[i], &dir, &file, &ext);
-        out_filename = dir;
-        out_filename += prefix;
-        out_filename += file;
-        out_filename += ext;
+        out_filename = dir + prefix + file + ext;
       }
       bool different_output_name = out_filename != files[i];
 

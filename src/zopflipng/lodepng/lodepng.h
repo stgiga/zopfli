@@ -2,6 +2,7 @@
 LodePNG version 20160124
 
 Copyright (c) 2005-2016 Lode Vandevenne
+Copyright 2016 Aaron Kaluszka. All Rights Reserved.
 
 This software is provided 'as-is', without any express or implied
 warranty. In no event will the authors be held liable for any damages
@@ -28,8 +29,6 @@ freely, subject to the following restrictions:
 
 #include <string.h> /*for size_t*/
 #include <limits.h>
-#include <cstdint>
-
 
 extern const char* LODEPNG_VERSION_STRING;
 
@@ -908,6 +907,9 @@ unsigned compress(std::vector<unsigned char>& out, const std::vector<unsigned ch
                   const LodePNGCompressSettings& settings = lodepng_default_compress_settings);
 #endif /* LODEPNG_COMPILE_ENCODER */
 #endif /* LODEPNG_COMPILE_ZLIB */
+
+/* Generate a random filter */
+void randomFilter(std::vector<unsigned char>& filter);
 } /* namespace lodepng */
 #endif /*LODEPNG_COMPILE_CPP*/
 
@@ -1504,7 +1506,7 @@ Fully supported and warning-free.
 *) Mingw
 
 The Mingw compiler (a port of gcc for Windows) should be fully supported by
-+LodePNG.
+LodePNG.
 
 *) Visual Studio and Visual C++ Express Edition
 
