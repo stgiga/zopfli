@@ -204,9 +204,12 @@ typedef struct ZopfliIterations {
 
   int iteration;
 
+  int bestiteration;
+
   int cost;
 
   int bestcost;
+
 } ZopfliIterations;
 
 /* Initializes shared options with default values. */

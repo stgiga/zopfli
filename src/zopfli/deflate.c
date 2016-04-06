@@ -1369,14 +1369,14 @@ static void ZopfliUseThreads(const ZopfliOptions* options,
   unsigned showthread = 0;
   unsigned threadsrunning = 0;
   unsigned threnum = 0;
-  unsigned numthreads = options->numthreads>0?options->numthreads:1;
+  unsigned numthreads = options->numthreads>0?options->numthreads>bkend+1?bkend+1:options->numthreads:1;
   int neednext = 0;
   size_t nextblock = bkstart;
   size_t n, i;
   double *tempcost = malloc(sizeof(double) * (bkend+1));
   unsigned char lastthread = 0;
   unsigned char* blockdone = calloc(bkend+1,sizeof(unsigned char));
-  pthread_t *thr = malloc(sizeof(pthread_t) * options->numthreads);
+  pthread_t *thr = malloc(sizeof(pthread_t) * (options->numthreads>bkend+1?bkend+1:options->numthreads));
   pthread_attr_t thr_attr;
   ZopfliThread *t = malloc(sizeof(ZopfliThread) * numthreads);
   ZopfliLZ77Store *tempstore = malloc(sizeof(ZopfliLZ77Store) * (bkend+1));
@@ -1397,9 +1397,18 @@ static void ZopfliUseThreads(const ZopfliOptions* options,
         if(t[threnum].is_running==1) {
           usleep(100000);
           if(t[showthread].is_running==1) {
-            fprintf(stderr,"{T#%d} BLOCK: %d - Iteration %d: %d bit [%d bit]         \r",
-                    showthread, ((int)t[showthread].iterations.block+1),t[showthread].iterations.iteration,
-                    t[showthread].iterations.cost,t[showthread].iterations.bestcost);
+            unsigned calci, thrprogress;
+            if(mui==0) {
+              calci = options->numiterations;
+            } else {
+              calci = (unsigned)(t[showthread].iterations.bestiteration+mui);
+              if(calci>options->numiterations) calci=options->numiterations;
+            }
+            thrprogress = (int)(((double)t[showthread].iterations.iteration / (double)calci) * 100);
+            fprintf(stderr,"%3d%% THR %d | BLK %d | BST %d: %d b | ITR %d: %d b      \r",
+                    thrprogress, showthread, ((int)t[showthread].iterations.block+1),
+                    t[showthread].iterations.bestiteration, t[showthread].iterations.bestcost,
+                    t[showthread].iterations.iteration, t[showthread].iterations.cost);
           } else {
             ++showthread;
             if(showthread>=numthreads)
@@ -1431,6 +1440,7 @@ static void ZopfliUseThreads(const ZopfliOptions* options,
             t[threnum].iterations.bestcost = 0;
             t[threnum].iterations.cost = 0;
             t[threnum].iterations.iteration = 0;
+            t[threnum].iterations.bestiteration = 0;
             t[threnum].is_running = 1;
             PrintProgress(v, start, inend, i, bkend);
             if(options->numthreads) {

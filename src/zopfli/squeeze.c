@@ -503,6 +503,7 @@ void ZopfliLZ77Optimal(ZopfliBlockState *s,
     }
     if (cost < bestcost) {
       if(s->options->numthreads) {
+        iterations->bestiteration = i;
         iterations->bestcost = (int)cost;
       } else if(!s->options->numthreads && s->options->verbose>3) {
         fprintf(stderr, "\n");
