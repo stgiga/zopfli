@@ -123,6 +123,8 @@ typedef struct CZopfliPNGOptions {
   int ga_number_of_offspring;
 
   unsigned numthreads;
+
+  int cmwc;
 } CZopfliPNGOptions;
 
 // Sets the default options
@@ -289,6 +291,12 @@ struct ZopfliPNGOptions {
   displaying old fashioned statistics.
   */
   unsigned numthreads;
+
+  /*
+  If to use better random number generator by G. Marsaglia:
+  "Complementary-Multiply-With-Carry".
+  */
+  int cmwc;
 };
 
 // Returns 0 on success, error code otherwise.

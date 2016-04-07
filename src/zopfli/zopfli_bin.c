@@ -943,6 +943,7 @@ int main(int argc, char* argv[]) {
     else if (StringsEqual(arg, "--dir")) binoptions.usescandir = 1;
     else if (StringsEqual(arg, "--aas")) binoptions.additionalautosplits = 1;
     else if (StringsEqual(arg, "--all")) options.tryall = 1;
+    else if (StringsEqual(arg, "--cmwc")) options.cmwc = 1;
     else if (arg[0] == '-' && arg[1] == '-' && arg[2] == 'i'
           && arg[3] >= '0' && arg[3] <= '9') {
       options.numiterations = atoi(arg + 3);
@@ -1065,7 +1066,9 @@ int main(int argc, char* argv[]) {
           "  --idle        use idle process priority\n"
           "  --lessmem     use less memory algorithm\n"
           "  --pass#       recompress last split points max # times (d: 0)\n"
-          "  --rp          use restore points\n"
+          "  --rp          use restore points\n");
+      fprintf(stderr,
+          "  --cmwc        use Complementary-Multiply-With-Carry rand. gen.\n"
           "  --rw#         initial random W for iterations (1-65535, d: 1)\n"
           "  --rz#         initial random Z for iterations (1-65535, d: 2)\n\n"
           " Pressing CTRL+C will set maximum unsuccessful iterations to 1.\n"

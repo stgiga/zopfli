@@ -152,6 +152,12 @@ typedef struct ZopfliOptions {
   */
   unsigned numthreads;
 
+  /*
+  If to use better random number generator by G. Marsaglia:
+  "Complementary-Multiply-With-Carry".
+  */
+  int cmwc;
+
 } ZopfliOptions;
 
 /*

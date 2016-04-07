@@ -247,4 +247,5 @@ void ZopfliInitOptions(ZopfliOptions* options) {
   options->tryall = 0;
   options->slowsplit = 0;
   options->numthreads = 1;
+  options->cmwc = 0;
 }

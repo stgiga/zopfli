@@ -23,6 +23,7 @@ Author: jyrki.alakuijala@gmail.com (Jyrki Alakuijala)
 
 #include <assert.h>
 #include <stdio.h>
+#include <stdint.h>
 
 #include "inthandler.h"
 #include "blocksplitter.h"
@@ -81,22 +82,56 @@ static void AddWeighedStatFreqs(const SymbolStats* stats1, double w1,
 
 typedef struct RanState {
   unsigned int m_w, m_z;
+  uint32_t Q[4096], c;
+  int cmwc;
 } RanState;
 
-static void InitRanState(RanState* state,short int m_w,short int m_z) {
+static void InitRanState(RanState* state,short int m_w,short int m_z, int cmwc) {
+  if(cmwc) {
+    const unsigned long phi = 0x9e3779b9;
+    uint32_t x = m_w + m_z;
+    int i;
+
+    state->Q[0] = x;
+    state->Q[1] = x + phi;
+    state->Q[2] = x + phi + phi;
+
+    for (i = 3; i < 4096; i++)
+      state->Q[i] = state->Q[i - 3] ^ state->Q[i - 2] ^ phi ^ i;
+
+    state->c = 362436;
+  }
   state->m_w = m_w;
   state->m_z = m_z;
+  state->cmwc = cmwc;
 }
 
 /*
-Get random number: "Multiply-With-Carry" generator of G. Marsaglia.
+Use one of G. Marsaglia's random number generators:
+- "Multiply-With-Carry" or,
+- "Complementary-Multiply-With-Carry".
 We can feed the generator with 2 unsigned shorts passed
 with --rw and --rz switches.
 */
 static unsigned int Ran(RanState* state) {
-  state->m_z = 36969 * (state->m_z & 65535) + (state->m_z >> 16);
-  state->m_w = 18000 * (state->m_w & 65535) + (state->m_w >> 16);
-  return (state->m_z << 16) + state->m_w;  /* 32-bit result. */
+  if(state->cmwc) {
+    uint64_t t, a=(uint64_t)18782;
+    static uint32_t i=4095;
+    uint32_t x,r=0xfffffffe;
+    i=(i+1)&4095;
+    t=a*state->Q[i]+state->c;
+    state->c=(t>>32);
+    x=t+state->c;
+    if(x<state->c) {
+      ++x;
+      ++state->c;
+    }
+    return(state->Q[i]=r-x);
+  } else {
+    state->m_z = 36969 * (state->m_z & 65535) + (state->m_z >> 16);
+    state->m_w = 18000 * (state->m_w & 65535) + (state->m_w >> 16);
+    return (state->m_z << 16) + state->m_w;  /* 32-bit result. */
+  }
 }
 
 static void RandomizeFreqs(RanState* state, size_t* freqs, int n) {
@@ -474,7 +509,9 @@ void ZopfliLZ77Optimal(ZopfliBlockState *s,
   if (!length_array) exit(-1); /* Allocation failed. */
   if (!costs) exit(-1); /* Allocation failed. */
 
-  InitRanState(&ran_state,s->options->ranstatew,s->options->ranstatez);
+  InitRanState(&ran_state,s->options->ranstatew,s->options->ranstatez,
+               s->options->cmwc);
+
   InitStats(&stats);
   ZopfliInitLZ77Store(in, &currentstore);
   ZopfliMallocHash(ZOPFLI_WINDOW_SIZE, h);
