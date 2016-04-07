@@ -5591,7 +5591,10 @@ static unsigned filter(unsigned char* out, const unsigned char* in, unsigned w, 
         {
           best_size = size[ranking[0]];
           e_since_best = 0;
-          if(settings->verbose) printf("Generation %d: %d bytes\n", e, best_size);
+          if(settings->verbose>2)
+            printf("Generation %d: %d bytes      \r", e, (int)size[ranking[0]]);
+          if(settings->verbose>3)
+            printf("\n");
         }
         else ++e_since_best;
         /*generate offspring*/
@@ -5651,6 +5654,8 @@ static unsigned filter(unsigned char* out, const unsigned char* in, unsigned w, 
           zlib_compress(&dummy, &size[ranking[last - c]], out, h * (linebytes + 1), &zlibsettings);
           lodepng_free(dummy);
           total_size += size[ranking[last - c]];
+          if(settings->verbose>4)
+            printf("Generation %d: %d bytes      \r", e, (int)size[ranking[last - c]]);
         }
       }
     }

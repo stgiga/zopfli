@@ -295,7 +295,7 @@ struct ZopfliPNGOptions {
 // If verbose is true, it will print some info while working.
 int ZopfliPNGOptimize(const std::vector<unsigned char>& origpng,
     const ZopfliPNGOptions& png_options,
-    bool verbose,
+    int verbose,
     std::vector<unsigned char>* resultpng);
 
 #endif  // __cplusplus

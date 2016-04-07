@@ -635,7 +635,7 @@ typedef struct LodePNGEncoderSettings
   unsigned text_compression;
 #endif /*LODEPNG_COMPILE_ANCILLARY_CHUNKS*/
   GeneticAlgorithmSettings ga;
-  bool verbose;
+  int verbose;
 } LodePNGEncoderSettings;
 
 void lodepng_encoder_settings_init(LodePNGEncoderSettings* settings);

@@ -464,7 +464,7 @@ unsigned TryOptimize(
   unsigned error = 0;
 
   lodepng::State state;
-  state.encoder.verbose = png_options->verbosezopfli?1:0;
+  state.encoder.verbose = png_options->verbosezopfli;
   state.encoder.zlibsettings.windowsize = windowsize;
   state.encoder.zlibsettings.nicematch = 258;
 
@@ -642,7 +642,7 @@ void KeepChunks(const std::vector<unsigned char>& origpng,
 
 int ZopfliPNGOptimize(const std::vector<unsigned char>& origpng,
     const ZopfliPNGOptions& png_options,
-    bool verbose,
+    int verbose,
     std::vector<unsigned char>* resultpng) {
   // Use the largest possible deflate window size
   int windowsize = 32768;
@@ -898,7 +898,7 @@ extern "C" int CZopfliPNGOptimize(const unsigned char* origpng,
   const std::vector<unsigned char> origpng_cc(origpng, origpng + origpng_size);
   std::vector<unsigned char> resultpng_cc;
 
-  int ret = ZopfliPNGOptimize(origpng_cc, opts, !!verbose, &resultpng_cc);
+  int ret = ZopfliPNGOptimize(origpng_cc, opts, verbose, &resultpng_cc);
   if (ret) {
     return ret;
   }

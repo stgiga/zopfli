@@ -457,7 +457,7 @@ printf("ZopfliPNG, a Portable Network Graphics (PNG) image optimizer.\n"
     error = lodepng::load_file(origpng, files[i]);
     if (!error) {
       error = ZopfliPNGOptimize(origpng, png_options,
-                                (png_options.verbosezopfli!=0), &resultpng);
+                                png_options.verbosezopfli, &resultpng);
     }
 
     if (error) {
