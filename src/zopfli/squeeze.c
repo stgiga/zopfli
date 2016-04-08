@@ -494,7 +494,7 @@ void ZopfliLZ77Optimal(ZopfliBlockState *s,
   size_t pathsize = 0;
   ZopfliLZ77Store currentstore;
   SymbolStats stats, beststats, laststats;
-  unsigned int i;
+  unsigned int i = 0;
   unsigned int fails=0;
   double cost;
   double *costs = (double*)malloc(sizeof(double) * (blocksize + 1));
@@ -525,7 +525,7 @@ void ZopfliLZ77Optimal(ZopfliBlockState *s,
 
   /* Repeat statistics with each time the cost model from the previous stat
   run. */
-  for (i = 0; i < s->options->numiterations; i++) {
+  while (i < s->options->numiterations && (!mui || fails < mui)) {
     ZopfliCleanLZ77Store(&currentstore);
     ZopfliInitLZ77Store(in, &currentstore);
     LZ77OptimalRun(s, in, instart, inend, &path, &pathsize,
@@ -571,13 +571,7 @@ void ZopfliLZ77Optimal(ZopfliBlockState *s,
       lastrandomstep = i;
     }
     lastcost = cost;
-    if(mui>0 && fails>=mui) {
-/*
-      if(s->options->verbose>3) fprintf(stderr, "Iteration %d: No further reduction"
-                                                " in the last %d tries.\n", i,fails);
-*/
-      break;
-    }
+    ++i;
   }
 
   if(s->options->verbose==3) {
