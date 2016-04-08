@@ -360,9 +360,6 @@ printf("ZopfliPNG, a Portable Network Graphics (PNG) image optimizer.\n"
               return 1;
           }
           png_options.filter_strategies.push_back(strategy);
-          // Enable auto filter strategy only if no user-specified filter is
-          // given.
-          png_options.auto_filter_strategy = false;
         }
       } else if (name == "--zopfli_filters") {
           png_options.auto_filter_strategy = false;
