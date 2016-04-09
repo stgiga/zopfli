@@ -94,7 +94,7 @@ d_lengths: the 32 lengths of the distance codes.
 */
 static void PatchDistanceCodesForBuggyDecoders(unsigned* d_lengths) {
   int num_dist_codes = 0; /* Amount of non-zero distance codes */
-  int i;
+  size_t i;
   for (i = 0; i < 30 /* Ignore the two unused codes from the spec */; i++) {
     if (d_lengths[i]) num_dist_codes++;
     if (num_dist_codes >= 2) return; /* Two or more codes is fine. */
@@ -420,6 +420,9 @@ static void AddLZ77Data(const ZopfliLZ77Store* lz77,
                         unsigned char** out, size_t* outsize) {
   size_t testlength = 0;
   size_t i;
+#ifdef NDEBUG
+  (void)expected_data_size;
+#endif
 
   for (i = lstart; i < lend; i++) {
     unsigned dist = lz77->dists[i];

@@ -403,7 +403,9 @@ static void FollowPath(ZopfliBlockState* s,
       ZopfliFindLongestMatch(s, h, in, pos, inend, length, 0,
                              &dist, &dummy_length);
       assert(!(dummy_length != length && length > 2 && dummy_length > 2));
+#ifndef NDEBUG
       ZopfliVerifyLenDist(in, inend, pos, dist, length);
+#endif
       ZopfliStoreLitLenDist(length, dist, pos, store);
       total_length_test += length;
     } else {
@@ -411,7 +413,6 @@ static void FollowPath(ZopfliBlockState* s,
       ZopfliStoreLitLenDist(in[pos], 0, pos, store);
       total_length_test++;
     }
-
 
     assert(pos + length <= inend);
     for (j = 1; j < length; j++) {

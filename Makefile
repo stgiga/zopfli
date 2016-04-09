@@ -4,8 +4,9 @@ CXX = g++
 CFLAGS = -W -Wall -Wextra -ansi -pedantic -lm -pthread
 CXXFLAGS = -W -Wall -Wextra -ansi -pedantic -std=gnu++11 -pthread
 
-ZDEFOPT = -Ofast -fno-ipa-cp-clone
-ZARMOPT = -O2
+ZDEBUG  = -O0 -g
+ZDEFOPT = -Ofast -fno-ipa-cp-clone -D NDEBUG
+ZARMOPT = -O2 -D NDEBUG
 ZADDOPT = -g0 -s -flto -fuse-linker-plugin -ffat-lto-objects -flto-compression-level=0 -finline-functions -funswitch-loops -fpredictive-commoning -ftree-loop-distribute-patterns -ftree-slp-vectorize -ffast-math -fomit-frame-pointer -ftracer -ftree-loop-ivcanon -ftree-loop-distribution -fselective-scheduling2 -fsel-sched-pipelining -fira-region=all -fira-hoist-pressure -free -fno-crossjumping -fno-cx-limited-range -fno-defer-pop -fno-function-cse -fno-rerun-cse-after-loop -fno-sched-interblock -fno-sched-last-insn-heuristic -fno-sched-spec -fno-sel-sched-pipelining-outer-loops -fno-tree-fre -fno-tree-loop-im -fno-zero-initialized-in-bss
 # -flto-partition=max - provides ~1% speed up on linux but doesn't work with mingw32 
 CAVXFLAGS = -mavx -mtune=corei7-avx -march=corei7-avx
@@ -30,12 +31,15 @@ ZOPFLIPNGBIN_SRC := src/zopflipng/zopflipng_bin.cc
 # Zopfli binary
 zopfli:
 	$(CC) -static $(ZOPFLILIB_SRC) $(ZOPFLIBIN_SRC) $(CFLAGS) $(ZDEFOPT) $(ZADDOPT) -o zopfli
-	
+
 zopfliavx:
 	$(CC) -static $(ZOPFLILIB_SRC) $(ZOPFLIBIN_SRC) $(CFLAGS) $(ZDEFOPT) $(CAVXFLAGS) $(ZADDOPT) -o zopfli
 
 zopflineon:
 	$(CC) -static $(ZOPFLILIB_SRC) $(ZOPFLIBIN_SRC) $(CFLAGS) $(ZARMOPT) $(CNEONFLAGS) $(ZADDOPT) -o zopfli
+
+zopflidebug:
+	$(CC) $(ZOPFLILIB_SRC) $(ZOPFLIBIN_SRC) $(CFLAGS) $(ZDEBUG) -o zopfli
 
 defdbparser:
 	$(CC) -static $(DEFDBPARSER_SRC) $(ZARMOPT) -o defdbparser
@@ -68,6 +72,10 @@ zopflipngavx:
 zopflipngneon:
 	$(CC) $(ZOPFLILIB_SRC) $(CFLAGS) $(ZARMOPT) $(CNEONFLAGS) $(ZADDOPT) -c
 	$(CXX) -static -static-libgcc $(ZOPFLILIB_OBJ) $(LODEPNG_SRC) $(ZOPFLIPNGLIB_SRC) $(ZOPFLIPNGBIN_SRC) $(CXXFLAGS) $(ZARMOPT) $(CNEONFLAGS) $(ZADDOPT) -o zopflipng
+
+zopflipngdebug:
+	$(CC) $(ZOPFLILIB_SRC) $(CFLAGS) $(ZDEBUG) -c
+	$(CXX) $(ZOPFLILIB_OBJ) $(LODEPNG_SRC) $(ZOPFLIPNGLIB_SRC) $(ZOPFLIPNGBIN_SRC) $(CXXFLAGS) $(ZDEBUG) -o zopflipng
 
 # ZopfliPNG shared library
 libzopflipng:
