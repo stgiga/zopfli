@@ -567,6 +567,52 @@ typedef enum LodePNGFilterStrategy
   LFS_GENETIC_ALGORITHM
 } LodePNGFilterStrategy;
 
+typedef enum LodePNGPalettePriorityStrategy
+{
+  /*Prioritize by frequency of color*/
+  LPPS_POPULARITY,
+  /*Prioritize by RGB color space*/
+  LPPS_RGB,
+  /*Prioritize by Y'UV color space*/
+  LPPS_YUV,
+  /*Prioritize by L*a*b* color space*/
+  LPPS_LAB,
+  /*Prioritize by most significant bits of each RGB channel*/
+  LPPS_MSB
+} LodePNGPalettePriorityStrategy;
+
+typedef enum LodePNGPaletteDirectionStrategy
+{
+  /*Sort in ascending direction*/
+  LPDS_ASCENDING,
+  /*Sort in descending direction*/
+  LPDS_DESCENDING
+} LodePNGPaletteDirectionStrategy;
+
+typedef enum LodePNGPaletteTransparencyStrategy
+{
+  /*Don't consider transparency*/
+  LPTS_IGNORE,
+  /*Sort transparency as additional color channel*/
+  LPTS_SORT,
+  /*Put colors with transparency first*/
+  LPTS_FIRST
+} LodePNGPaletteTransparencyStrategy;
+
+typedef enum LodePNGPaletteOrderStrategy
+{
+  /*Do not change palette*/
+  LPOS_NONE,
+  /*Consider all colors when ordering*/
+  LPOS_GLOBAL,
+  /*Order by nearest color (Euclidean distance in RGB space)*/
+  LPOS_NEAREST,
+  /*Order by nearest color (Euclidean distance in RGB space) multiplied by overall popularity*/
+  LPOS_NEAREST_WEIGHT,
+  /*Order by nearest color (Euclidean distance in RGB space), only taking into account neighbors*/
+  LPOS_NEAREST_NEIGHBOR
+} LodePNGPaletteOrderStrategy;
+
 /*Gives characteristics about the colors of the image, which helps decide which color model to use for encoding.
 Used internally by default if "auto_convert" is enabled. Public because it's useful for custom algorithms.*/
 typedef struct LodePNGColorProfile
@@ -624,6 +670,10 @@ typedef struct LodePNGEncoderSettings
   have to cleanup this buffer, LodePNG will never free it. Don't forget that filter_palette_zero
   must be set to 0 to ensure this is also used on palette or low bitdepth images.*/
   const unsigned char* predefined_filters;
+  LodePNGPalettePriorityStrategy palette_priority;
+  LodePNGPaletteDirectionStrategy palette_direction;
+  LodePNGPaletteTransparencyStrategy palette_transparency;
+  LodePNGPaletteOrderStrategy palette_order;
 
   /*force creating a PLTE chunk if colortype is 2 or 6 (= a suggested palette).
   If colortype is 3, PLTE is _always_ created.*/

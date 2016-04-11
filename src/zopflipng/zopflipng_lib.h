@@ -53,17 +53,63 @@ enum ZopfliPNGFilterStrategy {
   kStrategyIncremental,
   kStrategyPredefined,
   kStrategyGeneticAlgorithm,
-  kNumFilterStrategies /* Not a strategy but used for the size of this enum */
+  kNumFilterStrategies, /* Not a strategy but used for the size of this enum */
+  kStrategyNA
+};
+
+enum ZopfliPNGPalettePriority {
+  kPriorityPopularity,
+  kPriorityRGB,
+  kPriorityYUV,
+  kPriorityLab,
+  kPriorityMSB,
+  kNumPalettePriorities,
+  kPriorityNA
+};
+
+enum ZopfliPNGPaletteDirection {
+  kDirectionAscending,
+  kDirectionDescending,
+  kNumPaletteDirections,
+  kDirectionNA
+};
+
+enum ZopfliPNGPaletteTransparency {
+  kTransparencyIgnore,
+  kTransparencySort,
+  kTransparencyFirst,
+  kNumPaletteTransparencies,
+  kTransparencyNA
+};
+
+enum ZopfliPNGPaletteOrder {
+  kOrderNone,
+  kOrderGlobal,
+  kOrderNearest,
+  kOrderWeight,
+  kOrderNeighbor,
+  kNumPaletteOrders
 };
 
 typedef struct CZopfliPNGOptions {
   int lossy_transparent;
-
   int lossy_8bit;
 
   enum ZopfliPNGFilterStrategy* filter_strategies;
   // How many strategies to try.
   int num_filter_strategies;
+
+  enum ZopfliPNGPalettePriority* palette_priorities;
+  int num_palette_priorities;
+
+  enum ZopfliPNGPaletteDirection* palette_directions;
+  int num_palette_directions;
+
+  enum ZopfliPNGPaletteTransparency* palette_transparencies;
+  int num_palette_transparencies;
+
+  enum ZopfliPNGPaletteOrder* palette_orders;
+  int num_palette_orders;
 
   int auto_filter_strategy;
 
@@ -83,7 +129,7 @@ typedef struct CZopfliPNGOptions {
 
   int lengthscoremax;
 
-  int verbosezopfli;
+  int verbose;
 
   int lazymatching;
 
@@ -110,6 +156,12 @@ typedef struct CZopfliPNGOptions {
 
   int slowsplit;
 
+  unsigned numthreads;
+
+  int cmwc;
+
+  int try_paletteless_size;
+
   int ga_population_size;
 
   int ga_max_evaluations;
@@ -122,9 +174,6 @@ typedef struct CZopfliPNGOptions {
 
   int ga_number_of_offspring;
 
-  unsigned numthreads;
-
-  int cmwc;
 } CZopfliPNGOptions;
 
 // Sets the default options
@@ -159,6 +208,18 @@ struct ZopfliPNGOptions {
   // Filter strategies to try
   std::vector<ZopfliPNGFilterStrategy> filter_strategies;
 
+  // Palette priority strategies to try
+  std::vector<ZopfliPNGPalettePriority> palette_priorities;
+
+  // Palette sort directions to try
+  std::vector<ZopfliPNGPaletteDirection> palette_directions;
+
+  // Palette transparency strategies to try
+  std::vector<ZopfliPNGPaletteTransparency> palette_transparencies;
+
+  // Palette ordering strategies to try
+  std::vector<ZopfliPNGPaletteOrder> palette_orders;
+
   // Automatically choose filter strategy using less good compression
   bool auto_filter_strategy;
 
@@ -186,8 +247,8 @@ struct ZopfliPNGOptions {
   // model and the chance for first run being closer to the optimal output.
   int lengthscoremax;
 
-  // How much zopfli output to print, verbose level
-  int verbosezopfli;
+  // Verbosity level, shared with Zopfli
+  int verbose;
 
   // Enable lazy matching in LZ77 Greedy may provide various results for different files when enabled.
   int lazymatching;
@@ -266,6 +327,23 @@ struct ZopfliPNGOptions {
   */
   int slowsplit;
 
+  /*
+  Iterate multiple dynamic blocks at once using pthreads, aka.
+  multi-threading mode. Passing 0 forces compatibility behavior
+  by running Block processing function with MASTER thread and
+  displaying old fashioned statistics.
+  */
+  unsigned numthreads;
+
+  /*
+  If to use better random number generator by G. Marsaglia:
+  "Complementary-Multiply-With-Carry".
+  */
+  int cmwc;
+
+  // Maximum size after which to try full color image compression on paletted image
+  int try_paletteless_size;
+
   // Genetic algorithm: number of genomes in pool
   int ga_population_size;
 
@@ -284,19 +362,6 @@ struct ZopfliPNGOptions {
   // Genetic algorithm: number of offspring per generation
   int ga_number_of_offspring;
 
-  /*
-  Iterate multiple dynamic blocks at once using pthreads, aka.
-  multi-threading mode. Passing 0 forces compatibility behavior
-  by running Block processing function with MASTER thread and
-  displaying old fashioned statistics.
-  */
-  unsigned numthreads;
-
-  /*
-  If to use better random number generator by G. Marsaglia:
-  "Complementary-Multiply-With-Carry".
-  */
-  int cmwc;
 };
 
 // Returns 0 on success, error code otherwise.

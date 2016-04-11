@@ -123,9 +123,8 @@ void ShowHelp() {
          " considered as output from previous runs. This is handy when using"
          " *.png wildcard expansion with multiple runs.\n"
          "-y: do not ask about overwriting files.\n"
-         "--alpha_cleaner=[0-5]: remove colors behind alpha channel 0. No"
-         " visual difference, removes hidden information, based on cryopng.\n"
-         "--lossy_transparent: backwards compat., same as alpha cleaner 1.\n"
+         "--lossy_transparent: remove colors behind alpha channel 0. No visual"
+         " difference, removes hidden information.\n"
          "--lossy_8bit: convert 16-bit per channel image to 8-bit per"
          " channel.\n"
          "-d: dry run: don't save any files, just see the console output"
@@ -136,9 +135,17 @@ void ShowHelp() {
          "-q: use quick, but not very good, compression"
          " (e.g. for only trying the PNG filter and color types)\n"
          "--iterations=[number]: number of iterations, more iterations makes it"
-         " slower but provides slightly better compression. Default: 15 for"
-         " small files, 5 for large files.\n"
+         " slower but provides slightly better compression."
+         " Default: 15 for small files, 5 for large files.\n"
          "--nosplittinglast: don't use last splitting after compression\n"
+         "--alpha_cleaners=[types]: remove colors behind alpha channel 0. No"
+         " visual difference, removes hidden information.\n"
+         " b: black\n"
+         " h: horizontal\n"
+         " v: vertical\n"
+         " a: average\n"
+         " p: paeth\n"
+         " w: white\n"
          "--filters=[types]: filter strategies to try:\n"
          " 0-4: give all scanlines PNG filter type 0-4\n"
          " m: minimum sum\n"
@@ -170,6 +177,36 @@ void ShowHelp() {
          " trying faster compression with each given type. If this argument is"
          " used, all given filter types are tried with slow compression and the"
          " best result retained.\n"
+         "--palette_priorities=[types]: palette priorities to try:\n"
+         " p: popularity\n"
+         " r: RGB\n"
+         " y: Y'UV\n"
+         " l: L*a*b*\n"
+         " m: MSB\n"
+         " By default, if this argument is not given, all strategies are tried."
+         "\n"
+         "--palette_directions=[types]: palette directions to try:\n"
+         " a: ascending\n"
+         " d: descending\n"
+         " By default, if this argument is not given, all strategies are tried."
+         "\n"
+         "--palette_transparencies=[types]: palette transparencies to try:\n"
+         " i: ignore\n"
+         " s: sort\n"
+         " f: first\n"
+         " By default, if this argument is not given, all strategies are tried."
+         "\n"
+         "--palette_orders=[types]: palette orders to try:\n"
+         " p: none\n"
+         " g: global\n"
+         " d: distance\n"
+         " w: distance, weighted by popularity\n"
+         " n: distance, weighted by neighbor popularity\n"
+         " By default, if this argument is not given, all strategies are tried."
+         "\n"
+         "--try_paletteless_size=[number]: number of bytes under which to try"
+         " non-paletted version of image that would normally use a palette."
+         " Default: 2048\n"
          "--keepchunks=nAME,nAME,...: keep metadata chunks with these names"
          " that would normally be removed, e.g. tEXt,zTXt,iTXt,gAMA, ... \n"
          " Due to adding extra data, this increases the result size. Keeping"
@@ -207,7 +244,7 @@ void ShowHelp() {
          "Optimize multiple files: zopflipng --prefix a.png b.png c.png\n"
          "Compress really good and trying all filter strategies: zopflipng"
          " --iterations=500 --filters=01234mywebipg --lossy_8bit"
-         " --alpha_cleaner=012345 infile.png outfile.png\n");
+         " --alpha_cleaners=bhvapw infile.png outfile.png\n");
 }
 
 void PrintSize(const char* label, size_t size) {
@@ -271,18 +308,26 @@ printf("ZopfliPNG, a Portable Network Graphics (PNG) image optimizer.\n"
       int num = atoi(value.c_str());
       if (name == "--always_zopflify") {
         always_zopflify = true;
-      } else if (name == "--alpha_cleaner") {
+      } else if (name == "--alpha_cleaners") {
         for (size_t j = 0; j < value.size(); j++) {
-          signed char f = value[j] - '0';
-          if (f >= 0 && f <= 5) {
-            png_options.lossy_transparent |= (1 << f);
-          } else {
-            printf("Unknown alpha cleaning method: %i\n", f);
-            return 1;
+          char c = value[j];
+          int cleaner = 0;
+          switch (c) {
+            case 'n': cleaner = 0; break;
+            case 'b': cleaner = 1; break;
+            case 'h': cleaner = 2; break;
+            case 'v': cleaner = 3; break;
+            case 'a': cleaner = 4; break;
+            case 'p': cleaner = 5; break;
+            case 'w': cleaner = 6; break;
+            default:
+              printf("Unknown alpha cleaning method: %c\n", c);
+              return 1;
           }
+          png_options.lossy_transparent |= (1 << cleaner);
         }
       } else if (name == "--lossy_transparent") {
-        png_options.lossy_transparent |= 2;
+        png_options.lossy_transparent |= 4;
       } else if (name == "--lossy_8bit") {
         png_options.lossy_8bit = true;
       } else if (name == "--brotli") {
@@ -318,7 +363,7 @@ printf("ZopfliPNG, a Portable Network Graphics (PNG) image optimizer.\n"
         png_options.maxfailiterations = num;
       } else if (name == "--v") {
         if (num < 0) num = 1;
-        png_options.verbosezopfli = num;
+        png_options.verbose = num;
       } else if (name == "--cmwc") {
         png_options.cmwc = 1;
       } else if (name == "--rw") {
@@ -362,7 +407,69 @@ printf("ZopfliPNG, a Portable Network Graphics (PNG) image optimizer.\n"
           png_options.filter_strategies.push_back(strategy);
         }
       } else if (name == "--zopfli_filters") {
-          png_options.auto_filter_strategy = false;
+        png_options.auto_filter_strategy = false;
+      } else if (name == "--palette_priorities") {
+        for (size_t j = 0; j < value.size(); j++) {
+          ZopfliPNGPalettePriority popularity = kPriorityPopularity;
+          char p = value[j];
+          switch (p) {
+            case 'p': popularity = kPriorityPopularity; break;
+            case 'r': popularity = kPriorityRGB; break;
+            case 'y': popularity = kPriorityYUV; break;
+            case 'l': popularity = kPriorityLab; break;
+            case 'm': popularity = kPriorityMSB; break;
+            default:
+              printf("Unknown palette priority: %c\n", p);
+              return 1;
+          }
+          png_options.palette_priorities.push_back(popularity);
+        }
+      } else if (name == "--palette_directions") {
+        for (size_t j = 0; j < value.size(); j++) {
+          ZopfliPNGPaletteDirection direction = kDirectionAscending;
+          char d = value[j];
+          switch (d) {
+            case 'a': direction = kDirectionAscending; break;
+            case 'd': direction = kDirectionDescending; break;
+            default:
+              printf("Unknown palette direction: %c\n", d);
+              return 1;
+          }
+          png_options.palette_directions.push_back(direction);
+        }
+      } else if (name == "--palette_transparencies") {
+        for (size_t j = 0; j < value.size(); j++) {
+          ZopfliPNGPaletteTransparency transparency = kTransparencyIgnore;
+          char t = value[j];
+          switch (t) {
+            case 'i': transparency = kTransparencyIgnore; break;
+            case 's': transparency = kTransparencySort; break;
+            case 'f': transparency = kTransparencyFirst; break;
+            default:
+              printf("Unknown palette direction: %c\n", t);
+              return 1;
+          }
+          png_options.palette_transparencies.push_back(transparency);
+        }
+      } else if (name == "--palette_orders") {
+        for (size_t j = 0; j < value.size(); j++) {
+          ZopfliPNGPaletteOrder order = kOrderNone;
+          char o = value[j];
+          switch (o) {
+            case 'p': order = kOrderNone; break;
+            case 'g': order = kOrderGlobal; break;
+            case 'd': order = kOrderNearest; break;
+            case 'w': order = kOrderWeight; break;
+            case 'n': order = kOrderNeighbor; break;
+            default:
+              printf("Unknown palette order: %c\n", o);
+              return 1;
+          }
+          png_options.palette_orders.push_back(order);
+        }
+      } else if (name == "--try_paletteless_size") {
+        if (num < 0) num = 0;
+        png_options.try_paletteless_size = num;
       } else if (name == "--keepchunks") {
         bool correct = true;
         if ((value.size() + 1) % 5 != 0) correct = false;
@@ -389,11 +496,11 @@ printf("ZopfliPNG, a Portable Network Graphics (PNG) image optimizer.\n"
         png_options.ga_stagnate_evaluations = num;
       } else if (name == "--ga_mutation_probability") {
         if (num < 0) num = 0;
-          else if (num > 1) num = 1;
+        else if (num > 1) num = 1;
         png_options.ga_mutation_probability = num;
       } else if (name == "--ga_crossover_probability") {
         if (num < 0) num = 0;
-          else if (num > 1) num = 1;
+        else if (num > 1) num = 1;
         png_options.ga_crossover_probability = num;
       } else if (name == "--ga_number_of_offspring") {
         if (num < 1) num = 1;
@@ -457,7 +564,7 @@ printf("ZopfliPNG, a Portable Network Graphics (PNG) image optimizer.\n"
     error = lodepng::load_file(origpng, files[i]);
     if (!error) {
       error = ZopfliPNGOptimize(origpng, png_options,
-                                png_options.verbosezopfli, &resultpng);
+                                png_options.verbose, &resultpng);
     }
 
     if (error) {
