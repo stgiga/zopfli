@@ -24,7 +24,6 @@ Author: jyrki.alakuijala@gmail.com (Jyrki Alakuijala)
 #define HASH_MASK 32767
 
 void ZopfliInitHash(size_t window_size, ZopfliHash* h) {
-  size_t i = 0;
 
   h->val = 0;
 
@@ -32,9 +31,7 @@ void ZopfliInitHash(size_t window_size, ZopfliHash* h) {
   memset(h->head, -1, 65536 * sizeof(h->head[0]));
 
   memset(h->hashval, -1, window_size * sizeof(h->hashval[0]));
-  for (i = 0; i < window_size; ++i) {
-    h->prev[i] = i;  /* If prev[j] == j, then prev[j] is uninitialized. */
-  }
+  memcpy(h->prev, h->prevbase, window_size * sizeof(h->prev[0]));
 
 #ifdef ZOPFLI_HASH_SAME
   memset(h->same, 0, window_size * sizeof(h->same[0]));
@@ -45,17 +42,13 @@ void ZopfliInitHash(size_t window_size, ZopfliHash* h) {
   memset(h->head2, -1, 65536 * sizeof(h->head2[0]));
 
   memset(h->hashval2, -1, window_size * sizeof(h->hashval2[0]));
-  for (i = 0; i < window_size; ++i) {
-    h->prev2[i] = i;
-  }
+  memcpy(h->prev2, h->prevbase, window_size * sizeof(h->prev2[0]));
 #endif
 
 }
 
 void ZopfliMallocHash(size_t window_size, ZopfliHash* h) {
   size_t i = 0;
-
-  h->val = 0;
 
 /* 
    Some systems may refuse to give memory to many line-by-line
@@ -69,6 +62,8 @@ void ZopfliMallocHash(size_t window_size, ZopfliHash* h) {
     h->prev = (unsigned short*)malloc(sizeof(*h->prev) * window_size);
     h->hashval = (int*)malloc(sizeof(*h->hashval) * window_size);
 
+    h->prevbase = (unsigned short*)malloc(sizeof(*h->prevbase) * window_size);
+
 #ifdef ZOPFLI_HASH_SAME
     h->same = (unsigned short*)malloc(sizeof(*h->same) * window_size);
 #endif
@@ -79,6 +74,7 @@ void ZopfliMallocHash(size_t window_size, ZopfliHash* h) {
     h->hashval2 = (int*)malloc(sizeof(*h->hashval2) * window_size);
 #endif
     if(h->head == NULL || h->prev == NULL || h->hashval == NULL
+    || h->prevbase == NULL
 #ifdef ZOPFLI_HASH_SAME
     || h->same == NULL
 #endif
@@ -97,6 +93,10 @@ void ZopfliMallocHash(size_t window_size, ZopfliHash* h) {
       i=0;
     }
   } while(i!=0);
+
+  for (i = 0; i < window_size; ++i) {
+    h->prevbase[i] = i;
+  }
 }
 
 void ZopfliCleanHash(ZopfliHash* h) {
@@ -113,7 +113,8 @@ void ZopfliCleanHash(ZopfliHash* h) {
   free(h->same);
   h->same     = 0;
 #endif
-
+  free(h->prevbase);
+  h->prevbase = 0;
   free(h->hashval);
   h->hashval  = 0;
   free(h->prev);
