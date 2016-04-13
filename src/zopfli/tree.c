@@ -33,9 +33,7 @@ void ZopfliLengthsToSymbols(const unsigned* lengths, size_t n, unsigned maxbits,
   unsigned bits, i;
   unsigned code;
 
-  for (i = 0; i < n; i++) {
-    symbols[i] = 0;
-  }
+  memset(symbols, 0, n * sizeof(symbols[0]));
 
   /* 1) Count the number of codes for each code length. Let bl_count[N] be the
   number of codes of length N, N >= 1. */

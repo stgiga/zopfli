@@ -22,6 +22,7 @@ Author: jyrki.alakuijala@gmail.com (Jyrki Alakuijala)
 
 #include <assert.h>
 #include <stdio.h>
+#include <string.h>
 
 #ifdef ZOPFLI_LONGEST_MATCH_CACHE
 
@@ -59,8 +60,8 @@ void ZopfliInitCache(size_t blocksize, ZopfliLongestMatchCache* lmc) {
   /* length > 0 and dist 0 is invalid combination, which indicates on purpose
   that this cache value is not filled in yet. */
   for (i = 0; i < blocksize; i++) lmc->length[i] = 1;
-  for (i = 0; i < blocksize; i++) lmc->dist[i] = 0;
-  for (i = 0; i < lmc->cache_length * blocksize * 3; i++) lmc->sublen[i] = 0;
+  memset(lmc->dist, 0, blocksize * sizeof(lmc->dist[0]));
+  memset(lmc->sublen, 0, lmc->cache_length * blocksize * 3 * sizeof(lmc->sublen[0]));
 }
 
 void ZopfliCleanCache(ZopfliLongestMatchCache* lmc) {

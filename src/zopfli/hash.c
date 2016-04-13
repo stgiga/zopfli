@@ -28,28 +28,25 @@ void ZopfliInitHash(size_t window_size, ZopfliHash* h) {
 
   h->val = 0;
 
-  for (i = 0; i < 65536; ++i) {
-    h->head[i] = -1;  /* -1 indicates no head so far. */
-  }
+  /* -1 indicates no head so far. */
+  memset(h->head, -1, 65536 * sizeof(h->head[0]));
+
+  memset(h->hashval, -1, window_size * sizeof(h->hashval[0]));
   for (i = 0; i < window_size; ++i) {
     h->prev[i] = i;  /* If prev[j] == j, then prev[j] is uninitialized. */
-    h->hashval[i] = -1;
   }
 
 #ifdef ZOPFLI_HASH_SAME
-  for (i = 0; i < window_size; ++i) {
-    h->same[i] = 0;
-  }
+  memset(h->same, 0, window_size * sizeof(h->same[0]));
 #endif
 
 #ifdef ZOPFLI_HASH_SAME_HASH
   h->val2 = 0;
-  for (i = 0; i < 65536; ++i) {
-    h->head2[i] = -1;
-  }
+  memset(h->head2, -1, 65536 * sizeof(h->head2[0]));
+
+  memset(h->hashval2, -1, window_size * sizeof(h->hashval2[0]));
   for (i = 0; i < window_size; ++i) {
     h->prev2[i] = i;
-    h->hashval2[i] = -1;
   }
 #endif
 

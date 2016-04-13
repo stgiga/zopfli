@@ -246,7 +246,6 @@ void ZopfliBlockSplitLZ77(const ZopfliOptions* options,
                           const ZopfliLZ77Store* lz77, size_t maxblocks,
                           size_t** splitpoints, size_t* npoints) {
   size_t lstart, lend;
-  size_t i;
   size_t llpos = 0;
   size_t numblocks = 1;
   unsigned char* done;
@@ -254,9 +253,8 @@ void ZopfliBlockSplitLZ77(const ZopfliOptions* options,
 
   if (lz77->size < 10) return;  /* This code fails on tiny files. */
 
-  done = (unsigned char*)malloc(lz77->size);
+  done = (unsigned char*)calloc(lz77->size, sizeof(unsigned char));
   if (!done) exit(-1); /* Allocation failed. */
-  for (i = 0; i < lz77->size; i++) done[i] = 0;
 
   lstart = 0;
   lend = lz77->size;

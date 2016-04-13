@@ -140,7 +140,7 @@ static size_t EncodeTree(const unsigned* ll_lengths,
   int size_only = !out;
   size_t result_size = 0;
 
-  for(i = 0; i < 19; i++) clcounts[i] = 0;
+  memset(clcounts, 0, 19 * sizeof(clcounts[0]));
 
   /* Trim zeros. */
   while (hlit > 0 && ll_lengths[257 + hlit - 1] == 0) hlit--;
