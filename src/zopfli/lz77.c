@@ -60,7 +60,6 @@ static size_t CeilDiv(size_t a, size_t b) {
 
 void ZopfliCopyLZ77Store(
     const ZopfliLZ77Store* source, ZopfliLZ77Store* dest) {
-  size_t i;
   size_t llsize = ZOPFLI_NUM_LL * CeilDiv(source->size, ZOPFLI_NUM_LL);
   size_t dsize = ZOPFLI_NUM_D * CeilDiv(source->size, ZOPFLI_NUM_D);
   ZopfliCleanLZ77Store(dest);
@@ -83,19 +82,20 @@ void ZopfliCopyLZ77Store(
   if (!dest->ll_counts || !dest->d_counts) exit(-1);
 
   dest->size = source->size;
-  for (i = 0; i < source->size; i++) {
-    dest->litlens[i] = source->litlens[i];
-    dest->dists[i] = source->dists[i];
-    dest->pos[i] = source->pos[i];
-    dest->ll_symbol[i] = source->ll_symbol[i];
-    dest->d_symbol[i] = source->d_symbol[i];
-  }
-  for (i = 0; i < llsize; i++) {
-    dest->ll_counts[i] = source->ll_counts[i];
-  }
-  for (i = 0; i < dsize; i++) {
-    dest->d_counts[i] = source->d_counts[i];
-  }
+  memcpy(dest->litlens, source->litlens,
+         source->size * sizeof(dest->litlens[0]));
+  memcpy(dest->dists, source->dists,
+         source->size * sizeof(dest->dists[0]));
+  memcpy(dest->pos, source->pos,
+         source->size * sizeof(dest->pos[0]));
+  memcpy(dest->ll_symbol, source->ll_symbol,
+         source->size * sizeof(dest->ll_symbol[0]));
+  memcpy(dest->d_symbol, source->d_symbol,
+         source->size * sizeof(dest->d_symbol[0]));
+  memcpy(dest->ll_counts, source->ll_counts,
+         llsize * sizeof(dest->ll_counts[0]));
+  memcpy(dest->d_counts, source->d_counts,
+         dsize * sizeof(dest->d_counts[0]));
 }
 
 /*
@@ -179,14 +179,10 @@ static void ZopfliLZ77GetHistogramAt(const ZopfliLZ77Store* lz77, size_t lpos,
   size_t llpos = ZOPFLI_NUM_LL * (lpos / ZOPFLI_NUM_LL);
   size_t dpos = ZOPFLI_NUM_D * (lpos / ZOPFLI_NUM_D);
   size_t i;
-  for (i = 0; i < ZOPFLI_NUM_LL; i++) {
-    ll_counts[i] = lz77->ll_counts[llpos + i];
-  }
+  memcpy(ll_counts, lz77->ll_counts + llpos, ZOPFLI_NUM_LL * sizeof(ll_counts[0]));
+  memcpy(d_counts, lz77->d_counts + dpos, ZOPFLI_NUM_D * sizeof(d_counts[0]));
   for (i = lpos + 1; i < llpos + ZOPFLI_NUM_LL && i < lz77->size; i++) {
     ll_counts[lz77->ll_symbol[i]]--;
-  }
-  for (i = 0; i < ZOPFLI_NUM_D; i++) {
-    d_counts[i] = lz77->d_counts[dpos + i];
   }
   for (i = lpos + 1; i < dpos + ZOPFLI_NUM_D && i < lz77->size; i++) {
     if (lz77->dists[i] != 0) d_counts[lz77->d_symbol[i]]--;
