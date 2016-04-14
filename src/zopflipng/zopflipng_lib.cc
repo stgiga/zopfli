@@ -397,6 +397,7 @@ unsigned TryOptimize(
     lodepng::State& outputstate) {
   unsigned error = 0;
   lodepng::State state;
+  std::vector<unsigned char> out2;
   state.encoder.verbose = png_options->verbose;
   state.encoder.zlibsettings.windowsize = windowsize;
   state.encoder.zlibsettings.nicematch = 258;
@@ -548,6 +549,16 @@ unsigned TryOptimize(
     error = lodepng::decode(temp, w, h, outputstate, *out);
   }
 
+  // For low bit depths, try higher depths, which might result in smaller files.
+  for (unsigned i = outputstate.info_png.color.bitdepth << 1; i <= 8; i <<= 1) {
+    if (error) break;
+    state.encoder.auto_convert = 0;
+    state.info_png.color.bitdepth = i;
+    out2.clear();
+    error = lodepng::encode(out2, image, w, h, state);
+    if (!error && out2.size() < out->size()) out->swap(out2);
+  }
+
   // For very small output, also try without palette, it may be smaller thanks
   // to no palette storage overhead.
   if (!error && out->size() < (unsigned) png_options->try_paletteless_size
@@ -557,6 +568,7 @@ unsigned TryOptimize(
       printf("Palette was used,"
              " compressed result is small enough to also try RGB or grey.\n");
     }
+    out2.clear();
     LodePNGColorProfile profile;
     lodepng_color_profile_init(&profile);
     lodepng_get_color_profile(&profile, &image[0], w, h, &state.info_raw);
@@ -573,7 +585,6 @@ unsigned TryOptimize(
       state.info_png.color.key_b = (profile.key_b & 255u);
     }
 
-    std::vector<unsigned char> out2;
     error = lodepng::encode(out2, image, w, h, state);
     if (!error && out2.size() < out->size()) {
       out->swap(out2);
