@@ -30,7 +30,7 @@ static int crc_table_computed = 0;
 /* Makes the table for a fast CRC. */
 static void MakeCRCTable(void) {
   unsigned long c;
-  int n, k;
+  size_t n, k;
   for (n = 0; n < 256; n++) {
     c = (unsigned long) n;
     for (k = 0; k < 8; k++) {

@@ -4,13 +4,20 @@ CXX = g++
 CFLAGS = -W -Wall -Wextra -ansi -pedantic -lm -pthread
 CXXFLAGS = -W -Wall -Wextra -ansi -pedantic -std=gnu++11 -pthread
 
+#It's recommended to double-compile zopfli by first adding -fprofile-generate, running it on
+#some file with 5000 iterations and using master thread only (--t0). After initial run
+#it should recompiled with -fprofile-use instead. This usually better optimizes the code
+#speeding up zopfli by ~8% than one-time compile without mentioned tweak.
+#
+#Fine-tune switches listed below are found to be the best on ARMv7 CPU, other architectures may
+#require other switches added or listed ones elminated/negated.
+
 ZDEBUG  = -O0 -g
-ZDEFOPT = -Ofast -fno-ipa-cp-clone -D NDEBUG
-ZARMOPT = -O2 -D NDEBUG
-ZADDOPT = -g0 -s -flto -fuse-linker-plugin -ffat-lto-objects -flto-compression-level=0 -finline-functions -funswitch-loops -fpredictive-commoning -ftree-loop-distribute-patterns -ftree-slp-vectorize -ffast-math -fomit-frame-pointer -ftracer -ftree-loop-ivcanon -ftree-loop-distribution -fselective-scheduling2 -fsel-sched-pipelining -fira-region=all -fira-hoist-pressure -free -fno-crossjumping -fno-cx-limited-range -fno-defer-pop -fno-function-cse -fno-rerun-cse-after-loop -fno-sched-interblock -fno-sched-last-insn-heuristic -fno-sched-spec -fno-sel-sched-pipelining-outer-loops -fno-tree-fre -fno-tree-loop-im -fno-zero-initialized-in-bss
-# -flto-partition=max - provides ~1% speed up on linux but doesn't work with mingw32 
+ZDEFOPT = -Ofast -D NDEBUG
+ZARMOPT = -Ofast -D NDEBUG
+ZADDOPT = -g0 -s -flto -fuse-linker-plugin -flto-partition=max -flto-compression-level=0 -ffat-lto-objects -fno-tree-slp-vectorize -fno-crossjumping -ftracer -ftree-loop-ivcanon -fno-tree-loop-distribution -fselective-scheduling2 -fsel-sched-pipelining -fira-region=all -free -fno-cx-limited-range -fno-defer-pop -fno-function-cse -fno-sched-interblock -fno-sched-last-insn-heuristic -fno-sel-sched-pipelining-outer-loops -fno-tree-fre -fno-tree-loop-im -fno-zero-initialized-in-bss -fno-ipa-reference -fno-ipa-cp -fgraphite-identity -floop-nest-optimize -fbranch-target-load-optimize2 -ffunction-sections -fdata-sections
 CAVXFLAGS = -mavx -mtune=corei7-avx -march=corei7-avx
-CNEONFLAGS = -march=armv7-a -mcpu=cortex-a9 -mfpu=neon -mfloat-abi=hard -mthumb-interwork -mword-relocations -mno-unaligned-access -mneon-for-64bits
+CNEONFLAGS = -march=armv7-a -mcpu=cortex-a9 -mfpu=neon -mfloat-abi=hard -mthumb-interwork -mno-unaligned-access -mneon-for-64bits -mstructure-size-boundary=64
 
 ZOPFLILIB_SRC = src/zopfli/blocksplitter.c src/zopfli/cache.c\
                 src/zopfli/inthandler.c src/zopfli/deflate.c\

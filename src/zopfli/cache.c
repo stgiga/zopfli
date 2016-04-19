@@ -90,8 +90,7 @@ void ZopfliSublenToCache(const unsigned short* sublen,
   for (i = 3; i <= length; i++) {
     if (i == length || sublen[i] != sublen[i + 1]) {
       cache[j * 3] = i - 3;
-      cache[j * 3 + 1] = sublen[i] % 256;
-      cache[j * 3 + 2] = (sublen[i] >> 8) % 256;
+      memcpy(cache + (j * 3) + 1, sublen + i, sizeof(*sublen));
       bestlength = i;
       j++;
       if (j >= lmc->cache_length) break;

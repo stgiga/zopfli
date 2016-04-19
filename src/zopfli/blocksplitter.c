@@ -148,10 +148,7 @@ static void AddSorted(size_t value, size_t** out, size_t* outsize) {
   ZOPFLI_APPEND_DATA(value, out, outsize);
   for (i = 0; i + 1 < *outsize; i++) {
     if ((*out)[i] > value) {
-      size_t j;
-      for (j = *outsize - 1; j > i; j--) {
-        (*out)[j] = (*out)[j - 1];
-      }
+      memmove(*out + i + 1, *out + i, (*outsize - i - 1) * sizeof(**out));
       (*out)[i] = value;
       break;
     }

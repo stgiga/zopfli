@@ -280,7 +280,7 @@ static int GetLengthScore(int length, int distance, int max) {
 void ZopfliVerifyLenDist(const unsigned char* data, size_t datasize, size_t pos,
                          unsigned short dist, unsigned short length) {
 
-  unsigned short i;
+  size_t i;
 
   assert(pos + length <= datasize);
   for (i = 0; i < length; i++) {
@@ -377,7 +377,7 @@ static int TryGetFromLongestMatchCache(ZopfliBlockState* s,
       return 1;
     }
     /* Can't use much of the cache, since the "sublens" need to be calculated,
-       but at  least we already know when to stop. */
+       but at least we already know when to stop. */
     *limit = s->lmc->length[lmcpos];
   }
 

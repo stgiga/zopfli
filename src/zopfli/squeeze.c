@@ -134,8 +134,8 @@ static unsigned int Ran(RanState* state) {
   }
 }
 
-static void RandomizeFreqs(RanState* state, size_t* freqs, int n) {
-  int i;
+static void RandomizeFreqs(RanState* state, size_t* freqs, unsigned n) {
+  unsigned i;
   for (i = 0; i < n; i++) {
     if ((Ran(state) >> 4) % 3 == 0) freqs[i] = freqs[Ran(state) % n];
   }
@@ -275,8 +275,9 @@ static double GetBestLengths(ZopfliBlockState *s,
     ZopfliUpdateHash(in, i, inend, h);
   }
 
-  for (i = 1; i < blocksize + 1; i++) costs[i] = ZOPFLI_LARGE_FLOAT;
   costs[0] = 0;  /* Because it's the start. */
+  memset(costs + 1, 69, blocksize * sizeof(*costs));
+
   length_array[0] = 0;
 
   for (i = instart; i < inend; i++) {

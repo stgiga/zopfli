@@ -545,9 +545,7 @@ static void OptimizeHuffmanForRle(unsigned int length, size_t* counts) {
   for (i = 0; i < length + 1; ++i) {
     if (i == length || counts[i] != symbol) {
       if ((symbol == 0 && stride >= 5) || (symbol != 0 && stride >= 7)) {
-        for (k = 0; k < stride; ++k) {
-          good_for_rle[i - k - 1] = 1;
-        }
+        memset(good_for_rle + (i - stride), 1, stride);
       }
       stride = 1;
       if (i != length) {
@@ -677,10 +675,7 @@ static unsigned OptimizeHuffmanForRleBrotli(size_t length, size_t* counts) {
       if (i == length || counts[i] != symbol) {
         if ((symbol == 0 && step >= 5) ||
             (symbol != 0 && step >= 7)) {
-          size_t k;
-          for (k = 0; k < step; ++k) {
-            good_for_rle[i - k - 1] = 1;
-          }
+          memset(good_for_rle + (i - step), 1, step);
         }
         step = 1;
         if (i != length) {
