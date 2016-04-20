@@ -237,6 +237,10 @@ static double GetCostModelMinCost(CostModelFun* costmodel, void* costcontext) {
   return costmodel(bestlength, bestdist, costcontext);
 }
 
+static size_t min(size_t a, size_t b) {
+  return a < b ? a : b;
+}
+
 /*
 Performs the forward pass for "squeeze". Gets the most optimal length to reach
 every byte from a previous byte, using cost calculations.
@@ -258,13 +262,14 @@ static double GetBestLengths(ZopfliBlockState *s,
                              ZopfliHash *h, double *costs) {
   /* Best cost to get here so far. */
   size_t blocksize = inend - instart;
-  size_t i = 0, k;
+  size_t i = 0, k, kend;
   unsigned short leng;
   unsigned short dist;
   unsigned short sublen[259];
   size_t windowstart = instart > ZOPFLI_WINDOW_SIZE
       ? instart - ZOPFLI_WINDOW_SIZE : 0;
   double result;
+  double mincostsum;
   double mincost = GetCostModelMinCost(costmodel, costcontext);
 
   if (instart == inend) return 0;
@@ -319,12 +324,14 @@ static double GetBestLengths(ZopfliBlockState *s,
       }
     }
     /* Lengths. */
-    for (k = 3; k <= leng && i + k <= inend; k++) {
+    kend = min(leng, inend-i);
+    mincostsum = mincost + costs[j];
+    for (k = 3; k <= kend; k++) {
       double newCost;
 
       /* Calling the cost model is expensive, avoid this if we are already at
       the minimum possible cost that it can return. */
-     if (costs[j + k] - costs[j] <= mincost) continue;
+      if (costs[j + k] <= mincostsum) continue; 
 
       newCost = costs[j] + costmodel(k, sublen[k], costcontext);
       assert(newCost >= 0);
