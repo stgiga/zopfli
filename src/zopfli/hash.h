@@ -48,8 +48,6 @@ typedef struct ZopfliHash {
 #ifdef ZOPFLI_HASH_SAME
   unsigned short* same;  /* Amount of repetitions of same byte after this .*/
 #endif
-
-  unsigned short* prevbase; /* Initialize in Malloc Hash stage for memcpy usage */
 } ZopfliHash;
 
 /* Allocates all fields of ZopfliHash. */
