@@ -26,6 +26,7 @@ Jyrki Katajainen, Alistair Moffat, Andrew Turpin".
 #include "defines.h"
 #include "katajainen.h"
 #include <stdlib.h>
+#include <limits.h>
 
 typedef struct Node Node;
 
@@ -172,23 +173,9 @@ static void ExtractBitLengths(Node* chain, Node* leaves, unsigned* bitlengths) {
 
 /*
 Comparator for sorting the leaves. Has the function signature for qsort.
-Make sure we are using correct ascending order for counts when weights
-are equal. This makes qsort work the same on GCC 5.3 as it did on GCC 4.8.
-This should fix Zopfli producing different results with various compilers.
 */
 static int LeafComparator(const void* a, const void* b) {
-  const Node *aa = ((const Node*)a);
-  const Node *bb = ((const Node*)b);
-  if(aa->weight < bb->weight)
-   return -1;
-  else if(aa->weight > bb->weight)
-   return 1;
-  else if(aa->count < bb->count)
-   return -1;
-  else if(aa->count > bb->count)
-   return 1;
-  else
-   return 0;
+  return ((const Node*)a)->weight - ((const Node*)b)->weight;
 }
 
 /*
@@ -253,7 +240,19 @@ int ZopfliLengthLimitedCodeLengths(
 
   /* Sort the leaves from lightest to heaviest. */
   if(revcounts==0) {
+   /* Add count into the same variable for stable sorting. */
+   for (i = 0; i < numsymbols; i++) {
+     if (leaves[i].weight >=
+         ((size_t)1 << (sizeof(leaves[0].weight) * CHAR_BIT - 9))) {
+       free(leaves);
+       return 1;  /* Error, we need 9 bits for the count. */
+     }
+     leaves[i].weight = (leaves[i].weight << 9) | leaves[i].count;
+   }
    qsort(leaves, numsymbols, sizeof(Node), LeafComparator);
+   for (i = 0; i < numsymbols; i++) {
+     leaves[i].weight >>= 9;
+   }
   } else {
    qsort(leaves, numsymbols, sizeof(Node), LeafComparatorRev);
   }

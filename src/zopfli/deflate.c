@@ -30,6 +30,7 @@ Author: jyrki.alakuijala@gmail.com (Jyrki Alakuijala)
 #include "inthandler.h"
 #include "blocksplitter.h"
 #include "squeeze.h"
+#include "symbols.h"
 #include "tree.h"
 #include "crc32.h"
 

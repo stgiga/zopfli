@@ -20,6 +20,7 @@ Author: jyrki.alakuijala@gmail.com (Jyrki Alakuijala)
 
 #include "defines.h"
 #include "lz77.h"
+#include "symbols.h"
 #include "util.h"
 
 #include <assert.h>
