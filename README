@@ -178,7 +178,14 @@ Description of new commands list in Zopfli KrzYmod:
    attempt. This mode doesn't work when --lessmem or --nosplitlast is used, or when the
    compressed input is only 1 block long.
 
-21. --rw# and --rz#
+21. --cwmc
+
+   Use Complementary-Multiply-With-Carry random number generator instead of the default
+   Multiply-With-Carry. Both algorithms are made by G. Marsaglia.
+   This provides different iteration progress.
+   To read more: https://en.wikipedia.org/wiki/Multiply-with-carry
+
+22. --rw# and --rz#
 
    Initial random W and Z for iterations. These parameters are 1 for W and 2 for Z
    by default and they are locked in original Zopfli. They are used to init
@@ -194,7 +201,7 @@ Description of new commands list in Zopfli KrzYmod:
    1 bit reduction when changing these parameters on --mui999 when previously
    the file was created doing as many as 99,999 unsucessful iteration.
 
-22. --rp
+23. --rp
 
    Use Restore Points. This mode let's Zopfli save special Restore Point files named
    Zopfli-[current input CRC32]-[C/R].lz77rp for resuming compression after Zopfli
@@ -205,7 +212,7 @@ Description of new commands list in Zopfli KrzYmod:
    to 100MB. Restore Points can take few times more than uncompressed data. Up to 2
    Restore Point files are used for given input, one for compression, one for recompression.
 
-23. --t#
+24. --t#
 
    Use # threads for compression. Limited by number of blocks in stream as each
    block is sent to a separate thread for compression. Most useful if there are many
@@ -217,11 +224,11 @@ Description of new commands list in Zopfli KrzYmod:
    all out-of-order blocks in memory will be lost. Always uses one thread in
    --lessmem mode.
 
-24. --idle
+25. --idle
 
    Run Zopfli in lowest priority to not slow down other processes.
 
-25. --lessmem
+26. --lessmem
 
    By default Zopfli KrzYmod uses most of improved original Zopfli algorithm by
    keeping full input, output and LZ77 Store in memory.
@@ -229,7 +236,7 @@ Description of new commands list in Zopfli KrzYmod:
    usage for input, output and LZ77 Store at the cost of limited features.
    Splitting last, Recompression and Restore Points are not supported in this mode.
 
-26. --v#
+27. --v#
 
    This option is formerly known as just -v and it extends control over Zopfli
    verbosity. The default is 2 and it can be set from 0 (quiet) to 5 (most verbose):
@@ -250,6 +257,7 @@ in original release, for example incorrect Deflate stream size being raported.
 Also supports Unix (gzip) and MS-DOS (zip) timestamps inside archives.
 
 Bitcoin: 1KrzY1CwE532e6YjN4aCzgV19gtAzQMatJ
+Paypal:  https://www.paypal.me/MrKrzYch00
 ^ in case You want to reward my work.
 
 ====================================
