@@ -81,14 +81,14 @@ dists: ll77 distances
 lstart: start of block
 lend: end of block (not inclusive)
 */
-double ZopfliCalculateBlockSize(const ZopfliOptions* options,
+zfloat ZopfliCalculateBlockSize(const ZopfliOptions* options,
                                 const ZopfliLZ77Store* lz77,
                                 size_t lstart, size_t lend, int btype);
 
 /*
 Calculates block size in bits, automatically using the best btype.
 */
-double ZopfliCalculateBlockSizeAutoType(const ZopfliOptions* options,
+zfloat ZopfliCalculateBlockSizeAutoType(const ZopfliOptions* options,
                                         const ZopfliLZ77Store* lz77,
                                         size_t lstart, size_t lend, int v);
 

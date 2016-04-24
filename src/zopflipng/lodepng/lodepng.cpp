@@ -36,6 +36,12 @@ Rename this file to lodepng.cpp to use it for C++, or to lodepng.c to use it for
 #include <stdlib.h>
 #include <math.h>
 
+#ifdef NDOUBLE
+ typedef float zfloat;
+#else
+ typedef double zfloat;
+#endif
+
 #if defined(_MSC_VER) && (_MSC_VER >= 1310) /*Visual Studio: A few warning types are not desired here.*/
 #pragma warning( disable : 4244 ) /*implicit conversions: not warned by gcc -Wall -Wextra and requires too much casts*/
 #pragma warning( disable : 4996 ) /*VS does not like fopen, but fopen_s is not standard C so unusable here*/
@@ -3789,9 +3795,9 @@ void optimize_palette(LodePNGColorMode* mode_out, const uint32_t* image,
     case LPPS_YUV:
       for (size_t i = 0; i < count; ++i) {
         const unsigned char* c = (unsigned char*)&palette_in[i];
-        const double r = c[0];
-        const double g = c[1];
-        const double b = c[2];
+        const zfloat r = c[0];
+        const zfloat g = c[1];
+        const zfloat b = c[2];
         sortfield[i] |= uint64_t(0.299 * r + 0.587 * g + 0.114 * b) << 32
           | uint64_t((-0.14713 * r - 0.28886 * g + 0.436 * b + 111.18) / 0.872) << 24
           | uint64_t((0.615 * r - 0.51499 * g - 0.10001 * b + 156.825) / 1.23) << 16;
@@ -3799,18 +3805,18 @@ void optimize_palette(LodePNGColorMode* mode_out, const uint32_t* image,
       break;
     case LPPS_LAB:
       {
-        const double ep = 216. / 24389.;
-        const double ka = 24389. / 27.;
-        const double ex = 1. / 3.;
-        const double de = 4. / 29.;
+        const zfloat ep = 216. / 24389.;
+        const zfloat ka = 24389. / 27.;
+        const zfloat ex = 1. / 3.;
+        const zfloat de = 4. / 29.;
         for (size_t i = 0; i < count; ++i) {
           const unsigned char* c = (unsigned char*)&palette_in[i];
-          const double r = c[0];
-          const double g = c[1];
-          const double b = c[2];
-          double vx = (0.4124564 * r + 0.3575761 * g + 0.1804375 * b) / 255 / 95.047;
-          double vy = (0.2126729 * r + 0.7151522 * g + 0.0721750 * b) / 255 / 100;
-          double vz = (0.0193339 * r + 0.1191920 * g + 0.9503041 * b) / 255 / 108.883;
+          const zfloat r = c[0];
+          const zfloat g = c[1];
+          const zfloat b = c[2];
+          zfloat vx = (0.4124564 * r + 0.3575761 * g + 0.1804375 * b) / 255 / 95.047;
+          zfloat vy = (0.2126729 * r + 0.7151522 * g + 0.0721750 * b) / 255 / 100;
+          zfloat vz = (0.0193339 * r + 0.1191920 * g + 0.9503041 * b) / 255 / 108.883;
           vx = vx > ep ? pow(vx, ex) : ka * vx + de;
           vy = vy > ep ? pow(vy, ex) : ka * vy + de;
           vz = vz > ep ? pow(vz, ex) : ka * vz + de;
@@ -3939,13 +3945,13 @@ void optimize_palette(LodePNGColorMode* mode_out, const uint32_t* image,
           const int r = c[0];
           const int g = c[1];
           const int b = c[2];
-          double bestdist = INT_MAX;
+          zfloat bestdist = INT_MAX;
           for (size_t j = i + 1; j < count; ++j) {
             const unsigned char* c2 = (unsigned char*)&palette_in[sortfield[j] & 0xFF];
             const int r2 = c2[0];
             const int g2 = c2[1];
             const int b2 = c2[2];
-            double dist = (r - r2) * (r - r2) + (g - g2) + (g - g2) + (b - b2) * (b - b2);
+            zfloat dist = (r - r2) * (r - r2) + (g - g2) + (g - g2) + (b - b2) * (b - b2);
             if (transparency == LPTS_SORT) {
               const int a = c[3];
               const int a2 = c2[3];
@@ -4004,14 +4010,14 @@ void optimize_palette(LodePNGColorMode* mode_out, const uint32_t* image,
           const int r = c[0];
           const int g = c[1];
           const int b = c[2];
-          double bestdist = INT_MAX;
+          zfloat bestdist = INT_MAX;
           best = i + 1;
           for (size_t j = i + 1; j < count; ++j) {
             const unsigned char* c2 = (unsigned char*)&palette_in[sortfield[j] & 0xFF];
             const int r2 = c2[0];
             const int g2 = c2[1];
             const int b2 = c2[2];
-            double dist = (r - r2) * (r - r2) + (g - g2) + (g - g2) + (b - b2) * (b - b2);
+            zfloat dist = (r - r2) * (r - r2) + (g - g2) + (g - g2) + (b - b2) * (b - b2);
             if (transparency == LPTS_SORT) {
               const int a = c[3];
               const int a2 = c2[3];
@@ -5510,8 +5516,8 @@ static uint64_t randomUInt64(uint64_t* s) {
 }
 
 /* generate random number between 0 and 1 */
-static double randomDecimal(uint64_t* s) {
-  return double(randomUInt64(s)) / UINT64_MAX;
+static zfloat randomDecimal(uint64_t* s) {
+  return zfloat(randomUInt64(s)) / UINT64_MAX;
 }
 
 static unsigned filter(unsigned char* out, const unsigned char* in, unsigned w, unsigned h,

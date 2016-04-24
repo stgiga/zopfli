@@ -789,18 +789,18 @@ void PrintSummary(unsigned long insize, unsigned long outsize, unsigned long def
       if(ratio_comp==0) ratio_comp=deflsize;
       fprintf(stderr, "Deflate size: %lu (%luK)\n", deflsize, deflsize / 1024);
     }
-    fprintf(stderr, "Ratio: %.3f%%\n\n", 100.0 * (double)ratio_comp / (double)insize);
+    fprintf(stderr, "Ratio: %.3f%%\n\n", 100.0 * (zfloat)ratio_comp / (zfloat)insize);
   }
 
 }
 
-double ZopfliCalculateBlockSize(const ZopfliOptions* options,
+zfloat ZopfliCalculateBlockSize(const ZopfliOptions* options,
                                 const ZopfliLZ77Store* lz77,
                                 size_t lstart, size_t lend, int btype) {
   unsigned ll_lengths[ZOPFLI_NUM_LL];
   unsigned d_lengths[ZOPFLI_NUM_D];
 
-  double result = 3; /* bfinal and btype bits */
+  zfloat result = 3; /* bfinal and btype bits */
 
   if (btype == 0) {
     size_t length = ZopfliLZ77GetByteRange(lz77, lstart, lend);
@@ -827,13 +827,13 @@ double ZopfliCalculateBlockSize(const ZopfliOptions* options,
   return result;
 }
 
-double ZopfliCalculateBlockSizeAutoType(const ZopfliOptions* options,
+zfloat ZopfliCalculateBlockSizeAutoType(const ZopfliOptions* options,
                                         const ZopfliLZ77Store* lz77,
                                         size_t lstart, size_t lend, int v) {
-  double bestcost;
-  double uncompressedcost = ZopfliCalculateBlockSize(options, lz77, lstart, lend, 0);
-  double fixedcost = ZOPFLI_LARGE_FLOAT;
-  double dyncost = ZopfliCalculateBlockSize(options, lz77, lstart, lend, 2);
+  zfloat bestcost;
+  zfloat uncompressedcost = ZopfliCalculateBlockSize(options, lz77, lstart, lend, 0);
+  zfloat fixedcost = ZOPFLI_LARGE_FLOAT;
+  zfloat dyncost = ZopfliCalculateBlockSize(options, lz77, lstart, lend, 2);
   ZopfliLZ77Store fixedstore;
 
   /* Don't do the expensive fixed cost calculation for larger blocks that are
@@ -996,9 +996,9 @@ static void AddLZ77BlockAutoType(const ZopfliOptions* options, int final,
                                  size_t expected_data_size,
                                  unsigned char* bp,
                                  unsigned char** out, size_t* outsize) {
-  double uncompressedcost = ZopfliCalculateBlockSize(options, lz77, lstart, lend, 0);
-  double fixedcost = ZopfliCalculateBlockSize(options, lz77, lstart, lend, 1);
-  double dyncost = ZopfliCalculateBlockSize(options, lz77, lstart, lend, 2);
+  zfloat uncompressedcost = ZopfliCalculateBlockSize(options, lz77, lstart, lend, 0);
+  zfloat fixedcost = ZopfliCalculateBlockSize(options, lz77, lstart, lend, 1);
+  zfloat dyncost = ZopfliCalculateBlockSize(options, lz77, lstart, lend, 2);
 
   /* Whether to perform the expensive calculation of creating an optimal block
   with fixed huffman tree to check if smaller. Only do this for small blocks or
@@ -1087,7 +1087,7 @@ static int LoadRestore(const char* infile, unsigned long* crc,
                        size_t* i, size_t* npoints,
                        size_t** splitpoints,
                        size_t** splitpoints_uncompressed,
-                       double* totalcost, 
+                       zfloat* totalcost, 
                        unsigned char* mode,
                        ZopfliLZ77Store* lz77, int v) {
   FILE *file;
@@ -1114,7 +1114,7 @@ static int LoadRestore(const char* infile, unsigned long* crc,
   if(sizetsize1 > sizeof(size_t) || sizetsize2 > sizeof(size_t) ||
      sizetsize3 > sizeof(size_t)) return 4;
   b += fread(mode, 1, 1, file);
-  b += fread(totalcost, sizeof(double), 1, file) * sizeof(double);
+  b += fread(totalcost, sizeof(zfloat), 1, file) * sizeof(zfloat);
   b += freadst(i, sizetsize1, 1, file);
   b += freadst(npoints, sizetsize1, 1, file);
   free(*splitpoints_uncompressed);
@@ -1164,7 +1164,7 @@ static int SaveRestore(const char* infile, unsigned long* crc,
                        size_t* i, size_t* npoints,
                        size_t** splitpoints,
                        size_t** splitpoints_uncompressed,
-                       double* totalcost, 
+                       zfloat* totalcost, 
                        unsigned char mode,
                        ZopfliLZ77Store* lz77, int v) {
   FILE *file;
@@ -1208,7 +1208,7 @@ static int SaveRestore(const char* infile, unsigned long* crc,
   b += fwrite(&sizetsize2, 1, 1, file);
   b += fwrite(&sizetsize3, 1, 1, file);
   b += fwrite(&mode, 1, 1, file);
-  b += fwrite(totalcost, sizeof(double), 1, file) * sizeof(double);
+  b += fwrite(totalcost, sizeof(zfloat), 1, file) * sizeof(zfloat);
   b += fwrite(&k, sizetsize1, 1, file) * sizetsize1;
   b += fwrite(npoints, sizetsize1, 1, file) * sizetsize1;
   for(j = 0; j < *npoints; ++j)
@@ -1261,7 +1261,7 @@ static void ErrorRestore(const char* rpfile, int rp_error) {
 }
 
 static void PrintProgress(int v, size_t start, size_t inend, size_t i, size_t npoints) {
-  if(v>0) fprintf(stderr, "Progress: %.1f%%",100.0 * (double) start / (double)inend);
+  if(v>0) fprintf(stderr, "Progress: %.1f%%",100.0 * (zfloat) start / (zfloat)inend);
   if(v>1) {
     fprintf(stderr, "  ---  Block: %d / %d  ---  Data left: %luKB",
             (int)(i + 1), (int)(npoints + 1),(unsigned long)((inend - start)/1024));
@@ -1297,7 +1297,7 @@ typedef struct ZopfliThread {
 
   const unsigned char* in;
 
-  double cost;
+  zfloat cost;
 
   unsigned char bestperblock[4];
 
@@ -1314,7 +1314,7 @@ static void *threading(void *a) {
   ZopfliInitLZ77Store(b->in, &b->store);
   if(b->options->tryall == 1) tries=17;
   do {
-    double tempcost;
+    zfloat tempcost;
     ZopfliBlockState s;
     ZopfliOptions o = *(b->options);
     ZopfliInitLZ77Store(b->in, &store);
@@ -1360,7 +1360,7 @@ static void ZopfliUseThreads(const ZopfliOptions* options,
                                size_t** splitpoints,
                                size_t** splitpoints_uncompressed,
                                unsigned char*** bestperblock,
-                               double *totalcost,
+                               zfloat *totalcost,
                                const char* rpfile,
                                unsigned long crc,
                                unsigned char mode, int v) {
@@ -1372,7 +1372,7 @@ static void ZopfliUseThreads(const ZopfliOptions* options,
   int neednext = 0;
   size_t nextblock = bkstart;
   size_t n, i;
-  double *tempcost = malloc(sizeof(double) * (bkend+1));
+  zfloat *tempcost = malloc(sizeof(*tempcost) * (bkend+1));
   unsigned char lastthread = 0;
   unsigned char* blockdone = calloc(bkend+1,sizeof(unsigned char));
   pthread_t *thr = malloc(sizeof(pthread_t) * (options->numthreads>bkend+1?bkend+1:options->numthreads));
@@ -1403,7 +1403,7 @@ static void ZopfliUseThreads(const ZopfliOptions* options,
               calci = (unsigned)(t[showthread].iterations.bestiteration+mui);
               if(calci>options->numiterations) calci=options->numiterations;
             }
-            thrprogress = (int)(((double)t[showthread].iterations.iteration / (double)calci) * 100);
+            thrprogress = (int)(((zfloat)t[showthread].iterations.iteration / (zfloat)calci) * 100);
             fprintf(stderr,"%3d%% THR %d | BLK %d | BST %d: %d b | ITR %d: %d b      \r",
                     thrprogress, showthread, ((int)t[showthread].iterations.block+1),
                     t[showthread].iterations.bestiteration, t[showthread].iterations.bestcost,
@@ -1539,9 +1539,9 @@ DLL_PUBLIC void ZopfliDeflatePart(const ZopfliOptions* options, int btype, int f
   size_t* splitpoints_uncompressed = 0;
   size_t npoints = 0;
   size_t* splitpoints = 0;
-  double totalcost = 0;
+  zfloat totalcost = 0;
   int pass = 0;
-  double alltimebest = 0;
+  zfloat alltimebest = 0;
   int rp_error = 0;
   unsigned char mode = 0;
   unsigned char** bestperblock = 0;
@@ -1657,7 +1657,7 @@ DLL_PUBLIC void ZopfliDeflatePart(const ZopfliOptions* options, int btype, int f
   if (options->blocksplitting && npoints > 1 && !options->noblocksplittinglast) {
     size_t* splitpoints2;
     size_t npoints2;
-    double totalcost2;
+    zfloat totalcost2;
     unsigned char mode2 = 1;
     do {
       splitpoints2 = 0;

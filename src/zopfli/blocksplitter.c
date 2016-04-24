@@ -34,7 +34,7 @@ The "f" for the FindMinimum function below.
 i: the current parameter of f(i)
 context: for your implementation
 */
-typedef double FindMinimumFun(size_t i, void* context);
+typedef zfloat FindMinimumFun(size_t i, void* context);
 
 typedef struct SplitCostContext {
   const ZopfliLZ77Store* lz77;
@@ -45,7 +45,7 @@ typedef struct SplitCostContext {
 
 /*
 Finds minimum of function f(i) where i is of type size_t, f(i) is of type
-double, i is in range start-end (excluding end).
+zfloat, i is in range start-end (excluding end).
 Outputs the minimum value in *smallest and returns the index of this value.
 
 Here we allow changing recursion by --bsr switch instead of using
@@ -56,14 +56,14 @@ Also prints some garbage at verbosity level 6+.
 */
 static size_t FindMinimum(FindMinimumFun f, void* context,
                           size_t start, size_t end,
-                          double* smallest) {
+                          zfloat* smallest) {
   SplitCostContext* c = (SplitCostContext*)context;
   if (end - start < 1024) {
-    double best = ZOPFLI_LARGE_FLOAT;
+    zfloat best = ZOPFLI_LARGE_FLOAT;
     size_t result = start;
     size_t i;
     for (i = start; i < end; i++) {
-      double v = f(i, context);
+      zfloat v = f(i, context);
       if (v < best) {
         best = v;
         result = i;
@@ -75,11 +75,11 @@ static size_t FindMinimum(FindMinimumFun f, void* context,
   } else {
     /* Try to find minimum faster by recursively checking multiple points. */
     size_t i;
-    size_t *p = malloc(c->options->findminimumrec * sizeof(size_t));
-    double *vp = malloc(c->options->findminimumrec * sizeof(double));
+    size_t *p = (size_t*)malloc(sizeof(size_t) * c->options->findminimumrec);
+    zfloat *vp = (zfloat*)malloc(sizeof(*vp) * c->options->findminimumrec);
     size_t besti;
-    double best;
-    double lastbest = ZOPFLI_LARGE_FLOAT;
+    zfloat best;
+    zfloat lastbest = ZOPFLI_LARGE_FLOAT;
     size_t pos = start;
 
     for (;;) {
@@ -126,7 +126,7 @@ dists: ll77 distances
 lstart: start of block
 lend: end of block (not inclusive)
 */
-static double EstimateCost(const ZopfliOptions* options,
+static zfloat EstimateCost(const ZopfliOptions* options,
                            const ZopfliLZ77Store* lz77,
                            size_t lstart, size_t lend) {
   return ZopfliCalculateBlockSizeAutoType(options, lz77, lstart, lend, 0);
@@ -137,7 +137,7 @@ Gets the cost which is the sum of the cost of the left and the right section
 of the data.
 type: FindMinimumFun
 */
-static double SplitCost(size_t i, void* context) {
+static zfloat SplitCost(size_t i, void* context) {
   SplitCostContext* c = (SplitCostContext*)context;
   return EstimateCost(c->options, c->lz77, c->start, i) +
       EstimateCost(c->options, c->lz77, i, c->end);
@@ -246,7 +246,7 @@ void ZopfliBlockSplitLZ77(const ZopfliOptions* options,
   size_t llpos = 0;
   size_t numblocks = 1;
   unsigned char* done;
-  double splitcost, origcost;
+  zfloat splitcost, origcost;
 
   if (lz77->size < 10) return;  /* This code fails on tiny files. */
 

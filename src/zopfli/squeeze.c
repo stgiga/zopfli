@@ -39,9 +39,9 @@ typedef struct SymbolStats {
   size_t dists[ZOPFLI_NUM_D];
 
   /* Length of each lit/len symbol in bits. */
-  double ll_symbols[ZOPFLI_NUM_LL];
+  zfloat ll_symbols[ZOPFLI_NUM_LL];
   /* Length of each dist symbol in bits. */
-  double d_symbols[ZOPFLI_NUM_D];
+  zfloat d_symbols[ZOPFLI_NUM_D];
 } SymbolStats;
 
 /* Sets everything to 0. */
@@ -66,8 +66,8 @@ static void CopyStats(SymbolStats* source, SymbolStats* dest) {
 }
 
 /* Adds the bit lengths. */
-static void AddWeighedStatFreqs(const SymbolStats* stats1, double w1,
-                                const SymbolStats* stats2, double w2,
+static void AddWeighedStatFreqs(const SymbolStats* stats1, zfloat w1,
+                                const SymbolStats* stats2, zfloat w2,
                                 SymbolStats* result) {
   size_t i;
   for (i = 0; i < ZOPFLI_NUM_LL; i++) {
@@ -157,13 +157,13 @@ static void ClearStatFreqs(SymbolStats* stats) {
 Function that calculates a cost based on a model for the given LZ77 symbol.
 litlen: means literal symbol if dist is 0, length otherwise.
 */
-typedef double CostModelFun(unsigned litlen, unsigned dist, void* context);
+typedef zfloat CostModelFun(unsigned litlen, unsigned dist, void* context);
 
 /*
 Cost model which should exactly match fixed tree.
 type: CostModelFun
 */
-static double GetCostFixed(unsigned litlen, unsigned dist, void* unused) {
+static zfloat GetCostFixed(unsigned litlen, unsigned dist, void* unused) {
   (void)unused;
   if (dist == 0) {
     if (litlen <= 143) return 8;
@@ -172,7 +172,7 @@ static double GetCostFixed(unsigned litlen, unsigned dist, void* unused) {
     int dbits = ZopfliGetDistExtraBits(dist);
     int lbits = ZopfliGetLengthExtraBits(litlen);
     int lsym = ZopfliGetLengthSymbol(litlen);
-    double cost = 0;
+    zfloat cost = 0;
     if (lsym <= 279) cost += 7;
     else cost += 8;
     cost += 5;  /* Every dist symbol has length 5. */
@@ -184,7 +184,7 @@ static double GetCostFixed(unsigned litlen, unsigned dist, void* unused) {
 Cost model based on symbol statistics.
 type: CostModelFun
 */
-static double GetCostStat(unsigned litlen, unsigned dist, void* context) {
+static zfloat GetCostStat(unsigned litlen, unsigned dist, void* context) {
   SymbolStats* stats = (SymbolStats*)context;
   if (dist == 0) {
     return stats->ll_symbols[litlen];
@@ -201,8 +201,8 @@ static double GetCostStat(unsigned litlen, unsigned dist, void* context) {
 Finds the minimum possible cost this cost model can return for valid length and
 distance symbols.
 */
-static double GetCostModelMinCost(CostModelFun* costmodel, void* costcontext) {
-  double mincost;
+static zfloat GetCostModelMinCost(CostModelFun* costmodel, void* costcontext) {
+  zfloat mincost;
   int bestlength = 0; /* length that has lowest cost in the cost model */
   int bestdist = 0; /* distance that has lowest cost in the cost model */
   int i;
@@ -219,7 +219,7 @@ static double GetCostModelMinCost(CostModelFun* costmodel, void* costcontext) {
 
   mincost = ZOPFLI_LARGE_FLOAT;
   for (i = 3; i < 259; i++) {
-    double c = costmodel(i, 1, costcontext);
+    zfloat c = costmodel(i, 1, costcontext);
     if (c < mincost) {
       bestlength = i;
       mincost = c;
@@ -228,7 +228,7 @@ static double GetCostModelMinCost(CostModelFun* costmodel, void* costcontext) {
 
   mincost = ZOPFLI_LARGE_FLOAT;
   for (i = 0; i < 30; i++) {
-    double c = costmodel(3, dsymbols[i], costcontext);
+    zfloat c = costmodel(3, dsymbols[i], costcontext);
     if (c < mincost) {
       bestdist = dsymbols[i];
       mincost = c;
@@ -255,12 +255,12 @@ length_array: output array of size (inend - instart) which will receive the best
     length to reach this byte from a previous byte.
 returns the cost that was, according to the costmodel, needed to get to the end.
 */
-static double GetBestLengths(ZopfliBlockState *s,
+static zfloat GetBestLengths(ZopfliBlockState *s,
                              const unsigned char* in,
                              size_t instart, size_t inend,
                              CostModelFun* costmodel, void* costcontext,
                              unsigned short* length_array,
-                             ZopfliHash *h, double *costs) {
+                             ZopfliHash *h, zfloat *costs) {
   /* Best cost to get here so far. */
   size_t blocksize = inend - instart;
   size_t i = 0, k, kend;
@@ -269,9 +269,9 @@ static double GetBestLengths(ZopfliBlockState *s,
   unsigned short sublen[259];
   size_t windowstart = instart > ZOPFLI_WINDOW_SIZE
       ? instart - ZOPFLI_WINDOW_SIZE : 0;
-  double result;
-  double mincostsum;
-  double mincost = GetCostModelMinCost(costmodel, costcontext);
+  zfloat result;
+  zfloat mincostsum;
+  zfloat mincost = GetCostModelMinCost(costmodel, costcontext);
 
   if (instart == inend) return 0;
 
@@ -282,7 +282,12 @@ static double GetBestLengths(ZopfliBlockState *s,
   }
 
   costs[0] = 0;  /* Because it's the start. */
+
+#ifdef NDOUBLE
+  memset(costs + 1, 127, blocksize * sizeof(*costs));
+#else
   memset(costs + 1, 69, blocksize * sizeof(*costs));
+#endif
 
   length_array[0] = 0;
 
@@ -298,7 +303,7 @@ static double GetBestLengths(ZopfliBlockState *s,
         && i + ZOPFLI_MAX_MATCH * 2 + 1 < inend
         && h->same[(i - ZOPFLI_MAX_MATCH) & ZOPFLI_WINDOW_MASK]
             > ZOPFLI_MAX_MATCH) {
-      double symbolcost = costmodel(ZOPFLI_MAX_MATCH, 1, costcontext);
+      zfloat symbolcost = costmodel(ZOPFLI_MAX_MATCH, 1, costcontext);
       /* Set the length to reach each one to ZOPFLI_MAX_MATCH, and the cost to
       the cost corresponding to that length. Doing this, we skip
       ZOPFLI_MAX_MATCH values to avoid calling ZopfliFindLongestMatch. */
@@ -317,7 +322,7 @@ static double GetBestLengths(ZopfliBlockState *s,
 
     /* Literal. */
     if (i + 1 <= inend) {
-      double newCost = costs[j] + costmodel(in[i], 0, costcontext);
+      zfloat newCost = costs[j] + costmodel(in[i], 0, costcontext);
       assert(newCost >= 0);
       if (newCost < costs[j + 1]) {
         costs[j + 1] = newCost;
@@ -328,7 +333,7 @@ static double GetBestLengths(ZopfliBlockState *s,
     kend = min(leng, inend-i);
     mincostsum = mincost + costs[j];
     for (k = 3; k <= kend; k++) {
-      double newCost;
+      zfloat newCost;
 
       /* Calling the cost model is expensive, avoid this if we are already at
       the minimum possible cost that it can return. */
@@ -469,13 +474,13 @@ store: place to output the LZ77 data
 returns the cost that was, according to the costmodel, needed to get to the end.
     This is not the actual cost.
 */
-static double LZ77OptimalRun(ZopfliBlockState* s,
+static zfloat LZ77OptimalRun(ZopfliBlockState* s,
     const unsigned char* in, size_t instart, size_t inend,
     unsigned short** path, size_t* pathsize,
     unsigned short* length_array, CostModelFun* costmodel,
     void* costcontext, ZopfliLZ77Store* store,
-    ZopfliHash* h, double *costs) {
-  double cost = GetBestLengths(
+    ZopfliHash* h, zfloat *costs) {
+  zfloat cost = GetBestLengths(
       s, in, instart, inend, costmodel, costcontext, length_array, h, costs);
   free(*path);
   *path = 0;
@@ -504,10 +509,10 @@ void ZopfliLZ77Optimal(ZopfliBlockState *s,
   SymbolStats stats, beststats, laststats;
   unsigned int i = 0;
   unsigned int fails=0;
-  double cost;
-  double *costs = (double*)malloc(sizeof(double) * (blocksize + 1));
-  double bestcost = ZOPFLI_LARGE_FLOAT;
-  double lastcost = 0;
+  zfloat cost;
+  zfloat *costs = (zfloat*)malloc(sizeof(zfloat) * (blocksize + 1));
+  zfloat bestcost = ZOPFLI_LARGE_FLOAT;
+  zfloat lastcost = 0;
   /* Try randomizing the costs a bit once the size stabilizes. */
   RanState ran_state;
   int lastrandomstep = -1;
@@ -604,7 +609,7 @@ void ZopfliLZ77OptimalFixed(ZopfliBlockState *s,
       (unsigned short*)malloc(sizeof(unsigned short) * (blocksize + 1));
   unsigned short* path = 0;
   size_t pathsize = 0;
-  double *costs = (double*)malloc(sizeof(double) * (blocksize + 1));
+  zfloat *costs = (zfloat*)malloc(sizeof(zfloat) * (blocksize + 1));
   ZopfliHash hash;
   ZopfliHash* h = &hash;
   ZopfliMallocHash(ZOPFLI_WINDOW_SIZE, h);

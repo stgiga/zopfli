@@ -151,7 +151,7 @@ equal than *size.
 #ifdef __cplusplus /* C++ cannot assign void* from malloc to *data */
 #define ZOPFLI_APPEND_DATA(/* T */ value, /* T** */ data, /* size_t* */ size) {\
   if (!((*size) & ((*size) - 1))) {\
-    /*double alloc size if it's a power of two*/\
+    /*zfloat alloc size if it's a power of two*/\
     void** data_void = reinterpret_cast<void**>(data);\
     *data_void = (*size) == 0 ? malloc(sizeof(**data))\
                               : realloc((*data), (*size) * 2 * sizeof(**data));\
@@ -162,7 +162,7 @@ equal than *size.
 #else /* C gives problems with strict-aliasing rules for (void**) cast */
 #define ZOPFLI_APPEND_DATA(/* T */ value, /* T** */ data, /* size_t* */ size) {\
   if (!((*size) & ((*size) - 1))) {\
-    /*double alloc size if it's a power of two*/\
+    /*zfloat alloc size if it's a power of two*/\
     (*data) = (*size) == 0 ? malloc(sizeof(**data))\
                            : realloc((*data), (*size) * 2 * sizeof(**data));\
   }\

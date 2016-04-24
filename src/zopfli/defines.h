@@ -8,8 +8,14 @@ required by Zopfli KrzYmod.
 #ifndef DEFINES_H_
 #define DEFINES_H_
 
+#ifdef NDOUBLE
+ typedef float zfloat;
+#else
+ typedef double zfloat;
+#endif
+
 #ifndef _THREAD_SAFE
-#define _THREAD_SAFE
+ #define _THREAD_SAFE
 #endif
 
 #if (_XOPEN_SOURCE<500)

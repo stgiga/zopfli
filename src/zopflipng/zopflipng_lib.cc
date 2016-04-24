@@ -34,6 +34,7 @@ See zopflipng_lib.h
 
 #include "lodepng/lodepng.h"
 #include "lodepng/lodepng_util.h"
+#include "../zopfli/defines.h"
 #include "../zopfli/inthandler.h"
 #include "../zopfli/deflate.h"
 #include "../zopfli/util.h"

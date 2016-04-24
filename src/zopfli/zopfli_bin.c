@@ -90,9 +90,9 @@ static void ZopfliInitBinOptions(ZopfliBinOptions* options) {
   options->additionalautosplits = 0;
 }
 
-static size_t ceilz(double num) {
+static size_t ceilz(zfloat num) {
     size_t inum = (size_t)num;
-    if (num == (double)inum) {
+    if (num == (zfloat)inum) {
         return inum;
     }
     return inum + 1;
@@ -448,7 +448,7 @@ static int Compress(ZopfliOptions* options, const ZopfliBinOptions* binoptions,
         if(binoptions->numblocks>fullsize) {
           i = 1;
         } else {
-          i = ceilz((double)fullsize / (double)binoptions->numblocks);
+          i = ceilz((zfloat)fullsize / (zfloat)binoptions->numblocks);
         }
         l=i;
         do {
@@ -616,7 +616,7 @@ static int Compress(ZopfliOptions* options, const ZopfliBinOptions* binoptions,
       in = 0;
 
       if(options->verbose==1) fprintf(stderr,"                                     \r");
-      if(options->verbose>0) fprintf(stderr, "Progress: %.1f%%",100.0 * (double)processed / (double)fullsize);
+      if(options->verbose>0) fprintf(stderr, "Progress: %.1f%%",100.0 * (zfloat)processed / (zfloat)fullsize);
       if(options->verbose>1) {
         fprintf(stderr, "  ---  Block: %d / %d  ---  Data left: %luKB",
                (int)(i + 1), (int)(npoints + 1),(unsigned long)((fullsize - processed)/1024));
@@ -666,7 +666,7 @@ static int Compress(ZopfliOptions* options, const ZopfliBinOptions* binoptions,
         if(binoptions->numblocks>fullsize) {
           i = 1;
         } else {
-          i = ceilz((double)fullsize / (double)binoptions->numblocks);
+          i = ceilz((zfloat)fullsize / (zfloat)binoptions->numblocks);
         }
         l=i;
         do {
