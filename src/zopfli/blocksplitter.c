@@ -69,13 +69,13 @@ static size_t FindMinimum(FindMinimumFun f, void* context,
         result = i;
       }
     }
-    if(c->options->verbose>5) fprintf(stderr," [%lu - %lu] Best: %.0f\n",(unsigned long)start,(unsigned long)end,best);
+    if(c->options->verbose>5) fprintf(stderr," [%lu - %lu] Best: %.0f\n",(unsigned long)start,(unsigned long)end,(zpfloat)best);
     *smallest = best;
     return result;
   } else {
     /* Try to find minimum faster by recursively checking multiple points. */
     size_t i;
-    size_t *p = (size_t*)malloc(sizeof(size_t) * c->options->findminimumrec);
+    size_t *p = (size_t*)malloc(sizeof(*p) * c->options->findminimumrec);
     zfloat *vp = (zfloat*)malloc(sizeof(*vp) * c->options->findminimumrec);
     size_t besti;
     zfloat best;
@@ -107,7 +107,7 @@ static size_t FindMinimum(FindMinimumFun f, void* context,
 
       pos = p[besti];
       lastbest = best;
-      if(c->options->verbose>5) fprintf(stderr," [%lu - %lu] Best: %.0f\n",(unsigned long)start,(unsigned long)end,best);
+      if(c->options->verbose>5) fprintf(stderr," [%lu - %lu] Best: %.0f\n",(unsigned long)start,(unsigned long)end,(zpfloat)best);
     }
     *smallest = lastbest;
     free(p);

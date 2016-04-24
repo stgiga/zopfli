@@ -10,8 +10,14 @@ required by Zopfli KrzYmod.
 
 #ifdef NDOUBLE
  typedef float zfloat;
+ typedef float zpfloat;
 #else
- typedef double zfloat;
+ typedef double zpfloat;
+ #ifdef LDOUBLE
+  typedef long double zfloat;
+ #else
+  typedef double zfloat;
+ #endif
 #endif
 
 #ifndef _THREAD_SAFE

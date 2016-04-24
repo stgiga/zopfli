@@ -286,7 +286,11 @@ static zfloat GetBestLengths(ZopfliBlockState *s,
 #ifdef NDOUBLE
   memset(costs + 1, 127, blocksize * sizeof(*costs));
 #else
+ #ifdef LDOUBLE
+  for (i = 1; i < blocksize + 1; i++) costs[i] = ZOPFLI_LARGE_FLOAT;
+ #else
   memset(costs + 1, 69, blocksize * sizeof(*costs));
+ #endif
 #endif
 
   length_array[0] = 0;

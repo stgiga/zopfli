@@ -789,7 +789,7 @@ void PrintSummary(unsigned long insize, unsigned long outsize, unsigned long def
       if(ratio_comp==0) ratio_comp=deflsize;
       fprintf(stderr, "Deflate size: %lu (%luK)\n", deflsize, deflsize / 1024);
     }
-    fprintf(stderr, "Ratio: %.3f%%\n\n", 100.0 * (zfloat)ratio_comp / (zfloat)insize);
+    fprintf(stderr, "Ratio: %.3f%%\n\n", 100.0 * (zpfloat)ratio_comp / (zpfloat)insize);
   }
 
 }
@@ -1261,7 +1261,7 @@ static void ErrorRestore(const char* rpfile, int rp_error) {
 }
 
 static void PrintProgress(int v, size_t start, size_t inend, size_t i, size_t npoints) {
-  if(v>0) fprintf(stderr, "Progress: %.1f%%",100.0 * (zfloat) start / (zfloat)inend);
+  if(v>0) fprintf(stderr, "Progress: %.1f%%",100.0 * (zpfloat) start / (zpfloat)inend);
   if(v>1) {
     fprintf(stderr, "  ---  Block: %d / %d  ---  Data left: %luKB",
             (int)(i + 1), (int)(npoints + 1),(unsigned long)((inend - start)/1024));

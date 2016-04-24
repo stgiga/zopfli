@@ -616,7 +616,7 @@ static int Compress(ZopfliOptions* options, const ZopfliBinOptions* binoptions,
       in = 0;
 
       if(options->verbose==1) fprintf(stderr,"                                     \r");
-      if(options->verbose>0) fprintf(stderr, "Progress: %.1f%%",100.0 * (zfloat)processed / (zfloat)fullsize);
+      if(options->verbose>0) fprintf(stderr, "Progress: %.1f%%",100.0 * (zpfloat)processed / (zpfloat)fullsize);
       if(options->verbose>1) {
         fprintf(stderr, "  ---  Block: %d / %d  ---  Data left: %luKB",
                (int)(i + 1), (int)(npoints + 1),(unsigned long)((fullsize - processed)/1024));
@@ -1073,7 +1073,8 @@ int main(int argc, char* argv[]) {
           "  --rz#         initial random Z for iterations (1-65535, d: 2)\n\n"
           " Pressing CTRL+C will set maximum unsuccessful iterations to 1.\n"
           "\n");
-      fprintf(stderr,"Maximum supported input file size by this version is %luMB.\n\n",(unsigned long)((size_t)(-1)/1024/1024));
+      fprintf(stderr,"Floating point arithmetic precision: %d-bit\n"
+                     "Maximum supported input file size: %luMB.\n\n",(int)(8 * sizeof(zfloat)),(unsigned long)((size_t)(-1)/1024/1024));
       return EXIT_FAILURE;
     }
   }
