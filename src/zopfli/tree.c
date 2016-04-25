@@ -64,7 +64,7 @@ void ZopfliLengthsToSymbols(const unsigned* lengths, size_t n, unsigned maxbits,
 }
 
 void ZopfliCalculateEntropy(const size_t* count, size_t n, zfloat* bitlengths) {
-  static const zfloat kInvLog2 = 1.4426950408889;  /* 1.0 / log(2.0) */
+  static const zfloat kInvLog2 = ZOPFLI_INVLOG2; /* 1.0 / log(2.0) */
   size_t sum = 0;
   size_t i;
   zfloat log2sum;
@@ -83,7 +83,7 @@ void ZopfliCalculateEntropy(const size_t* count, size_t n, zfloat* bitlengths) {
     instead of zero (e.g. -5.973954e-17 with gcc 4.1.2 on Ubuntu 11.4). Clamp
     it to zero. These floating point imprecisions do not affect the cost model
     significantly so this is ok. */
-    if (bitlengths[i] < 0 && bitlengths[i] > -1e-5) bitlengths[i] = 0;
+    if (bitlengths[i] < 0 && bitlengths[i] > ZOPFLI_CLOSENEGATIVE) bitlengths[i] = 0;
     assert(bitlengths[i] >= 0);
   }
 }

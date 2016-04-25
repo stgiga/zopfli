@@ -8,14 +8,32 @@ required by Zopfli KrzYmod.
 #ifndef DEFINES_H_
 #define DEFINES_H_
 
+#include <float.h>
+
 #ifdef NDOUBLE
+ #define ZOPFLI_INVLOG2 1.4426950f
+ #define ZOPFLI_CLOSENEGATIVE -1e-5f
  typedef float zfloat;
  typedef float zpfloat;
 #else
  typedef double zpfloat;
  #ifdef LDOUBLE
+  #if (LDBL_DIG>=33)
+   #define ZOPFLI_INVLOG2 1.44269504088896340735992468100189214L
+   #define ZOPFLI_CLOSENEGATIVE -1e-32L
+  #else
+   #if (LDBL_DIG>15)
+    #define ZOPFLI_INVLOG2 1.442695040888963407L
+    #define ZOPFLI_CLOSENEGATIVE -1e-17L
+   #else
+    #define ZOPFLI_INVLOG2 1.442695040888963L
+    #define ZOPFLI_CLOSENEGATIVE -1e-14L
+   #endif
+  #endif
   typedef long double zfloat;
  #else
+  #define ZOPFLI_INVLOG2 1.442695040888963
+  #define ZOPFLI_CLOSENEGATIVE -1e-14
   typedef double zfloat;
  #endif
 #endif
