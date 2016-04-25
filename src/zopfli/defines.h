@@ -10,14 +10,25 @@ required by Zopfli KrzYmod.
 
 #include <float.h>
 
+#if (_XOPEN_SOURCE<500)
+ #define _XOPEN_SOURCE 500
+#endif
+
+#ifndef _THREAD_SAFE
+ #define _THREAD_SAFE
+#endif
+
 #ifdef NDOUBLE
+ #define __STDC_VERSION__ 199901L
  #define ZOPFLI_INVLOG2 1.4426950f
  #define ZOPFLI_CLOSENEGATIVE -1e-5f
+ #define ZLOG(x) logf(x)
  typedef float zfloat;
  typedef float zpfloat;
 #else
  typedef double zpfloat;
  #ifdef LDOUBLE
+  #define __STDC_VERSION__ 199901L
   #if (LDBL_DIG>=33)
    #define ZOPFLI_INVLOG2 1.44269504088896340735992468100189214L
    #define ZOPFLI_CLOSENEGATIVE -1e-32L
@@ -30,20 +41,14 @@ required by Zopfli KrzYmod.
     #define ZOPFLI_CLOSENEGATIVE -1e-14L
    #endif
   #endif
+  #define ZLOG(x) logl(x)
   typedef long double zfloat;
  #else
   #define ZOPFLI_INVLOG2 1.442695040888963
   #define ZOPFLI_CLOSENEGATIVE -1e-14
+  #define ZLOG(x) log(x)
   typedef double zfloat;
  #endif
-#endif
-
-#ifndef _THREAD_SAFE
- #define _THREAD_SAFE
-#endif
-
-#if (_XOPEN_SOURCE<500)
-#define _XOPEN_SOURCE 500
 #endif
 
 #if defined _WIN32 || defined __CYGWIN__
