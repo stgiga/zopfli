@@ -369,17 +369,16 @@ static void TraceBackwards(size_t size, const unsigned short* length_array,
                            unsigned short** path, size_t* pathsize) {
   size_t index = size;
   if (size == 0) return;
-  for (;;) {
+  do {
     ZOPFLI_APPEND_DATA(length_array[index], path, pathsize);
     assert(length_array[index] <= index);
     assert(length_array[index] <= ZOPFLI_MAX_MATCH);
     assert(length_array[index] != 0);
-    index -= length_array[index];
-    if (index == 0) break;
-  }
+  } while(index -= length_array[index]);
 
   /* Mirror result. */
-  for (index = 0; index < *pathsize / 2; index++) {
+  index = *pathsize >> 1;
+  while(index--) {
     unsigned short temp = (*path)[index];
     (*path)[index] = (*path)[*pathsize - index - 1];
     (*path)[*pathsize - index - 1] = temp;
@@ -448,8 +447,8 @@ static void CalculateStatistics(SymbolStats* stats) {
 
 /* Appends the symbol statistics from the store. */
 static void GetStatistics(const ZopfliLZ77Store* store, SymbolStats* stats) {
-  size_t i;
-  for (i = 0; i < store->size; i++) {
+  size_t i = store->size;
+  while(i--) {
     if (store->dists[i] == 0) {
       stats->litlens[store->litlens[i]]++;
     } else {
@@ -511,7 +510,7 @@ void ZopfliLZ77Optimal(ZopfliBlockState *s,
   size_t pathsize = 0;
   ZopfliLZ77Store currentstore;
   SymbolStats stats, beststats, laststats;
-  unsigned int i = 0;
+  unsigned int i = 0, j;
   unsigned int fails=0;
   zfloat cost;
   zfloat *costs = (zfloat*)malloc(sizeof(zfloat) * (blocksize + 1));
@@ -542,7 +541,8 @@ void ZopfliLZ77Optimal(ZopfliBlockState *s,
 
   /* Repeat statistics with each time the cost model from the previous stat
   run. */
-  while (i < s->options->numiterations && (!mui || fails < mui)) {
+  j = s->options->numiterations + 1;
+  while(--j) {
     ZopfliCleanLZ77Store(&currentstore);
     ZopfliInitLZ77Store(in, &currentstore);
     LZ77OptimalRun(s, in, instart, inend, &path, &pathsize,
@@ -568,9 +568,11 @@ void ZopfliLZ77Optimal(ZopfliBlockState *s,
       bestcost = cost;
       /* End */
       fails=0;
+      if(s->options->weightedafterbest) lastrandomstep = 0;
     } else {
       ++fails;
     }
+    if(mui && fails > mui) break;
     CopyStats(&stats, &laststats);
     ClearStatFreqs(&stats);
     GetStatistics(&currentstore, &stats);

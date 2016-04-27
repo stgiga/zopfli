@@ -67,6 +67,7 @@ ZopfliPNGOptions::ZopfliPNGOptions()
   , slowsplit(0)
   , numthreads(1)
   , cmwc(0)
+  , weightedafterbest(0)
   , try_paletteless_size(2048)
   , ga_population_size(19)
   , ga_max_evaluations(0)
@@ -108,6 +109,7 @@ unsigned CustomPNGDeflate(unsigned char** out, size_t* outsize,
   options.slowsplit             = png_options->slowsplit;
   options.numthreads            = png_options->numthreads;
   options.cmwc                  = png_options->cmwc;
+  options.weightedafterbest     = png_options->weightedafterbest;
 
   ZopfliDeflate(&options, 2 /* Dynamic */, 1, in, insize, &bp, out, outsize, 0);
 
@@ -1029,6 +1031,7 @@ extern "C" void CZopfliPNGSetDefaults(CZopfliPNGOptions* png_options) {
   png_options->slowsplit                = opts.slowsplit;
   png_options->numthreads               = opts.numthreads;
   png_options->cmwc                     = opts.cmwc;
+  png_options->weightedafterbest        = opts.weightedafterbest;
   png_options->try_paletteless_size     = opts.try_paletteless_size;
   png_options->ga_population_size       = opts.ga_population_size;
   png_options->ga_max_evaluations       = opts.ga_max_evaluations;
@@ -1072,6 +1075,7 @@ extern "C" int CZopfliPNGOptimize(const unsigned char* origpng,
   opts.slowsplit                = png_options->slowsplit;
   opts.numthreads               = png_options->numthreads;
   opts.cmwc                     = png_options->cmwc;
+  opts.weightedafterbest        = png_options->weightedafterbest;
   opts.try_paletteless_size     = png_options->try_paletteless_size;
   opts.ga_population_size       = png_options->ga_population_size;
   opts.ga_max_evaluations       = png_options->ga_max_evaluations;

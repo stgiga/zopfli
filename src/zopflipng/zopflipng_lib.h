@@ -160,6 +160,8 @@ typedef struct CZopfliPNGOptions {
 
   int cmwc;
 
+  int weightedafterbest;
+
   int try_paletteless_size;
 
   int ga_population_size;
@@ -340,6 +342,12 @@ struct ZopfliPNGOptions {
   "Complementary-Multiply-With-Carry".
   */
   int cmwc;
+
+  /*
+  Re-run weighted statistics on every best iteration found.
+  This usually finds best iterations sooner.
+  */
+  int weightedafterbest;
 
   // Maximum size after which to try full color image compression on paletted image
   int try_paletteless_size;
