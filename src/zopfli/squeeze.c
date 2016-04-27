@@ -518,7 +518,7 @@ void ZopfliLZ77Optimal(ZopfliBlockState *s,
   zfloat lastcost = 0;
   /* Try randomizing the costs a bit once the size stabilizes. */
   RanState ran_state;
-  int lastrandomstep = -1;
+  int lastrandomstep = 0;
   ZopfliHash hash;
   ZopfliHash* h = &hash;
 
@@ -576,7 +576,7 @@ void ZopfliLZ77Optimal(ZopfliBlockState *s,
     CopyStats(&stats, &laststats);
     ClearStatFreqs(&stats);
     GetStatistics(&currentstore, &stats);
-    if (lastrandomstep != -1) {
+    if (!lastrandomstep) {
       /* This makes it converge slower but better. Do it only once the
       randomness kicks in so that if the user does few iterations, it gives a
       better result sooner. */
