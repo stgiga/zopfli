@@ -159,10 +159,11 @@ typedef struct ZopfliOptions {
   int cmwc;
 
   /*
-  Re-run weighted statistics on every best iteration found.
-  This usually finds best iterations sooner.
+  Start running weighted statistics only after this many unsuccessful
+  random tries in size reduction when costs are equal with last costs.
+  Usually makes Zopfli faster and gives different results.
   */
-  int weightedafterbest;
+  int rui;
 
 } ZopfliOptions;
 

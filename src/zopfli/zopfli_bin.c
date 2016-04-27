@@ -943,9 +943,12 @@ int main(int argc, char* argv[]) {
     else if (StringsEqual(arg, "--dir")) binoptions.usescandir = 1;
     else if (StringsEqual(arg, "--aas")) binoptions.additionalautosplits = 1;
     else if (StringsEqual(arg, "--all")) options.tryall = 1;
-    else if (StringsEqual(arg, "--wob")) options.weightedafterbest = 1;
     else if (StringsEqual(arg, "--cmwc")) options.cmwc = 1;
-    else if (arg[0] == '-' && arg[1] == '-' && arg[2] == 'i'
+    else if (arg[0] == '-' && arg[1] == '-' && arg[2] == 'r'
+          && arg[3] == 'u' && arg[4] == 'i'
+          && arg[5] >= '0' && arg[5] <= '9') {
+      options.rui = atoi(arg + 5);
+    } else if (arg[0] == '-' && arg[1] == '-' && arg[2] == 'i'
           && arg[3] >= '0' && arg[3] <= '9') {
       options.numiterations = atoi(arg + 3);
     }  else if (arg[0] == '-' && arg[1] == '-' && arg[2] == 't'
@@ -1069,7 +1072,7 @@ int main(int argc, char* argv[]) {
           "  --pass#       recompress last split points max # times (d: 0)\n"
           "  --rp          use restore points\n");
       fprintf(stderr,
-          "  --wob         re-run weighted statistics after best\n"
+          "  --rui         run weighted stats after this many unsuccessful randoms (d:0)\n"
           "  --cmwc        use Complementary-Multiply-With-Carry rand. gen.\n"
           "  --rw#         initial random W for iterations (1-65535, d: 1)\n"
           "  --rz#         initial random Z for iterations (1-65535, d: 2)\n\n"

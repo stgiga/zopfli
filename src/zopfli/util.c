@@ -44,5 +44,5 @@ void ZopfliInitOptions(ZopfliOptions* options) {
   options->slowsplit = 0;
   options->numthreads = 1;
   options->cmwc = 0;
-  options->weightedafterbest = 0;
+  options->rui = 0;
 }

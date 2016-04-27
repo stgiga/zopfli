@@ -160,7 +160,7 @@ typedef struct CZopfliPNGOptions {
 
   int cmwc;
 
-  int weightedafterbest;
+  int rui;
 
   int try_paletteless_size;
 
@@ -344,10 +344,11 @@ struct ZopfliPNGOptions {
   int cmwc;
 
   /*
-  Re-run weighted statistics on every best iteration found.
-  This usually finds best iterations sooner.
+  Start running weighted statistics only after this many unsuccessful
+  random tries in size reduction when costs are equal with last costs.
+  Usually makes Zopfli faster and gives different results.
   */
-  int weightedafterbest;
+  int rui;
 
   // Maximum size after which to try full color image compression on paletted image
   int try_paletteless_size;
