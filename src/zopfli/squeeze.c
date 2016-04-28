@@ -512,11 +512,12 @@ void ZopfliLZ77Optimal(ZopfliBlockState *s,
   SymbolStats stats, beststats, laststats;
   unsigned int i = 0, j;
   unsigned int fails=0;
-  int rui = 0;
   zfloat cost;
   zfloat *costs = (zfloat*)malloc(sizeof(zfloat) * (blocksize + 1));
   zfloat bestcost = ZOPFLI_LARGE_FLOAT;
   zfloat lastcost = 0;
+  zfloat statsimp = (zfloat)s->options->statimportance/(zfloat)100;
+  zfloat laststatsimp = 1.5 - statsimp;
   /* Try randomizing the costs a bit once the size stabilizes. */
   RanState ran_state;
   int lastrandomstep = 0;
@@ -569,7 +570,6 @@ void ZopfliLZ77Optimal(ZopfliBlockState *s,
       bestcost = cost;
       /* End */
       fails=0;
-      rui = s->options->rui;
     } else {
       ++fails;
     }
@@ -581,13 +581,12 @@ void ZopfliLZ77Optimal(ZopfliBlockState *s,
       CopyStats(&beststats, &stats);
       RandomizeStatFreqs(&ran_state, &stats);
       CalculateStatistics(&stats);
-      if(rui) --rui;
       lastrandomstep = 1;
-    } else if (lastrandomstep && !rui) {
+    } else if (lastrandomstep) {
       /* This makes it converge slower but better. Do it only once the
       randomness kicks in so that if the user does few iterations, it gives a
       better result sooner. */
-      AddWeighedStatFreqs(&stats, 1.0, &laststats, 0.5, &stats);
+      AddWeighedStatFreqs(&stats, statsimp, &laststats, laststatsimp, &stats);
       CalculateStatistics(&stats);
     }
     lastcost = cost;

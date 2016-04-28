@@ -159,11 +159,10 @@ typedef struct ZopfliOptions {
   int cmwc;
 
   /*
-  Start running weighted statistics only after this many unsuccessful
-  random tries in size reduction when costs are equal with last costs.
-  Usually makes Zopfli faster and gives different results.
+  Current stats to last stats importance in weighted statistic
+  calculations. Default is 100, meaning 1 : 0.5.
   */
-  int rui;
+  int statimportance;
 
 } ZopfliOptions;
 

@@ -230,7 +230,7 @@ void ShowHelp() {
          "--rc:            reverse counts ordering in bit length calculations\n"
          "--pass=[number]: recompress last split points max # times (d: 0)\n"
          "--rp:            use restore points\n"
-         "--rui=[number]   run weighted stats only after this many unsuccessful randoms (d:0)\n"
+         "--si=[number]    stats to laststats in weight calculations (d: 100, max: 149)\n"
          "--cmwc           use Complementary-Multiply-With-Carry rand. gen.\n"
          "--rw=[number]:   initial random W for iterations (1-65535, d: 1)\n"
          "--rz=[number]:   initial random Z for iterations (1-65535, d: 2)\n"
@@ -365,9 +365,10 @@ printf("ZopfliPNG, a Portable Network Graphics (PNG) image optimizer.\n"
       } else if (name == "--v") {
         if (num < 0) num = 1;
         png_options.verbose = num;
-      } else if (name == "--rui") {
+      } else if (name == "--si") {
         if (num < 0) num = 1;
-        png_options.rui = num;
+        else if(num>149) num = 149;
+        png_options.statimportance = num;
       } else if (name == "--cmwc") {
         png_options.cmwc = 1;
       } else if (name == "--rw") {
