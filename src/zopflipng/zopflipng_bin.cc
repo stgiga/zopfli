@@ -230,12 +230,13 @@ void ShowHelp() {
          "--rc:            reverse counts ordering in bit length calculations\n"
          "--pass=[number]: recompress last split points max # times (d: 0)\n"
          "--rp:            use restore points\n"
-         "--si=[number]    stats to laststats in weight calculations (d: 100, max: 149)\n"
-         "--cmwc           use Complementary-Multiply-With-Carry rand. gen.\n"
-         "--rw=[number]:   initial random W for iterations (1-65535, d: 1)\n"
-         "--rz=[number]:   initial random Z for iterations (1-65535, d: 2)\n"
+         "--si=[number]:   stats to laststats in weight calculations (d: 100, max: 149)\n"
+         "--cmwc:          use Complementary-Multiply-With-Carry rand. gen.\n"
+         "--rm=[number]:   random modulo for iteration stats (d: 3)\n"
+         "--rw=[number]:   initial random W for iteration stats (1-65535, d: 1)\n"
+         "--rz=[number]:   initial random Z for iteration stats (1-65535, d: 2)\n"
          "--t=[number]:    compress using # threads, 0 = compat. (d:1)\n"
-         "--idle           use idle process priority\n"
+         "--idle:          use idle process priority\n"
          "   more options available only in Zopfli\n"
          "\n"
          "Usage examples:\n"
@@ -344,7 +345,6 @@ printf("ZopfliPNG, a Portable Network Graphics (PNG) image optimizer.\n"
       } else if (name == "--all") {
         png_options.tryall = 1;
       } else if (name == "--iterations") {
-        if (num < 1) num = 1;
         png_options.num_iterations = num;
         png_options.num_iterations_large = num;
       } else if (name == "--mb") {
@@ -371,6 +371,9 @@ printf("ZopfliPNG, a Portable Network Graphics (PNG) image optimizer.\n"
         png_options.statimportance = num;
       } else if (name == "--cmwc") {
         png_options.cmwc = 1;
+      } else if (name == "--rm") {
+        if (num < 1) num = 1;
+        png_options.ranstatemod = num;
       } else if (name == "--rw") {
         if (num < 1) num = 1;
         png_options.ranstatew = num;

@@ -119,9 +119,9 @@ typedef struct CZopfliPNGOptions {
 
   int use_zopfli;
 
-  int num_iterations;
+  unsigned int num_iterations;
 
-  int num_iterations_large;
+  unsigned int num_iterations_large;
 
   int block_split_strategy;
 
@@ -135,12 +135,14 @@ typedef struct CZopfliPNGOptions {
 
   int optimizehuffmanheader;
 
-  int maxfailiterations;
+  unsigned int maxfailiterations;
 
   unsigned int findminimumrec;
 
   unsigned short ranstatew;
   unsigned short ranstatez;
+
+  int ranstatemod;
 
   int usebrotli;
 
@@ -233,10 +235,10 @@ struct ZopfliPNGOptions {
   bool use_zopfli;
 
   // Zopfli number of iterations
-  int num_iterations;
+  unsigned int num_iterations;
 
   // Zopfli number of iterations on large images
-  int num_iterations_large;
+  unsigned int num_iterations_large;
 
   // Unused, left for backwards compatiblity.
   int block_split_strategy;
@@ -266,7 +268,7 @@ struct ZopfliPNGOptions {
   without further bit reductions. Number of iterations should be greater
   than this value, otherwise it will have no effect.
   */
-  int maxfailiterations;
+  unsigned int maxfailiterations;
 
   /*
   This has an impact on block splitting model by recursively checking multiple
@@ -281,6 +283,12 @@ struct ZopfliPNGOptions {
   */
   unsigned short ranstatew;
   unsigned short ranstatez;
+
+  /*
+  Modulo used by random function. By default modulo 3 is used.
+  Sometimes using different values (like 5) may give better results.
+  */
+  int ranstatemod;
 
   /*
   If to use Brotli RLE.

@@ -35,6 +35,7 @@ void ZopfliInitOptions(ZopfliOptions* options) {
   options->findminimumrec = 9;
   options->ranstatew = 1;
   options->ranstatez = 2;
+  options->ranstatemod = 3;
   options->usebrotli = 0;
   options->revcounts = 0;
   options->pass = 0;

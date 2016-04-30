@@ -85,9 +85,10 @@ typedef struct RanState {
   unsigned int m_w, m_z;
   uint32_t Q[4096], c;
   int cmwc;
+  int ranmod;
 } RanState;
 
-static void InitRanState(RanState* state,short int m_w,short int m_z, int cmwc) {
+static void InitRanState(RanState* state,short int m_w,short int m_z, int cmwc, int ranmod) {
   if(cmwc) {
     const unsigned long phi = 0x9e3779b9;
     uint32_t x = m_w + m_z;
@@ -105,6 +106,7 @@ static void InitRanState(RanState* state,short int m_w,short int m_z, int cmwc) 
   state->m_w = m_w;
   state->m_z = m_z;
   state->cmwc = cmwc;
+  state->ranmod = ranmod;
 }
 
 /*
@@ -138,7 +140,7 @@ static unsigned int Ran(RanState* state) {
 static void RandomizeFreqs(RanState* state, size_t* freqs, unsigned n) {
   unsigned i;
   for (i = 0; i < n; i++) {
-    if ((Ran(state) >> 4) % 3 == 0) freqs[i] = freqs[Ran(state) % n];
+    if ((Ran(state) >> 4) % state->ranmod == 0) freqs[i] = freqs[Ran(state) % n];
   }
 }
 
@@ -511,7 +513,7 @@ void ZopfliLZ77Optimal(ZopfliBlockState *s,
   ZopfliLZ77Store currentstore;
   SymbolStats stats, beststats, laststats;
   unsigned int i = 0, j;
-  unsigned int fails=0;
+  unsigned int fails = 0, lastrandomstep = 0;
   zfloat cost;
   zfloat *costs = (zfloat*)malloc(sizeof(zfloat) * (blocksize + 1));
   zfloat bestcost = ZOPFLI_LARGE_FLOAT;
@@ -520,7 +522,6 @@ void ZopfliLZ77Optimal(ZopfliBlockState *s,
   zfloat laststatsimp = 1.5 - statsimp;
   /* Try randomizing the costs a bit once the size stabilizes. */
   RanState ran_state;
-  int lastrandomstep = 0;
   ZopfliHash hash;
   ZopfliHash* h = &hash;
 
@@ -528,7 +529,7 @@ void ZopfliLZ77Optimal(ZopfliBlockState *s,
   if (!costs) exit(-1); /* Allocation failed. */
 
   InitRanState(&ran_state,s->options->ranstatew,s->options->ranstatez,
-               s->options->cmwc);
+               s->options->cmwc, s->options->ranstatemod);
 
   InitStats(&stats);
   ZopfliInitLZ77Store(in, &currentstore);
@@ -544,6 +545,7 @@ void ZopfliLZ77Optimal(ZopfliBlockState *s,
   /* Repeat statistics with each time the cost model from the previous stat
   run. */
   j = s->options->numiterations + 1;
+  if(j == 1) j = (unsigned int)-1;
   while(--j) {
     ZopfliCleanLZ77Store(&currentstore);
     ZopfliInitLZ77Store(in, &currentstore);

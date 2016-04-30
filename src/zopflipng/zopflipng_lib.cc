@@ -58,6 +58,7 @@ ZopfliPNGOptions::ZopfliPNGOptions()
   , findminimumrec(9)
   , ranstatew(1)
   , ranstatez(2)
+  , ranstatemod(3)
   , usebrotli(0)
   , revcounts(0)
   , pass(0)
@@ -67,7 +68,7 @@ ZopfliPNGOptions::ZopfliPNGOptions()
   , slowsplit(0)
   , numthreads(1)
   , cmwc(0)
-  , statimportance(0)
+  , statimportance(100)
   , try_paletteless_size(2048)
   , ga_population_size(19)
   , ga_max_evaluations(0)
@@ -100,6 +101,7 @@ unsigned CustomPNGDeflate(unsigned char** out, size_t* outsize,
   options.findminimumrec        = png_options->findminimumrec;
   options.ranstatew             = png_options->ranstatew;
   options.ranstatez             = png_options->ranstatez;
+  options.ranstatemod           = png_options->ranstatemod;
   options.usebrotli             = png_options->usebrotli;
   options.revcounts             = png_options->revcounts;
   options.pass                  = png_options->pass;
@@ -1024,6 +1026,7 @@ extern "C" void CZopfliPNGSetDefaults(CZopfliPNGOptions* png_options) {
   png_options->findminimumrec           = opts.findminimumrec;
   png_options->ranstatew                = opts.ranstatew;
   png_options->ranstatez                = opts.ranstatez;
+  png_options->ranstatemod              = opts.ranstatemod;
   png_options->pass                     = opts.pass;
   png_options->restorepoints            = opts.restorepoints;
   png_options->noblocksplittinglast     = opts.noblocksplittinglast;
@@ -1066,6 +1069,7 @@ extern "C" int CZopfliPNGOptimize(const unsigned char* origpng,
   opts.findminimumrec           = png_options->findminimumrec;
   opts.ranstatew                = png_options->ranstatew;
   opts.ranstatez                = png_options->ranstatez;
+  opts.ranstatemod              = png_options->ranstatemod;
   opts.usebrotli                = png_options->usebrotli;
   opts.revcounts                = png_options->revcounts;
   opts.pass                     = png_options->pass;

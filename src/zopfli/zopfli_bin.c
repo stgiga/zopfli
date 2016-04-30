@@ -947,10 +947,10 @@ int main(int argc, char* argv[]) {
     else if (arg[0] == '-' && arg[1] == '-' && arg[2] == 's' && arg[3] == 'i'
              && arg[4] >= '0' && arg[4] <= '9') {
       options.statimportance = atoi(arg + 4);
-      if(options.statimportance>149) options.statimportance=149;
-      else if(options.statimportance<1) options.statimportance=1;
-    } else if (arg[0] == '-' && arg[1] == '-' && arg[2] == 'i'
-          && arg[3] >= '0' && arg[3] <= '9') {
+      if (options.statimportance > 149) options.statimportance = 149;
+      else if (options.statimportance < 1) options.statimportance = 1;
+    }  else if (arg[0] == '-' && arg[1] == '-' && arg[2] == 'i'
+             && arg[3] >= '0' && arg[3] <= '9') {
       options.numiterations = atoi(arg + 3);
     }  else if (arg[0] == '-' && arg[1] == '-' && arg[2] == 't'
              && arg[3] >= '0' && arg[3] <= '9') {
@@ -958,23 +958,30 @@ int main(int argc, char* argv[]) {
     }  else if (arg[0] == '-' && arg[1] == '-' && arg[2] == 'm' && arg[3] == 'b'
              && arg[4] >= '0' && arg[4] <= '9') {
       options.blocksplittingmax = atoi(arg + 4);
+      if (options.blocksplittingmax < 0) options.blocksplittingmax = 0;
     }  else if (arg[0] == '-' && arg[1] == '-' && arg[2] == 'p' && arg[3] == 'a'
              && arg[4] == 's' && arg[5] == 's' && arg[6] >= '0' && arg[6] <= '9') {
       options.pass = atoi(arg + 6);
     }  else if (arg[0] == '-' && arg[1] == '-' && arg[2] == 'm' && arg[3] == 'l'
              && arg[4] == 's' && arg[5] >= '0' && arg[5] <= '9') {
       options.lengthscoremax = atoi(arg + 5);
+      if (options.lengthscoremax < 1) options.lengthscoremax = 1;
     }  else if (arg[0] == '-' && arg[1] == '-' && arg[2] == 'b' && arg[3] == 's'
              && arg[4] == 'r' && arg[5] >= '0' && arg[5] <= '9') {
       options.findminimumrec = atoi(arg + 5);
+      if (options.findminimumrec < 2) options.findminimumrec = 2;
     }  else if (arg[0] == '-' && arg[1] == '-' && arg[2] == 'r' && arg[3] == 'w'
              && arg[4] >= '0' && arg[4] <= '9') {
       options.ranstatew = atoi(arg + 4);
-      if(options.ranstatew<1) options.ranstatew=1;
+      if (options.ranstatew < 1) options.ranstatew = 1;
     }  else if (arg[0] == '-' && arg[1] == '-' && arg[2] == 'r' && arg[3] == 'z'
              && arg[4] >= '0' && arg[4] <= '9') {
       options.ranstatez = atoi(arg + 4);
-      if(options.ranstatez<1) options.ranstatez=1;
+      if (options.ranstatez < 1) options.ranstatez = 1;
+    }  else if (arg[0] == '-' && arg[1] == '-' && arg[2] == 'r' && arg[3] == 'm'
+             && arg[4] >= '0' && arg[4] <= '9') {
+      options.ranstatemod = atoi(arg + 4);
+      if (options.ranstatemod < 1) options.ranstatemod = 1;
     }  else if (arg[0] == '-' && arg[1] == '-' && arg[2] == 'm' && arg[3] == 'u'
              && arg[4] == 'i' && arg[5] >= '0' && arg[5] <= '9') {
       options.maxfailiterations = atoi(arg + 5);
@@ -1031,7 +1038,7 @@ int main(int argc, char* argv[]) {
           "  --v#          verbose level (0-5, d: 2)\n\n");
       fprintf(stderr,
           "      TIME SPENT CONTROL:\n"
-          "  --i#          perform # iterations (d: 15)\n"
+          "  --i#          perform # iterations (d: 15; 0 => 4.2 billion)\n"
           "  --mui#        maximum unsucessful iterations after last best (d: 0)\n\n");
       fprintf(stderr,
           "      AUTOMATIC BLOCK SPLITTER CONTROL:\n"
@@ -1075,8 +1082,9 @@ int main(int argc, char* argv[]) {
       fprintf(stderr,
           "  --si#         stats to laststats in weight calculations (d: 100, max: 149)\n"
           "  --cmwc        use Complementary-Multiply-With-Carry rand. gen.\n"
-          "  --rw#         initial random W for iterations (1-65535, d: 1)\n"
-          "  --rz#         initial random Z for iterations (1-65535, d: 2)\n\n"
+          "  --rm#         random modulo for iteration stats (d: 3)\n"
+          "  --rw#         initial random W for iteration stats (1-65535, d: 1)\n"
+          "  --rz#         initial random Z for iteration stats (1-65535, d: 2)\n\n"
           " Pressing CTRL+C will set maximum unsuccessful iterations to 1.\n"
           "\n");
       fprintf(stderr,"Floating point arithmetic precision: %d-bit\n"
@@ -1087,32 +1095,12 @@ int main(int argc, char* argv[]) {
 
   if(options.verbose) VersionInfo();
 
-  if (options.numiterations < 1) {
-    fprintf(stderr, "Error: --i parameter must be at least 1.\n");
-    return EXIT_FAILURE;
-  }
-
   if(options.restorepoints) {
     if(binoptions.legacy && !binoptions.usescandir) {
       if(options.verbose) fprintf(stderr, "Info: Using restore points.\n");
     } else {
       options.restorepoints=0;
     }
-  }
-
-  if (options.blocksplittingmax < 0) {
-    fprintf(stderr, "Error: --mb parameter must be at least 0.\n");
-    return EXIT_FAILURE;
-  }
-
-  if (options.lengthscoremax < 1) {
-    fprintf(stderr, "Error: --mls parameter must be at least 1.\n");
-    return EXIT_FAILURE;
-  }
-
-  if (options.findminimumrec < 2) {
-    fprintf(stderr, "Error: --bsr parameter must be at least 2.\n");
-    return EXIT_FAILURE;
   }
 
   for (i = 1; i < argc; i++) {

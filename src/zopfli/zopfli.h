@@ -99,6 +99,12 @@ typedef struct ZopfliOptions {
   unsigned short ranstatez;
 
   /*
+  Modulo used by random function. By default modulo 3 is used.
+  Sometimes using different values (like 5) may give better results.
+  */
+  int ranstatemod;
+
+  /*
   If to use Brotli RLE.
   */
   int usebrotli;
