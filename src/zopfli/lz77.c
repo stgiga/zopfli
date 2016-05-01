@@ -535,7 +535,7 @@ void ZopfliFindLongestMatch(ZopfliBlockState* s, const ZopfliHash* h,
     p = hprev[p];
     if (p == pp) break;  /* Uninited prev value. */
 
-    dist += (pp - p) & ZOPFLI_WINDOW_MASK;
+    dist += p < pp ? pp - p : ((ZOPFLI_WINDOW_SIZE - p) + pp);
 
 #if ZOPFLI_MAX_CHAIN_HITS < ZOPFLI_WINDOW_SIZE
     chain_counter--;
