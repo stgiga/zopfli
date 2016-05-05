@@ -558,6 +558,7 @@ unsigned TryOptimize(
   for (unsigned i = outputstate.info_png.color.bitdepth << 1; i <= 8; i <<= 1) {
     if (error) break;
     state.encoder.auto_convert = 0;
+    lodepng_color_mode_copy(&state.info_png.color, &outputstate.info_png.color);
     state.info_png.color.bitdepth = i;
     out2.clear();
     error = lodepng::encode(out2, image, w, h, state);
