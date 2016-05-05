@@ -3907,7 +3907,7 @@ void optimize_palette(LodePNGColorMode* mode_out, const uint32_t* image,
           sortfield[best] ^= sortfield[i];
           sortfield[i] ^= sortfield[best];
         }
-        sortfield[i] |= i << 40;
+        sortfield[i] |= uint64_t(i) << 40;
         const unsigned char* c = (unsigned char*)&palette_in[sortfield[i] & 0xFF];
         const int r = c[0];
         const int g = c[1];
@@ -3930,7 +3930,7 @@ void optimize_palette(LodePNGColorMode* mode_out, const uint32_t* image,
           }
         }
       }
-      sortfield[count - 1] |= (uint64_t(count) - 1) << 40;
+      sortfield[count - 1] |= uint64_t(count - 1) << 40;
       break;
     case LPOS_NEAREST_WEIGHT:
       {
@@ -3964,7 +3964,7 @@ void optimize_palette(LodePNGColorMode* mode_out, const uint32_t* image,
             }
           }
         }
-        sortfield[count - 1] |= (uint64_t(count) - 1) << 40;
+        sortfield[count - 1] |= uint64_t(count - 1) << 40;
       }
       break;
     case LPOS_NEAREST_NEIGHBOR:
@@ -4031,7 +4031,7 @@ void optimize_palette(LodePNGColorMode* mode_out, const uint32_t* image,
             }
           }
         }
-        sortfield[count - 1] |= (uint64_t(count) - 1) << 40;
+        sortfield[count - 1] |= uint64_t(count - 1) << 40;
         color_tree_cleanup(&paltree);
         color_tree_cleanup(&neighbors);
       }
@@ -4039,7 +4039,7 @@ void optimize_palette(LodePNGColorMode* mode_out, const uint32_t* image,
   }
   std::sort(sortfield, sortfield + count);
   uint32_t* palette_out = (uint32_t*)lodepng_malloc(mode_out->palettesize << 2);
-  for (size_t i = 0; i < mode_out->palettesize; i++) {
+  for (size_t i = 0; i < mode_out->palettesize; ++i) {
     palette_out[i] = palette_in[sortfield[i] & 0xFF];
   }
   std::copy(palette_out, palette_out + mode_out->palettesize, palette_in);
@@ -5891,6 +5891,8 @@ static unsigned filter(unsigned char* out, const unsigned char* in, unsigned w, 
     unsigned total_size = 0;
     unsigned e_since_best = 0;
     unsigned tournament_size = 2;
+    if(settings->verbose>2)
+      fprintf(stderr,": <{\n");
     /* for very small images, try every combination instead of genetic algorithm */
     if(h * flog2(5) < flog2(population_size * settings->ga.number_of_stagnations))
     {
@@ -5958,7 +5960,7 @@ static unsigned filter(unsigned char* out, const unsigned char* in, unsigned w, 
           best_size = size[ranking[0]];
           e_since_best = 0;
           if(settings->verbose>2)
-            printf("Generation %d: %d bytes      \r", e, (int)size[ranking[0]]);
+            printf("Generation %d: %d bytes      \r", e, best_size);
           if(settings->verbose>3)
             printf("\n");
         }
@@ -6037,6 +6039,8 @@ static unsigned filter(unsigned char* out, const unsigned char* in, unsigned w, 
     lodepng_free(population);
     lodepng_free(size);
     lodepng_free(ranking);
+    if(settings->verbose>2)
+      fprintf(stderr,"}> Genetic algorithm best size");
   }
   else return 88; /* unknown filter strategy */
 

@@ -79,11 +79,9 @@ For longest match cache. max 256. Uses huge amounts of memory but makes it
 faster. Uses this many times three bytes per single byte of the input data.
 This is so because longest match finding has to find the exact distance
 that belongs to each length for the best lz77 strategy.
-Good values: e.g. 5, 8.
-Actually 9 seems best. Tested on Odroid U3 and Lenovo Y500. Using higher
-values than 9 or lower than 7 made compressing lodepng.cpp file longer.
+Good values: 7, 8, 9.
 */
-#define ZOPFLI_CACHE_LENGTH 9
+#define ZOPFLI_CACHE_LENGTH 8
 
 /*
 To limit maximum memory usage by cache, let's use maximum 512MB.

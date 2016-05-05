@@ -1364,7 +1364,7 @@ static void ZopfliUseThreads(const ZopfliOptions* options,
                                const char* rpfile,
                                unsigned long crc,
                                unsigned char mode, int v) {
-  unsigned showcntr = 10;
+  unsigned showcntr = 4;
   unsigned showthread = 0;
   unsigned threadsrunning = 0;
   unsigned threnum = 0;
@@ -1394,7 +1394,6 @@ static void ZopfliUseThreads(const ZopfliOptions* options,
       neednext=0;
       for(;threnum<numthreads;) {
         if(t[threnum].is_running==1 && options->verbose>2) {
-          usleep(100000);
           if(t[showthread].is_running==1) {
             unsigned calci, thrprogress;
             if(mui==0) {
@@ -1404,6 +1403,7 @@ static void ZopfliUseThreads(const ZopfliOptions* options,
               if(calci>options->numiterations) calci=options->numiterations;
             }
             thrprogress = (int)(((zfloat)t[showthread].iterations.iteration / (zfloat)calci) * 100);
+            usleep(333333);
             fprintf(stderr,"%3d%% THR %d | BLK %d | BST %d: %d b | ITR %d: %d b      \r",
                     thrprogress, showthread, ((int)t[showthread].iterations.block+1),
                     t[showthread].iterations.bestiteration, t[showthread].iterations.bestcost,
@@ -1414,13 +1414,13 @@ static void ZopfliUseThreads(const ZopfliOptions* options,
               showthread=0;
             showcntr=0;
           }
-          if(showcntr>9) {
+          if(showcntr>3) {
             if(threadsrunning>1) {
               ++showthread;
               if(showthread>=numthreads)
                 showthread=0;
             }
-            showcntr=0;
+            showcntr=1;
           } else {
             ++showcntr;
           }

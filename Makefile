@@ -13,8 +13,8 @@ CXXFLAGS = -W -Wall -Wextra -ansi -pedantic -std=gnu++11 -pthread
 #require other switches added or listed ones elminated/negated.
 
 ZDEBUG  = -O0 -g
-ZDEFOPT = -Ofast -D NDEBUG -fno-fast-math
-ZARMOPT = -Ofast -D NDEBUG -fno-fast-math
+ZDEFOPT = -Ofast -D NDEBUG -fno-associative-math
+ZARMOPT = -Ofast -D NDEBUG -fno-associative-math
 ZADDOPT = -g0 -s -flto -fuse-linker-plugin -flto-partition=max -flto-compression-level=0 -ffat-lto-objects -fgraphite-identity -floop-nest-optimize
 CAVXFLAGS = -mavx -mtune=corei7-avx -march=corei7-avx
 CNEONFLAGS = -march=armv7-a -mcpu=cortex-a9 -mfpu=neon -mfloat-abi=hard -mthumb-interwork -mno-unaligned-access -mneon-for-64bits -mstructure-size-boundary=64 -fno-tree-slp-vectorize -fno-crossjumping -ftracer -ftree-loop-ivcanon -fno-tree-loop-distribution -fselective-scheduling2 -fsel-sched-pipelining -fira-region=all -free -fno-cx-limited-range -fno-defer-pop -fno-function-cse -fno-sched-interblock -fno-sched-last-insn-heuristic -fno-sel-sched-pipelining-outer-loops -fno-tree-fre -fno-tree-loop-im -fno-zero-initialized-in-bss -fno-ipa-reference -fno-ipa-cp -fbranch-target-load-optimize2 -ffunction-sections -fdata-sections
