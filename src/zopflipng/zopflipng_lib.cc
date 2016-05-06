@@ -940,10 +940,7 @@ int ZopfliPNGOptimize(const std::vector<unsigned char>& origpng,
                                     /* use_zopfli */, windowsize,
                                     &png_options, &temp, &filterbank[0], state);
                 if (first_filter) {
-                  if (state.info_png.color.colortype == LCT_PALETTE) {
-                    lodepng_color_mode_copy(&inputstate.info_png.color,
-                                            &state.info_png.color);
-                  }
+                  lodepng_state_copy(&inputstate, &state);
                   first_filter = false;
                 }
                 if (!error) {
@@ -965,10 +962,7 @@ int ZopfliPNGOptimize(const std::vector<unsigned char>& origpng,
                   }
                   if (temp.size() < bestsize) {
                     bestsize = temp.size();
-                    if (state.info_png.color.colortype == LCT_PALETTE) {
-                      lodepng_color_mode_copy(&beststate.info_png.color,
-                                              &state.info_png.color);
-                    }
+                    lodepng_state_copy(&inputstate, &state);
                     bestcleaner = images.size();
                     // Store best result so far in the output.
                     (*resultpng).swap(temp);
