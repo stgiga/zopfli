@@ -962,7 +962,7 @@ int ZopfliPNGOptimize(const std::vector<unsigned char>& origpng,
                   }
                   if (temp.size() < bestsize) {
                     bestsize = temp.size();
-                    lodepng_state_copy(&inputstate, &state);
+                    lodepng_state_copy(&beststate, &state);
                     bestcleaner = images.size();
                     // Store best result so far in the output.
                     (*resultpng).swap(temp);
