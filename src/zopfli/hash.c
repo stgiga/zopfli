@@ -102,24 +102,17 @@ void ZopfliMallocHash(size_t window_size, ZopfliHash* h) {
 void ZopfliCleanHash(ZopfliHash* h) {
 #ifdef ZOPFLI_HASH_SAME_HASH
   free(h->hashval2);
-  h->hashval2 = 0;
   free(h->prev2);
-  h->prev2    = 0;
   free(h->head2);
-  h->head2    = 0;
 #endif
 
 #ifdef ZOPFLI_HASH_SAME
   free(h->same);
-  h->same     = 0;
 #endif
 
   free(h->hashval);
-  h->hashval  = 0;
   free(h->prev);
-  h->prev     = 0;
   free(h->head);
-  h->head     = 0;
 }
 
 /*

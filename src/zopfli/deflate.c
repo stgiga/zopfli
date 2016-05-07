@@ -1263,7 +1263,7 @@ static void ErrorRestore(const char* rpfile, int rp_error) {
 static void PrintProgress(int v, size_t start, size_t inend, size_t i, size_t npoints) {
   if(v>0) fprintf(stderr, "Progress: %.1f%%",100.0 * (zpfloat) start / (zpfloat)inend);
   if(v>1) {
-    fprintf(stderr, "  ---  Block: %d / %d  ---  Data left: %luKB",
+    fprintf(stderr, "  ---  Block: %d / %d  ---  Data left: %luKB   ",
             (int)(i + 1), (int)(npoints + 1),(unsigned long)((inend - start)/1024));
     if(v>2) {
       fprintf(stderr,"\n");

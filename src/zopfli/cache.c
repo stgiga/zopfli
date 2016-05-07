@@ -41,14 +41,6 @@ void ZopfliInitCache(size_t blocksize, ZopfliLongestMatchCache* lmc) {
     lmc->sublen = (unsigned char*)malloc(3 * blocksize);
     if(lmc->sublen==NULL) {
       fprintf(stderr,"Error: Out of memory.\n");
-    /*
-      Fix by cngzhnp:
-      The length and dist variables are already allocated.
-      They should be given back to memory.
-      Mr_KrzYch00's note:
-      Usually OS frees all memory allocated to the process
-      on EXIT, however this may not be the case for old OSes.
-    */
       ZopfliCleanCache(lmc);
       exit(EXIT_FAILURE);
     } else {
@@ -68,9 +60,6 @@ void ZopfliCleanCache(ZopfliLongestMatchCache* lmc) {
   free(lmc->sublen);
   free(lmc->dist);
   free(lmc->length);
-  lmc->sublen = 0;
-  lmc->dist   = 0;
-  lmc->length = 0;
 }
 
 void ZopfliSublenToCache(const unsigned short* sublen,

@@ -522,8 +522,13 @@ void ZopfliLZ77Optimal(ZopfliBlockState *s,
   zfloat laststatsimp = 1.5 - statsimp;
   /* Try randomizing the costs a bit once the size stabilizes. */
   RanState ran_state;
+#ifdef __ARM_ARCH_7A__
+  /* Long-run SIGSEGV fix for Odroid U3 */
+  ZopfliHash* h = (ZopfliHash*)malloc(sizeof(ZopfliHash));
+#else
   ZopfliHash hash;
   ZopfliHash* h = &hash;
+#endif
 
   if (!length_array) exit(-1); /* Allocation failed. */
   if (!costs) exit(-1); /* Allocation failed. */
@@ -604,6 +609,9 @@ void ZopfliLZ77Optimal(ZopfliBlockState *s,
   free(length_array);
   ZopfliCleanHash(h);
   ZopfliCleanLZ77Store(&currentstore);
+#ifdef __ARM_ARCH_7A__
+  free(h);
+#endif
 }
 
 void ZopfliLZ77OptimalFixed(ZopfliBlockState *s,
