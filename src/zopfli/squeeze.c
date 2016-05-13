@@ -257,7 +257,11 @@ length_array: output array of size (inend - instart) which will receive the best
     length to reach this byte from a previous byte.
 returns the cost that was, according to the costmodel, needed to get to the end.
 */
+#ifdef NDEBUG
+static void GetBestLengths(ZopfliBlockState *s,
+#else
 static zfloat GetBestLengths(ZopfliBlockState *s,
+#endif
                              const unsigned char* in,
                              size_t instart, size_t inend,
                              CostModelFun* costmodel, void* costcontext,
@@ -271,11 +275,15 @@ static zfloat GetBestLengths(ZopfliBlockState *s,
   unsigned short sublen[259];
   size_t windowstart = instart > ZOPFLI_WINDOW_SIZE
       ? instart - ZOPFLI_WINDOW_SIZE : 0;
+#ifndef NDEBUG
   zfloat result;
+#endif
   zfloat mincostsum;
   zfloat mincost = GetCostModelMinCost(costmodel, costcontext);
 
+#ifndef NDEBUG
   if (instart == inend) return 0;
+#endif
 
   ZopfliInitHash(ZOPFLI_WINDOW_SIZE, h);
   ZopfliWarmupHash(in, windowstart, inend, h);
@@ -355,10 +363,12 @@ static zfloat GetBestLengths(ZopfliBlockState *s,
     }
   }
 
+#ifndef NDEBUG
   assert(costs[blocksize] >= 0);
   result = costs[blocksize];
 
   return result;
+#endif
 }
 
 /*
@@ -479,13 +489,16 @@ store: place to output the LZ77 data
 returns the cost that was, according to the costmodel, needed to get to the end.
     This is not the actual cost.
 */
-static zfloat LZ77OptimalRun(ZopfliBlockState* s,
+static void LZ77OptimalRun(ZopfliBlockState* s,
     const unsigned char* in, size_t instart, size_t inend,
     unsigned short** path, size_t* pathsize,
     unsigned short* length_array, CostModelFun* costmodel,
     void* costcontext, ZopfliLZ77Store* store,
     ZopfliHash* h, zfloat *costs) {
-  zfloat cost = GetBestLengths(
+#ifndef NDEBUG
+  zfloat cost = 
+#endif
+  GetBestLengths(
       s, in, instart, inend, costmodel, costcontext, length_array, h, costs);
   free(*path);
   *path = 0;
@@ -493,7 +506,6 @@ static zfloat LZ77OptimalRun(ZopfliBlockState* s,
   TraceBackwards(inend - instart, length_array, path, pathsize);
   FollowPath(s, in, instart, inend, *path, *pathsize, store, h);
   assert(cost < ZOPFLI_LARGE_FLOAT);
-  return cost;
 }
 
 /*
@@ -522,13 +534,8 @@ void ZopfliLZ77Optimal(ZopfliBlockState *s,
   zfloat laststatsimp = 1.5 - statsimp;
   /* Try randomizing the costs a bit once the size stabilizes. */
   RanState ran_state;
-#ifdef __ARM_ARCH_7A__
-  /* Long-run SIGSEGV fix for Odroid U3 */
-  ZopfliHash* h = (ZopfliHash*)malloc(sizeof(ZopfliHash));
-#else
   ZopfliHash hash;
   ZopfliHash* h = &hash;
-#endif
 
   if (!length_array) exit(-1); /* Allocation failed. */
   if (!costs) exit(-1); /* Allocation failed. */
@@ -609,9 +616,6 @@ void ZopfliLZ77Optimal(ZopfliBlockState *s,
   free(length_array);
   ZopfliCleanHash(h);
   ZopfliCleanLZ77Store(&currentstore);
-#ifdef __ARM_ARCH_7A__
-  free(h);
-#endif
 }
 
 void ZopfliLZ77OptimalFixed(ZopfliBlockState *s,
