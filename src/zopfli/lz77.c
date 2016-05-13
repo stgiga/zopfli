@@ -40,19 +40,12 @@ void ZopfliInitLZ77Store(const unsigned char* data, ZopfliLZ77Store* store) {
 
 void ZopfliCleanLZ77Store(ZopfliLZ77Store* store) {
   free(store->d_counts);
-  store->d_counts  = 0;
   free(store->ll_counts);
-  store->ll_counts = 0;
   free(store->d_symbol);
-  store->d_symbol  = 0;
   free(store->ll_symbol);
-  store->ll_symbol = 0;
   free(store->pos);
-  store->pos       = 0;
   free(store->dists);
-  store->dists     = 0;
   free(store->litlens);
-  store->litlens   = 0;
 }
 
 static size_t CeilDiv(size_t a, size_t b) {
