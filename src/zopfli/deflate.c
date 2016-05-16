@@ -1730,8 +1730,8 @@ DLL_PUBLIC void ZopfliDeflatePart(const ZopfliOptions* options, int btype, int f
 
   alltimebest = totalcost;
 
-  /* Second block splitting attempt */
-  if (options->blocksplitting && npoints > 1 && !options->noblocksplittinglast) {
+  /* Second/nth block splitting attempt and optional recompression */
+  if (options->blocksplitting && npoints > 0 && !options->noblocksplittinglast) {
     size_t* splitpoints2;
     size_t npoints2;
     zfloat totalcost2;
