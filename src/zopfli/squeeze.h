@@ -64,6 +64,8 @@ typedef struct ZopfliBestStatsDB {
 
   size_t amount;
 
+  size_t* size;
+
   unsigned long* checksum;
 
   SymbolStats* beststats;

@@ -1471,19 +1471,22 @@ static void ZopfliUseThreads(const ZopfliOptions* options,
     size_t start = i == 0 ? instart : (*splitpoints_uncompressed)[i - 1];
     size_t end = i == bkend ? inend : (*splitpoints_uncompressed)[i];
     int foundbest = -1;
-    unsigned long crc2 = CRC(in + start, end - start);
+    size_t blocksize = end - start;
+    unsigned long crc2 = CRC(in + start, blocksize);
     for(n = 0; n < statsdb->amount; ++n) {
-      if(crc2 == statsdb->checksum[n]) {
+      if(blocksize == statsdb->size[n] && crc2 == statsdb->checksum[n]) {
         foundbest = n;
         break;
       }
     }
     if(foundbest == -1) {
       ++statsdb->amount;
+      statsdb->size = realloc(statsdb->size, sizeof(*statsdb->size) * statsdb->amount);
       statsdb->checksum = realloc(statsdb->checksum, sizeof(*statsdb->checksum) * statsdb->amount);
       statsdb->beststats = realloc(statsdb->beststats, sizeof(*statsdb->beststats) * statsdb->amount);
-      InitStats(&statsdb->beststats[statsdb->amount - 1]);
+      statsdb->size[statsdb->amount - 1] = blocksize;
       statsdb->checksum[statsdb->amount - 1] = crc2;
+      InitStats(&statsdb->beststats[statsdb->amount - 1]);
     }
     do {
       neednext=0;
@@ -1663,6 +1666,7 @@ DLL_PUBLIC void ZopfliDeflatePart(const ZopfliOptions* options, int btype, int f
   ZopfliBestStatsDB statsdb;
 
   statsdb.amount = 0;
+  statsdb.size = 0;
   statsdb.checksum = 0;
   statsdb.beststats = 0;
 
@@ -1967,6 +1971,7 @@ DLL_PUBLIC void ZopfliDeflatePart(const ZopfliOptions* options, int btype, int f
   free(rpfile1);
   free(statsdb.beststats);
   free(statsdb.checksum);
+  free(statsdb.size);
 }
 
 /*

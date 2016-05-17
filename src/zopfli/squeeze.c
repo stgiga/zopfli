@@ -555,7 +555,7 @@ void ZopfliLZ77Optimal(ZopfliBlockState *s,
   if(foundbest!=NULL && *foundbest!=NULL) {
     CopyStats(*foundbest, &stats);
     j = 2;
-    if(s->options->verbose>2)
+    if(s->options->numthreads == 0 && s->options->verbose>2)
       fprintf(stderr,"Already processed, reusing best . . .\n");
   } else {
     /* Initial run. */
