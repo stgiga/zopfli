@@ -32,28 +32,16 @@ Author: jyrki.alakuijala@gmail.com (Jyrki Alakuijala)
 #include "tree.h"
 #include "util.h"
 
-typedef struct SymbolStats {
-  /* The literal and length symbols. */
-  size_t litlens[ZOPFLI_NUM_LL];
-  /* The 32 unique dist symbols, not the 32768 possible dists. */
-  size_t dists[ZOPFLI_NUM_D];
-
-  /* Length of each lit/len symbol in bits. */
-  zfloat ll_symbols[ZOPFLI_NUM_LL];
-  /* Length of each dist symbol in bits. */
-  zfloat d_symbols[ZOPFLI_NUM_D];
-} SymbolStats;
-
 /* Sets everything to 0. */
-static void InitStats(SymbolStats* stats) {
-  memset(stats->litlens, 0, ZOPFLI_NUM_LL * sizeof(stats->litlens[0]));
-  memset(stats->dists, 0, ZOPFLI_NUM_D * sizeof(stats->dists[0]));
+void InitStats(SymbolStats* stats) {
+  stats->litlens = calloc(ZOPFLI_NUM_LL, sizeof(*stats->litlens));
+  stats->dists = calloc(ZOPFLI_NUM_D, sizeof(*stats->dists));
 
-  memset(stats->ll_symbols, 0, ZOPFLI_NUM_LL * sizeof(stats->ll_symbols[0]));
-  memset(stats->d_symbols, 0, ZOPFLI_NUM_D * sizeof(stats->d_symbols[0]));
+  stats->ll_symbols = calloc(ZOPFLI_NUM_LL, sizeof(*stats->ll_symbols));
+  stats->d_symbols = calloc(ZOPFLI_NUM_D, sizeof(*stats->d_symbols));
 }
 
-static void CopyStats(SymbolStats* source, SymbolStats* dest) {
+void CopyStats(SymbolStats* source, SymbolStats* dest) {
   memcpy(dest->litlens, source->litlens,
          ZOPFLI_NUM_LL * sizeof(dest->litlens[0]));
   memcpy(dest->dists, source->dists,
@@ -63,6 +51,13 @@ static void CopyStats(SymbolStats* source, SymbolStats* dest) {
          ZOPFLI_NUM_LL * sizeof(dest->ll_symbols[0]));
   memcpy(dest->d_symbols, source->d_symbols,
          ZOPFLI_NUM_D * sizeof(dest->d_symbols[0]));
+}
+
+void FreeStats(SymbolStats* stats) {
+  free(stats->litlens);
+  free(stats->dists);
+  free(stats->ll_symbols);
+  free(stats->d_symbols);
 }
 
 /* Adds the bit lengths. */
@@ -515,7 +510,8 @@ iterations need to pass to give up in finding best parameters.
 */
 void ZopfliLZ77Optimal(ZopfliBlockState *s,
                        const unsigned char* in, size_t instart, size_t inend,
-                       ZopfliLZ77Store* store, ZopfliIterations* iterations) {
+                       ZopfliLZ77Store* store, ZopfliIterations* iterations,
+                       SymbolStats** foundbest) {
   /* Dist to get to here with smallest cost. */
   size_t blocksize = inend - instart;
   unsigned short* length_array =
@@ -544,6 +540,8 @@ void ZopfliLZ77Optimal(ZopfliBlockState *s,
                s->options->cmwc, s->options->ranstatemod);
 
   InitStats(&stats);
+  InitStats(&laststats);
+  InitStats(&beststats);
   ZopfliInitLZ77Store(in, &currentstore);
   ZopfliMallocHash(ZOPFLI_WINDOW_SIZE, h);
 
@@ -558,6 +556,14 @@ void ZopfliLZ77Optimal(ZopfliBlockState *s,
   run. */
   j = s->options->numiterations + 1;
   if(j == 1) j = (unsigned int)-1;
+
+  if(foundbest!=NULL && *foundbest!=NULL) {
+    CopyStats(*foundbest, &stats);
+    j = 2;
+    if(s->options->verbose>2)
+      fprintf(stderr,"Already processed, reusing best . . .\n");
+  }
+
   while(--j) {
     ZopfliCleanLZ77Store(&currentstore);
     ZopfliInitLZ77Store(in, &currentstore);
@@ -611,11 +617,22 @@ void ZopfliLZ77Optimal(ZopfliBlockState *s,
     fprintf(stderr, "\n");
   }
 
+  if(foundbest!=NULL) {
+    if(*foundbest==NULL) {
+      *foundbest = malloc(sizeof(**foundbest));
+      InitStats(*foundbest);
+    }
+    CopyStats(&beststats, *foundbest);
+  }
+
   free(path);
   free(costs);
   free(length_array);
   ZopfliCleanHash(h);
   ZopfliCleanLZ77Store(&currentstore);
+  FreeStats(&stats);
+  FreeStats(&laststats);
+  FreeStats(&beststats);
 }
 
 void ZopfliLZ77OptimalFixed(ZopfliBlockState *s,

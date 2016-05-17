@@ -1381,6 +1381,8 @@ typedef struct ZopfliThread {
   ZopfliIterations iterations;
 
   ZopfliLZ77Store store;
+
+  SymbolStats* beststats;
 } ZopfliThread;
 
 static void *threading(void *a) {
@@ -1405,7 +1407,8 @@ static void *threading(void *a) {
 
     ZopfliInitBlockState(&o, b->start, b->end, 1, &s);
 
-    ZopfliLZ77Optimal(&s, b->in, b->start, b->end, &store, &b->iterations);
+    ZopfliLZ77Optimal(&s, b->in, b->start, b->end, &store, &b->iterations,
+                      &b->beststats);
     tempcost = ZopfliCalculateBlockSizeAutoType(&o, &store, 0, store.size, 2);
 
     ZopfliCleanBlockState(&s);
@@ -1440,7 +1443,8 @@ static void ZopfliUseThreads(const ZopfliOptions* options,
                                zfloat *totalcost,
                                const char* rpfile,
                                unsigned long crc,
-                               unsigned char mode, int v) {
+                               unsigned char mode, int v,
+                               ZopfliBestStatsDB* statsdb) {
   unsigned showcntr = 4;
   unsigned showthread = 0;
   unsigned threadsrunning = 0;
@@ -1466,7 +1470,21 @@ static void ZopfliUseThreads(const ZopfliOptions* options,
   for (i = bkstart; i <= bkend; ++i) {
     size_t start = i == 0 ? instart : (*splitpoints_uncompressed)[i - 1];
     size_t end = i == bkend ? inend : (*splitpoints_uncompressed)[i];
-
+    int foundbest = -1;
+    unsigned long crc2 = CRC(in + start, end - start);
+    for(n = 0; n < statsdb->amount; ++n) {
+      if(crc2 == statsdb->checksum[n]) {
+        foundbest = n;
+        break;
+      }
+    }
+    if(foundbest == -1) {
+      ++statsdb->amount;
+      statsdb->checksum = realloc(statsdb->checksum, sizeof(*statsdb->checksum) * statsdb->amount);
+      statsdb->beststats = realloc(statsdb->beststats, sizeof(*statsdb->beststats) * statsdb->amount);
+      InitStats(&statsdb->beststats[statsdb->amount - 1]);
+      statsdb->checksum[statsdb->amount - 1] = crc2;
+    }
     do {
       neednext=0;
       for(;threnum<numthreads;) {
@@ -1518,6 +1536,13 @@ static void ZopfliUseThreads(const ZopfliOptions* options,
             t[threnum].iterations.iteration = 0;
             t[threnum].iterations.bestiteration = 0;
             t[threnum].is_running = 1;
+            if(foundbest != -1) {
+              t[threnum].beststats = malloc(sizeof(*t[threnum].beststats));
+              InitStats(t[threnum].beststats);
+              CopyStats(&statsdb->beststats[foundbest],t[threnum].beststats);
+            } else {
+              t[threnum].beststats = NULL;
+            }
             PrintProgress(v, start, inend, i, bkend);
             if(options->numthreads) {
               pthread_create(&thr[threnum], &thr_attr, threading, (void *)&t[threnum]);
@@ -1540,6 +1565,12 @@ static void ZopfliUseThreads(const ZopfliOptions* options,
             (*bestperblock)[t[threnum].iterations.block][1] = t[threnum].bestperblock[1];
             (*bestperblock)[t[threnum].iterations.block][2] = t[threnum].bestperblock[2];
             (*bestperblock)[t[threnum].iterations.block][3] = t[threnum].bestperblock[3];
+          }
+          if(t[threnum].beststats != NULL) {
+            CopyStats(t[threnum].beststats, &statsdb->beststats[statsdb->amount - 1]);
+            FreeStats(t[threnum].beststats);
+            free(t[threnum].beststats);
+            t[threnum].beststats = NULL;
           }
           if(nextblock==t[threnum].iterations.block) {
             *totalcost += t[threnum].cost;
@@ -1629,6 +1660,11 @@ DLL_PUBLIC void ZopfliDeflatePart(const ZopfliOptions* options, int btype, int f
   char* rpfile1 = (char*)malloc((sizeof(lz77file)+sizeof(lz77ext)+10) * sizeof(char));
   char* rpfile2 = (char*)malloc((sizeof(lz77file)+sizeof(lz77ext)+10) * sizeof(char));
   ZopfliLZ77Store lz77;
+  ZopfliBestStatsDB statsdb;
+
+  statsdb.amount = 0;
+  statsdb.checksum = 0;
+  statsdb.beststats = 0;
 
   /* If btype=2 is specified, it tries all block types. If a lesser btype is
   given, then however it forces that one. Neither of the lesser types needs
@@ -1723,7 +1759,7 @@ DLL_PUBLIC void ZopfliDeflatePart(const ZopfliOptions* options, int btype, int f
   if(mode == 0) {
     ZopfliUseThreads(options, &lz77, in, instart, inend, i, npoints,
                      &splitpoints, &splitpoints_uncompressed, &bestperblock,
-                     &totalcost,rpfile1,crc,mode,v);
+                     &totalcost,rpfile1,crc,mode,v,&statsdb);
 
     mode = 1;
   }
@@ -1794,7 +1830,7 @@ DLL_PUBLIC void ZopfliDeflatePart(const ZopfliOptions* options, int btype, int f
 
         ZopfliUseThreads(options, &lz77temp, in, instart, inend, j, npoints2,
                          &splitpoints2, &splitpoints_uncompressed2, &bestperblock2,
-                         &totalcost,rpfile2,crc,mode2,v);
+                         &totalcost,rpfile2,crc,mode2,v,&statsdb);
 
         if (v>2) fprintf(stderr,"!! RECOMPRESS: ");
         if(totalcost < alltimebest) {
@@ -1924,9 +1960,13 @@ DLL_PUBLIC void ZopfliDeflatePart(const ZopfliOptions* options, int btype, int f
     }
   }
   freeArray(&bestperblock, npoints+1);
+  for(i = 0; i < statsdb.amount; ++i) {
+    FreeStats(&statsdb.beststats[i]);
+  }
   free(rpfile2);
   free(rpfile1);
-
+  free(statsdb.beststats);
+  free(statsdb.checksum);
 }
 
 /*

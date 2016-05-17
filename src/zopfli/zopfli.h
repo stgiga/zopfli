@@ -216,20 +216,6 @@ typedef struct ZopfliPredefinedSplits {
 
 } ZopfliPredefinedSplits;
 
-typedef struct ZopfliIterations {
-
-  size_t block;
-
-  int iteration;
-
-  int bestiteration;
-
-  int cost;
-
-  int bestcost;
-
-} ZopfliIterations;
-
 /* Initializes shared options with default values. */
 void ZopfliInitOptions(ZopfliOptions* options);
 
