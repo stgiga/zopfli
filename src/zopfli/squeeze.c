@@ -548,22 +548,25 @@ void ZopfliLZ77Optimal(ZopfliBlockState *s,
   /* Do regular deflate, then loop multiple shortest path runs, each time using
   the statistics of the previous run. */
 
-  /* Initial run. */
-  ZopfliLZ77Greedy(s, in, instart, inend, &currentstore, h);
-  GetStatistics(&currentstore, &stats);
 
-  /* Repeat statistics with each time the cost model from the previous stat
-  run. */
-  j = s->options->numiterations + 1;
-  if(j == 1) j = (unsigned int)-1;
-
+  /* Check if we have best stats passed for this block, if we do,
+     skip initial run and reduce iterations to 1 to produce best
+     result right away. */
   if(foundbest!=NULL && *foundbest!=NULL) {
     CopyStats(*foundbest, &stats);
     j = 2;
     if(s->options->verbose>2)
       fprintf(stderr,"Already processed, reusing best . . .\n");
+  } else {
+    /* Initial run. */
+    ZopfliLZ77Greedy(s, in, instart, inend, &currentstore, h);
+    GetStatistics(&currentstore, &stats);
+    j = s->options->numiterations + 1;
+    if(j == 1) j = (unsigned int)-1;
   }
 
+  /* Repeat statistics with each time the cost model from the previous stat
+  run. */
   while(--j) {
     ZopfliCleanLZ77Store(&currentstore);
     ZopfliInitLZ77Store(in, &currentstore);
@@ -617,6 +620,8 @@ void ZopfliLZ77Optimal(ZopfliBlockState *s,
     fprintf(stderr, "\n");
   }
 
+  /* If we had last parameter, foundbest, NOT NULLed then use it to return best
+     stats found. */
   if(foundbest!=NULL) {
     if(*foundbest==NULL) {
       *foundbest = malloc(sizeof(**foundbest));
