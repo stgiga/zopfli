@@ -1476,7 +1476,7 @@ static void ZopfliUseThreads(const ZopfliOptions* options,
     size_t blocksize = end - start;
     unsigned long crc2 = CRC(in + start, blocksize);
     for(n = 0; n < statsdb->amount; ++n) {
-      if(blocksize == statsdb->size[n] && crc2 == statsdb->checksum[n]) {
+      if(statsdb->done[n] && blocksize == statsdb->size[n] && crc2 == statsdb->checksum[n]) {
         foundbest = n;
         break;
       }
@@ -1485,9 +1485,11 @@ static void ZopfliUseThreads(const ZopfliOptions* options,
       ++statsdb->amount;
       statsdb->size = realloc(statsdb->size, sizeof(*statsdb->size) * statsdb->amount);
       statsdb->checksum = realloc(statsdb->checksum, sizeof(*statsdb->checksum) * statsdb->amount);
+      statsdb->done = realloc(statsdb->done, sizeof(*statsdb->done) * statsdb->amount);
       statsdb->beststats = realloc(statsdb->beststats, sizeof(*statsdb->beststats) * statsdb->amount);
       statsdb->size[statsdb->amount - 1] = blocksize;
       statsdb->checksum[statsdb->amount - 1] = crc2;
+      statsdb->done[statsdb->amount - 1] = 0;
       InitStats(&statsdb->beststats[statsdb->amount - 1]);
     }
     do {
@@ -1578,6 +1580,7 @@ static void ZopfliUseThreads(const ZopfliOptions* options,
             FreeStats(t[threnum].beststats);
             free(t[threnum].beststats);
             t[threnum].beststats = NULL;
+            statsdb->done[t[threnum].statspos] = 1;
           }
           if(nextblock==t[threnum].iterations.block) {
             *totalcost += t[threnum].cost;
@@ -1672,6 +1675,7 @@ DLL_PUBLIC void ZopfliDeflatePart(const ZopfliOptions* options, int btype, int f
   statsdb.amount = 0;
   statsdb.size = 0;
   statsdb.checksum = 0;
+  statsdb.done = 0;
   statsdb.beststats = 0;
 
   /* If btype=2 is specified, it tries all block types. If a lesser btype is
@@ -1975,6 +1979,7 @@ DLL_PUBLIC void ZopfliDeflatePart(const ZopfliOptions* options, int btype, int f
   free(rpfile1);
   free(statsdb.beststats);
   free(statsdb.checksum);
+  free(statsdb.done);
   free(statsdb.size);
 }
 

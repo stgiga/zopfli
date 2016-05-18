@@ -68,6 +68,8 @@ typedef struct ZopfliBestStatsDB {
 
   unsigned long* checksum;
 
+  int* done;
+
   SymbolStats* beststats;
 } ZopfliBestStatsDB;
 
