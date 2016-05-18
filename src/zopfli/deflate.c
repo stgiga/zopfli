@@ -1372,6 +1372,8 @@ typedef struct ZopfliThread {
 
   size_t end;
 
+  size_t statspos;
+
   const unsigned char* in;
 
   zfloat cost;
@@ -1540,10 +1542,12 @@ static void ZopfliUseThreads(const ZopfliOptions* options,
             t[threnum].iterations.bestiteration = 0;
             t[threnum].is_running = 1;
             if(foundbest != -1) {
+              t[threnum].statspos = foundbest;
               t[threnum].beststats = malloc(sizeof(*t[threnum].beststats));
               InitStats(t[threnum].beststats);
               CopyStats(&statsdb->beststats[foundbest],t[threnum].beststats);
             } else {
+              t[threnum].statspos = statsdb->amount - 1;
               t[threnum].beststats = NULL;
             }
             PrintProgress(v, start, inend, i, bkend);
@@ -1570,7 +1574,7 @@ static void ZopfliUseThreads(const ZopfliOptions* options,
             (*bestperblock)[t[threnum].iterations.block][3] = t[threnum].bestperblock[3];
           }
           if(t[threnum].beststats != NULL) {
-            CopyStats(t[threnum].beststats, &statsdb->beststats[statsdb->amount - 1]);
+            CopyStats(t[threnum].beststats, &statsdb->beststats[t[threnum].statspos]);
             FreeStats(t[threnum].beststats);
             free(t[threnum].beststats);
             t[threnum].beststats = NULL;
