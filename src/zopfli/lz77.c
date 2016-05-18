@@ -583,7 +583,7 @@ void ZopfliLZ77Greedy(ZopfliBlockState* s, const unsigned char* in,
                            &dist, &leng);
     lengthscore = GetLengthScore(leng, dist, s->options->lengthscoremax);
 
-    if (s->options->lazymatching == 1) {
+    if ((s->options->mode & 1) == 1) {
       /* Lazy matching. */
       prevlengthscore = GetLengthScore(prev_length, prev_match, s->options->lengthscoremax);
       if (match_available) {

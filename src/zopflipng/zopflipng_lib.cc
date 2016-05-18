@@ -52,18 +52,15 @@ ZopfliPNGOptions::ZopfliPNGOptions()
   , blocksplittingmax(15)
   , lengthscoremax(1024)
   , verbose(2)
-  , lazymatching(0)
-  , optimizehuffmanheader(0)
   , maxfailiterations(0)
   , findminimumrec(9)
   , ranstatew(1)
   , ranstatez(2)
   , ranstatemod(3)
-  , usebrotli(0)
-  , revcounts(0)
   , pass(0)
   , restorepoints(0)
   , noblocksplittinglast(0)
+  , mode(0)
   , tryall(0)
   , slowsplit(0)
   , numthreads(1)
@@ -95,18 +92,15 @@ unsigned CustomPNGDeflate(unsigned char** out, size_t* outsize,
   options.blocksplittingmax     = png_options->blocksplittingmax;
   options.lengthscoremax        = png_options->lengthscoremax;
   options.verbose               = png_options->verbose;
-  options.lazymatching          = png_options->lazymatching;
-  options.optimizehuffmanheader = png_options->optimizehuffmanheader;
   mui                           = png_options->maxfailiterations;
   options.findminimumrec        = png_options->findminimumrec;
   options.ranstatew             = png_options->ranstatew;
   options.ranstatez             = png_options->ranstatez;
   options.ranstatemod           = png_options->ranstatemod;
-  options.usebrotli             = png_options->usebrotli;
-  options.revcounts             = png_options->revcounts;
   options.pass                  = png_options->pass;
   options.restorepoints         = png_options->restorepoints;
   options.noblocksplittinglast  = png_options->noblocksplittinglast;
+  options.mode                  = png_options->mode;
   options.tryall                = png_options->tryall;
   options.slowsplit             = png_options->slowsplit;
   options.numthreads            = png_options->numthreads;
@@ -1058,18 +1052,15 @@ extern "C" int CZopfliPNGOptimize(const unsigned char* origpng,
   opts.blocksplittingmax        = png_options->blocksplittingmax;
   opts.lengthscoremax           = png_options->lengthscoremax;
   opts.verbose                  = png_options->verbose;
-  opts.lazymatching             = png_options->lazymatching;
-  opts.optimizehuffmanheader    = png_options->optimizehuffmanheader;
   opts.maxfailiterations        = png_options->maxfailiterations;
   opts.findminimumrec           = png_options->findminimumrec;
   opts.ranstatew                = png_options->ranstatew;
   opts.ranstatez                = png_options->ranstatez;
   opts.ranstatemod              = png_options->ranstatemod;
-  opts.usebrotli                = png_options->usebrotli;
-  opts.revcounts                = png_options->revcounts;
   opts.pass                     = png_options->pass;
   opts.restorepoints            = png_options->restorepoints;
   opts.noblocksplittinglast     = png_options->noblocksplittinglast;
+  opts.mode                     = png_options->mode;
   opts.tryall                   = png_options->tryall;
   opts.slowsplit                = png_options->slowsplit;
   opts.numthreads               = png_options->numthreads;

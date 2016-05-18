@@ -67,6 +67,4 @@ required by Zopfli KrzYmod.
 
 #define _FILE_OFFSET_BITS 64
 
-#define BITSET(v,p) (((v)>>(p)) & 1)
-
 #endif

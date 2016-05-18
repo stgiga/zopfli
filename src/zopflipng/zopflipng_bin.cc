@@ -332,16 +332,16 @@ printf("ZopfliPNG, a Portable Network Graphics (PNG) image optimizer.\n"
         png_options.lossy_transparent |= 4;
       } else if (name == "--lossy_8bit") {
         png_options.lossy_8bit = true;
-      } else if (name == "--brotli") {
-        png_options.usebrotli = 1;
       } else if (name == "--lazy") {
-        png_options.lazymatching = 1;
+        png_options.mode |= 1;
+      } else if (name == "--ohh") {
+        png_options.mode |= 2;
       } else if (name == "--rc") {
-        png_options.revcounts = 1;
+        png_options.mode |= 4;
+      } else if (name == "--brotli") {
+        png_options.mode |= 8;
       } else if (name == "--rp") {
         png_options.restorepoints = 1;
-      } else if (name == "--ohh") {
-        png_options.optimizehuffmanheader = 1;
       } else if (name == "--all") {
         png_options.tryall = 1;
       } else if (name == "--iterations") {

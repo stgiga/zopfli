@@ -131,10 +131,6 @@ typedef struct CZopfliPNGOptions {
 
   int verbose;
 
-  int lazymatching;
-
-  int optimizehuffmanheader;
-
   unsigned int maxfailiterations;
 
   unsigned int findminimumrec;
@@ -144,15 +140,13 @@ typedef struct CZopfliPNGOptions {
 
   int ranstatemod;
 
-  int usebrotli;
-
-  int revcounts;
-
   int pass;
 
   int restorepoints;
 
   int noblocksplittinglast;
+
+  int mode;
 
   int tryall;
 
@@ -254,15 +248,6 @@ struct ZopfliPNGOptions {
   // Verbosity level, shared with Zopfli
   int verbose;
 
-  // Enable lazy matching in LZ77 Greedy may provide various results for different files when enabled.
-  int lazymatching;
-
-  /*
-  Work by Frédéric Kayser in his Zopfli fork: https://github.com/frkay/zopfli
-  Commit: 9501b29d0dacc8b8efb18ae01733b2768dd40b62
-  */
-  int optimizehuffmanheader;
-
   /*
   Used to stop working on a block if there is specified amount of iterations
   without further bit reductions. Number of iterations should be greater
@@ -291,19 +276,6 @@ struct ZopfliPNGOptions {
   int ranstatemod;
 
   /*
-  If to use Brotli RLE.
-  */
-  int usebrotli;
-
-  /*
-  Used to make reverse ordering of counts when weights are equal
-  in bit length calculations as per GCC 5.3 defaults. Provides
-  different results on block split points as well as iteration
-  progress.
-  */
-  int revcounts;
-
-  /*
   Recompress the file this many times after splitting last, it will
   run this many times ONLY if last block splitting is still smaller.
   */
@@ -321,6 +293,16 @@ struct ZopfliPNGOptions {
   Disables block splitting last after compression.
   */
   int noblocksplittinglast;
+
+  /*
+  Special compression mode as a set of bits:
+  0000 - NONE,
+  0001 - LAZY MATCHING,
+  0010 - OPTIMIZE HUFFMAN HEADERS,
+  0100 - REVERSE COUNTS (GCC 5.3 unstable qsort emulation),
+  1000 - BROTLI RLE ENCODING
+  */
+  int mode;
 
   /*
   Tries 16 cominations of brotli, ohh, lazy and rc per block and

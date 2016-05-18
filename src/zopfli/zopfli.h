@@ -66,18 +66,6 @@ typedef struct ZopfliOptions {
   int lengthscoremax;
 
   /*
-  Enable Lazy matching in LZ77Greedy, may provide different result.
-  During my tests one file got reduced by 1 byte using this method.
-  */
-  int lazymatching;
-
-  /*
-  Work by Frédéric Kayser in his Zopfli fork: https://github.com/frkay/zopfli
-  Commit: 9501b29d0dacc8b8efb18ae01733b2768dd40b62
-  */
-  int optimizehuffmanheader;
-
-  /*
   Used to stop working on a block if there is specified amount of iterations
   without further bit reductions. Number of iterations should be greater
   than this value, otherwise it will have no effect.
@@ -105,19 +93,6 @@ typedef struct ZopfliOptions {
   int ranstatemod;
 
   /*
-  If to use Brotli RLE.
-  */
-  int usebrotli;
-
-  /*
-  Used to make reverse ordering of counts when weights are equal
-  in bit length calculations as per GCC 5.3 defaults. Provides
-  different results on block split points as well as iteration
-  progress.
-  */
-  int revcounts;
-
-  /*
   Recompress the file this many times after splitting last, it will
   run this many times ONLY if last block splitting is still smaller.
   */
@@ -134,6 +109,16 @@ typedef struct ZopfliOptions {
   custom block split points without changes are desired.
   */
   int noblocksplittinglast;
+
+  /*
+  Special compression mode as a set of bits:
+  0000 - NONE,
+  0001 - LAZY MATCHING,
+  0010 - OPTIMIZE HUFFMAN HEADERS,
+  0100 - REVERSE COUNTS (GCC 5.3 unstable qsort emulation),
+  1000 - BROTLI RLE ENCODING
+  */
+  int mode;
 
   /*
   Tries 16 cominations of brotli, ohh, lazy and rc per block and

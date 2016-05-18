@@ -933,12 +933,12 @@ int main(int argc, char* argv[]) {
     else if (StringsEqual(arg, "--zip")) output_type = ZOPFLI_FORMAT_ZIP;
     else if (StringsEqual(arg, "--slowsplit")) options.slowsplit = 1;
     else if (StringsEqual(arg, "--nosplitlast")) options.noblocksplittinglast = 1;
-    else if (StringsEqual(arg, "--brotli")) options.usebrotli = 1;
     else if (StringsEqual(arg, "--lessmem")) binoptions.legacy = 0;
     else if (StringsEqual(arg, "--idle")) IdlePriority();
-    else if (StringsEqual(arg, "--lazy")) options.lazymatching = 1;
-    else if (StringsEqual(arg, "--ohh")) options.optimizehuffmanheader = 1;
-    else if (StringsEqual(arg, "--rc")) options.revcounts = 1;
+    else if (StringsEqual(arg, "--lazy")) options.mode |= 1;
+    else if (StringsEqual(arg, "--ohh")) options.mode |= 2;
+    else if (StringsEqual(arg, "--rc")) options.mode |= 4;
+    else if (StringsEqual(arg, "--brotli")) options.mode |= 8;
     else if (StringsEqual(arg, "--rp")) options.restorepoints = 1;
     else if (StringsEqual(arg, "--dir")) binoptions.usescandir = 1;
     else if (StringsEqual(arg, "--aas")) binoptions.additionalautosplits = 1;
