@@ -83,10 +83,10 @@ typedef struct RanState {
   int ranmod;
 } RanState;
 
-static void InitRanState(RanState* state,short int m_w,short int m_z, int cmwc, int ranmod) {
+static void InitRanState(RanState* state, unsigned long m_wz, int cmwc, int ranmod) {
   if(cmwc) {
     const unsigned long phi = 0x9e3779b9;
-    uint32_t x = m_w + m_z;
+    uint32_t x = (m_wz >> 16) + (m_wz & 65535);
     int i;
 
     state->Q[0] = x;
@@ -98,8 +98,8 @@ static void InitRanState(RanState* state,short int m_w,short int m_z, int cmwc, 
 
     state->c = 362436;
   }
-  state->m_w = m_w;
-  state->m_z = m_z;
+  state->m_w = (m_wz >> 16);
+  state->m_z = (m_wz & 65535);
   state->cmwc = cmwc;
   state->ranmod = ranmod;
 }
@@ -536,7 +536,7 @@ void ZopfliLZ77Optimal(ZopfliBlockState *s,
   if (!length_array) exit(-1); /* Allocation failed. */
   if (!costs) exit(-1); /* Allocation failed. */
 
-  InitRanState(&ran_state,s->options->ranstatew,s->options->ranstatez,
+  InitRanState(&ran_state, s->options->ranstatewz,
                s->options->cmwc, s->options->ranstatemod);
 
   InitStats(&stats);

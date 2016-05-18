@@ -376,10 +376,12 @@ printf("ZopfliPNG, a Portable Network Graphics (PNG) image optimizer.\n"
         png_options.ranstatemod = num;
       } else if (name == "--rw") {
         if (num < 1) num = 1;
-        png_options.ranstatew = num;
+        if (num > 65535) num = 65535;
+        png_options.ranstatewz = (num << 16) + (png_options.ranstatewz & 0xFFFF);
       } else if (name == "--rz") {
         if (num < 1) num = 1;
-        png_options.ranstatez = num;
+        if (num > 65535) num = 65535;
+        png_options.ranstatewz = num + (png_options.ranstatewz & 0xFFFF0000);
       } else if (name == "--idle") {
         IdlePriority();
       } else if (name == "--t") {

@@ -972,12 +972,14 @@ int main(int argc, char* argv[]) {
       if (options.findminimumrec < 2) options.findminimumrec = 2;
     }  else if (arg[0] == '-' && arg[1] == '-' && arg[2] == 'r' && arg[3] == 'w'
              && arg[4] >= '0' && arg[4] <= '9') {
-      options.ranstatew = atoi(arg + 4);
-      if (options.ranstatew < 1) options.ranstatew = 1;
+      unsigned short num = atoi(arg + 4);
+      if(num < 1) num = 1;
+      options.ranstatewz = (num << 16) + (options.ranstatewz & 0xFFFF);
     }  else if (arg[0] == '-' && arg[1] == '-' && arg[2] == 'r' && arg[3] == 'z'
              && arg[4] >= '0' && arg[4] <= '9') {
-      options.ranstatez = atoi(arg + 4);
-      if (options.ranstatez < 1) options.ranstatez = 1;
+      unsigned short num = atoi(arg + 4);
+      if(num < 1) num = 1;
+      options.ranstatewz = num + (options.ranstatewz & 0xFFFF0000);
     }  else if (arg[0] == '-' && arg[1] == '-' && arg[2] == 'r' && arg[3] == 'm'
              && arg[4] >= '0' && arg[4] <= '9') {
       options.ranstatemod = atoi(arg + 4);

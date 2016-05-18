@@ -54,8 +54,7 @@ ZopfliPNGOptions::ZopfliPNGOptions()
   , verbose(2)
   , maxfailiterations(0)
   , findminimumrec(9)
-  , ranstatew(1)
-  , ranstatez(2)
+  , ranstatewz(65538)
   , ranstatemod(3)
   , pass(0)
   , restorepoints(0)
@@ -94,8 +93,7 @@ unsigned CustomPNGDeflate(unsigned char** out, size_t* outsize,
   options.verbose               = png_options->verbose;
   mui                           = png_options->maxfailiterations;
   options.findminimumrec        = png_options->findminimumrec;
-  options.ranstatew             = png_options->ranstatew;
-  options.ranstatez             = png_options->ranstatez;
+  options.ranstatewz            = png_options->ranstatew;
   options.ranstatemod           = png_options->ranstatemod;
   options.pass                  = png_options->pass;
   options.restorepoints         = png_options->restorepoints;
@@ -1013,8 +1011,7 @@ extern "C" void CZopfliPNGSetDefaults(CZopfliPNGOptions* png_options) {
   png_options->optimizehuffmanheader    = opts.optimizehuffmanheader;
   png_options->maxfailiterations        = opts.maxfailiterations;
   png_options->findminimumrec           = opts.findminimumrec;
-  png_options->ranstatew                = opts.ranstatew;
-  png_options->ranstatez                = opts.ranstatez;
+  png_options->ranstatewz               = opts.ranstatewz;
   png_options->ranstatemod              = opts.ranstatemod;
   png_options->pass                     = opts.pass;
   png_options->restorepoints            = opts.restorepoints;
@@ -1054,8 +1051,7 @@ extern "C" int CZopfliPNGOptimize(const unsigned char* origpng,
   opts.verbose                  = png_options->verbose;
   opts.maxfailiterations        = png_options->maxfailiterations;
   opts.findminimumrec           = png_options->findminimumrec;
-  opts.ranstatew                = png_options->ranstatew;
-  opts.ranstatez                = png_options->ranstatez;
+  opts.ranstatewz               = png_options->ranstatewz;
   opts.ranstatemod              = png_options->ranstatemod;
   opts.pass                     = png_options->pass;
   opts.restorepoints            = png_options->restorepoints;

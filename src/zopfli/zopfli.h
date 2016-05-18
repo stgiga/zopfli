@@ -81,10 +81,9 @@ typedef struct ZopfliOptions {
   /*
   Initial randomness for iterations.
   Changing the default 1 and 2 allows zopfli to act more random
-  on each run.
+  on each run. W using upper 16 bits, Z lower 16 bits.
   */
-  unsigned short ranstatew;
-  unsigned short ranstatez;
+  unsigned long ranstatewz;
 
   /*
   Modulo used by random function. By default modulo 3 is used.

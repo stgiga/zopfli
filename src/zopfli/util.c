@@ -31,8 +31,7 @@ void ZopfliInitOptions(ZopfliOptions* options) {
   options->lengthscoremax = 1024;
   options->maxfailiterations = 0;
   options->findminimumrec = 9;
-  options->ranstatew = 1;
-  options->ranstatez = 2;
+  options->ranstatewz = 65538;
   options->ranstatemod = 3;
   options->pass = 0;
   options->restorepoints = 0;
