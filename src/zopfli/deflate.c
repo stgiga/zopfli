@@ -307,7 +307,7 @@ static void AddDynamicTree(const unsigned* ll_lengths,
   int best = 0;
   size_t bestsize = 0;
 
-  if(ohh==1) {
+  if(ohh) {
    j=4;
    k=1;
   }
@@ -322,7 +322,7 @@ static void AddDynamicTree(const unsigned* ll_lengths,
     }
   }
 
-  if(ohh==1) {
+  if(ohh) {
     for(i = 4; i < 8; i++) {
       size_t size = EncodeTree(ll_lengths, d_lengths,
                                i & 4, i & 2, i & 1, 1, 0,
@@ -371,7 +371,7 @@ static size_t CalculateTreeSize(const unsigned* ll_lengths,
   int j = 1;
   int k = 4;
 
-  if(ohh==1) {
+  if(ohh) {
    j=4;
    k=1;
   }
@@ -383,7 +383,7 @@ static size_t CalculateTreeSize(const unsigned* ll_lengths,
     if (result == 0 || size < result) result = size;
   }
 
-  if(ohh==1) {
+  if(ohh) {
     for(i = 4; i < 8; i++) {
       size_t size = EncodeTree(ll_lengths, d_lengths,
                                i & 4, i & 2, i & 1, 1, 0,
@@ -894,9 +894,9 @@ zfloat ZopfliCalculateBlockSize(const ZopfliOptions* options,
     result += CalculateBlockSymbolSize(
         ll_lengths, d_lengths, lz77, lstart, lend);
   } else {
-    int usebrotli = (options->mode & 8) == 8;
-    int revcounts = (options->mode & 4) == 4;
-    int ohh = (options->mode & 2) == 2;
+    int usebrotli = (options->mode & 0x0008) == 0x0008;
+    int revcounts = (options->mode & 0x0004) == 0x0004;
+    int ohh = (options->mode & 0x0002) == 0x0002;
     result += GetDynamicLengths(lz77, lstart, lend, ll_lengths, d_lengths,
                                 usebrotli, revcounts, ohh);
   }
@@ -916,7 +916,7 @@ zfloat ZopfliCalculateBlockSizeAutoType(const ZopfliOptions* options,
   /* Don't do the expensive fixed cost calculation for larger blocks that are
      unlikely to use it.
      We allow user to enable expensive fixed calculations on all blocks */
-  if (options->slowsplit || lz77->size<=1000) {
+  if (options->mode & 0x0080 || lz77->size<=1000) {
     /* Recalculate the LZ77 with ZopfliLZ77OptimalFixed */
     size_t instart = lz77->pos[lstart];
     size_t inend = instart + ZopfliLZ77GetByteRange(lz77, lstart, lend);
@@ -1037,9 +1037,9 @@ static void AddLZ77Block(const ZopfliOptions* options, int btype, int final,
     GetFixedTree(ll_lengths, d_lengths);
   } else {
     /* Dynamic block. */
-    int usebrotli = (options->mode & 8) == 8;
-    int revcounts = (options->mode & 4) == 4;
-    int ohh = (options->mode & 2) == 2;
+    int usebrotli = (options->mode & 0x0008) == 0x0008;
+    int revcounts = (options->mode & 0x0004) == 0x0004;
+    int ohh = (options->mode & 0x0002) == 0x0002;
     assert(btype == 2);
 
     GetDynamicLengths(lz77, lstart, lend, ll_lengths, d_lengths,
@@ -1382,7 +1382,7 @@ static void *threading(void *a) {
   ZopfliThread *b = (ZopfliThread *)a;
   ZopfliLZ77Store store;
   ZopfliInitLZ77Store(b->in, &b->store);
-  if(b->options->tryall == 1) tries=17;
+  if(b->options->mode & 0x0010) tries=17;
   do {
     zfloat tempcost;
     ZopfliBlockState s;
@@ -1554,7 +1554,7 @@ static void ZopfliUseThreads(const ZopfliOptions* options,
             threnum=0;
         }
         if(t[threnum].is_running==2) {
-          if(options->tryall == 1) {
+          if(options->mode & 0x0010) {
             (*bestperblock)[t[threnum].iterations.block] = t[threnum].bestperblock;
           }
           if(t[threnum].beststats != NULL) {
@@ -1578,7 +1578,7 @@ static void ZopfliUseThreads(const ZopfliOptions* options,
               blockdone[n]=0;
               ++nextblock;
             }
-            if(options->restorepoints && mui!=1) {
+            if(options->mode & 0x0100 && mui!=1) {
               int rp_error;
               if(nextblock==bkend) mode=1;
               rp_error = SaveRestore(rpfile, &crc, &nextblock, &bkend, splitpoints,
@@ -1683,7 +1683,7 @@ DLL_PUBLIC void ZopfliDeflatePart(const ZopfliOptions* options, int btype, int f
 
   ZopfliInitLZ77Store(in, &lz77);
 
-  if(options->restorepoints) {
+  if(options->mode & 0x0100) {
     crc = CRC(in + instart, inend - instart);
     sprintf(rpfile1,"%s-%08lx-C%s",lz77file,crc & 0xFFFFFFFFUL,lz77ext);
     sprintf(rpfile2,"%s-%08lx-R%s",lz77file,crc & 0xFFFFFFFFUL,lz77ext);
@@ -1693,7 +1693,7 @@ DLL_PUBLIC void ZopfliDeflatePart(const ZopfliOptions* options, int btype, int f
     ErrorRestore(rpfile1, rp_error);
   }
 
-  if(!options->restorepoints || rp_error!=0) {
+  if((options->mode & 0x0100) == 0 || rp_error!=0) {
     if (options->blocksplitting) {
       if(sp==NULL || sp->splitpoints==NULL) {
         ZopfliBlockSplit(options, in, instart, inend,
@@ -1741,7 +1741,7 @@ DLL_PUBLIC void ZopfliDeflatePart(const ZopfliOptions* options, int btype, int f
     i = 0;
   }
 
-  if(options->tryall == 1) {
+  if(options->mode & 0x0010) {
     bestperblock = malloc(sizeof(*bestperblock) * (npoints + 1));
   }
 
@@ -1756,7 +1756,7 @@ DLL_PUBLIC void ZopfliDeflatePart(const ZopfliOptions* options, int btype, int f
   alltimebest = totalcost;
 
   /* Second/nth block splitting attempt and optional recompression */
-  if (options->blocksplitting && npoints > 0 && !options->noblocksplittinglast) {
+  if (options->blocksplitting && npoints > 0 && (options->mode & 0x0040) == 0) {
     size_t* splitpoints2;
     size_t npoints2;
     zfloat totalcost2;
@@ -1784,7 +1784,7 @@ DLL_PUBLIC void ZopfliDeflatePart(const ZopfliOptions* options, int btype, int f
         totalcost = 0;
         ZopfliInitLZ77Store(in, &lz77temp);
 
-        if(options->restorepoints && pass==1) {
+        if(options->mode & 0x0100 && pass==1) {
           unsigned char dummy;
           rp_error = LoadRestore(rpfile2, &crc, &j, &npoints2, &splitpoints2,
                                  &splitpoints_uncompressed2, &totalcost,
@@ -1808,7 +1808,7 @@ DLL_PUBLIC void ZopfliDeflatePart(const ZopfliOptions* options, int btype, int f
 
         if (v>2) fprintf(stderr," Recompressing, pass #%d.\n",pass);
 
-        if(options->tryall == 1) {
+        if(options->mode & 0x0010) {
           bestperblock2 = malloc(sizeof(*bestperblock2) * (npoints2+1));
         }
 
@@ -1823,7 +1823,7 @@ DLL_PUBLIC void ZopfliDeflatePart(const ZopfliOptions* options, int btype, int f
           ZopfliCopyLZ77Store(&lz77temp,&lz77);
           ZopfliCleanLZ77Store(&lz77temp);
 
-          if(options->restorepoints && mui!=1) {
+          if(options->mode & 0x0100 && mui!=1) {
             rp_error = 10;
             unlink(rpfile1);
             if(rename(rpfile2,rpfile1)) rp_error=11;
@@ -1836,7 +1836,7 @@ DLL_PUBLIC void ZopfliDeflatePart(const ZopfliOptions* options, int btype, int f
           splitpoints_uncompressed = splitpoints_uncompressed2;
           free(bestperblock);
           npoints = npoints2;
-          if(options->tryall == 1) {
+          if(options->mode & 0x0010) {
             bestperblock = malloc(sizeof(*bestperblock) * (npoints+1));
             for(i = 0; i<= npoints; ++i) {
               bestperblock[i] = bestperblock2[i];
@@ -1930,7 +1930,7 @@ DLL_PUBLIC void ZopfliDeflatePart(const ZopfliOptions* options, int btype, int f
   ZopfliCleanLZ77Store(&lz77);
   free(splitpoints);
   free(splitpoints_uncompressed);
-  if(options->restorepoints && mui!=1) {
+  if(options->mode & 0x0100 && mui!=1) {
     if(final == 1) {
       unlink(rpfile1);
       unlink(rpfile2);

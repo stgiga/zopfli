@@ -34,12 +34,7 @@ void ZopfliInitOptions(ZopfliOptions* options) {
   options->ranstatewz = 65538;
   options->ranstatemod = 3;
   options->pass = 0;
-  options->restorepoints = 0;
-  options->noblocksplittinglast = 0;
   options->mode = 0;
-  options->tryall = 0;
-  options->slowsplit = 0;
   options->numthreads = 1;
-  options->cmwc = 0;
   options->statimportance = 100;
 }

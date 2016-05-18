@@ -931,19 +931,19 @@ int main(int argc, char* argv[]) {
     else if (StringsEqual(arg, "--gzip")) output_type = ZOPFLI_FORMAT_GZIP;
     else if (StringsEqual(arg, "--gzipname")) output_type = ZOPFLI_FORMAT_GZIP_NAME;
     else if (StringsEqual(arg, "--zip")) output_type = ZOPFLI_FORMAT_ZIP;
-    else if (StringsEqual(arg, "--slowsplit")) options.slowsplit = 1;
-    else if (StringsEqual(arg, "--nosplitlast")) options.noblocksplittinglast = 1;
     else if (StringsEqual(arg, "--lessmem")) binoptions.legacy = 0;
     else if (StringsEqual(arg, "--idle")) IdlePriority();
-    else if (StringsEqual(arg, "--lazy")) options.mode |= 1;
-    else if (StringsEqual(arg, "--ohh")) options.mode |= 2;
-    else if (StringsEqual(arg, "--rc")) options.mode |= 4;
-    else if (StringsEqual(arg, "--brotli")) options.mode |= 8;
-    else if (StringsEqual(arg, "--rp")) options.restorepoints = 1;
+    else if (StringsEqual(arg, "--lazy")) options.mode |= 0x0001;
+    else if (StringsEqual(arg, "--ohh")) options.mode |= 0x0002;
+    else if (StringsEqual(arg, "--rc")) options.mode |= 0x0004;
+    else if (StringsEqual(arg, "--brotli")) options.mode |= 0x0008;
+    else if (StringsEqual(arg, "--all")) options.mode |= 0x0010;
+    else if (StringsEqual(arg, "--cmwc")) options.mode |= 0x0020;
+    else if (StringsEqual(arg, "--nosplitlast")) options.mode |= 0x0040;
+    else if (StringsEqual(arg, "--slowsplit")) options.mode |= 0x0080;
+    else if (StringsEqual(arg, "--rp")) options.mode = 0x0100;
     else if (StringsEqual(arg, "--dir")) binoptions.usescandir = 1;
     else if (StringsEqual(arg, "--aas")) binoptions.additionalautosplits = 1;
-    else if (StringsEqual(arg, "--all")) options.tryall = 1;
-    else if (StringsEqual(arg, "--cmwc")) options.cmwc = 1;
     else if (arg[0] == '-' && arg[1] == '-' && arg[2] == 's' && arg[3] == 'i'
              && arg[4] >= '0' && arg[4] <= '9') {
       options.statimportance = atoi(arg + 4);
@@ -1097,11 +1097,11 @@ int main(int argc, char* argv[]) {
 
   if(options.verbose) VersionInfo();
 
-  if(options.restorepoints) {
+  if(options.mode & 0x0100) {
     if(binoptions.legacy && !binoptions.usescandir) {
       if(options.verbose) fprintf(stderr, "Info: Using restore points.\n");
     } else {
-      options.restorepoints=0;
+      options.mode ^= 0x0100;
     }
   }
 

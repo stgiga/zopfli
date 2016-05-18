@@ -537,7 +537,7 @@ void ZopfliLZ77Optimal(ZopfliBlockState *s,
   if (!costs) exit(-1); /* Allocation failed. */
 
   InitRanState(&ran_state, s->options->ranstatewz,
-               s->options->cmwc, s->options->ranstatemod);
+               (s->options->mode & 0x0020), s->options->ranstatemod);
 
   InitStats(&stats);
   InitStats(&laststats);

@@ -333,17 +333,23 @@ printf("ZopfliPNG, a Portable Network Graphics (PNG) image optimizer.\n"
       } else if (name == "--lossy_8bit") {
         png_options.lossy_8bit = true;
       } else if (name == "--lazy") {
-        png_options.mode |= 1;
+        png_options.mode |= 0x0001;
       } else if (name == "--ohh") {
-        png_options.mode |= 2;
+        png_options.mode |= 0x0002;
       } else if (name == "--rc") {
-        png_options.mode |= 4;
+        png_options.mode |= 0x0004;
       } else if (name == "--brotli") {
-        png_options.mode |= 8;
-      } else if (name == "--rp") {
-        png_options.restorepoints = 1;
+        png_options.mode |= 0x0008;
       } else if (name == "--all") {
-        png_options.tryall = 1;
+        png_options.mode |= 0x0010;
+      } else if (name == "--cmwc") {
+        png_options.mode |= 0x0020;
+      } else if (name == "--nosplitlast") {
+        png_options.mode |= 0x0040;
+      } else if (name == "--slowsplit") {
+        png_options.mode |= 0x0080;
+      } else if (name == "--rp") {
+        png_options.mode |= 0x0100;
       } else if (name == "--iterations") {
         png_options.num_iterations = num;
         png_options.num_iterations_large = num;
@@ -369,8 +375,6 @@ printf("ZopfliPNG, a Portable Network Graphics (PNG) image optimizer.\n"
         if (num < 0) num = 1;
         else if(num>149) num = 149;
         png_options.statimportance = num;
-      } else if (name == "--cmwc") {
-        png_options.cmwc = 1;
       } else if (name == "--rm") {
         if (num < 1) num = 1;
         png_options.ranstatemod = num;
@@ -388,10 +392,6 @@ printf("ZopfliPNG, a Portable Network Graphics (PNG) image optimizer.\n"
         png_options.numthreads = num;
       } else if (name == "--splitting") {
         // ignored
-      } else if (name == "--nosplitlast") {
-        png_options.noblocksplittinglast = 1;
-      } else if (name == "--slowsplit") {
-        png_options.slowsplit = 1;
       } else if (name == "--filters") {
         for (size_t j = 0; j < value.size(); j++) {
           ZopfliPNGFilterStrategy strategy = kStrategyZero;

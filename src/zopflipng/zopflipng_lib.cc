@@ -57,13 +57,8 @@ ZopfliPNGOptions::ZopfliPNGOptions()
   , ranstatewz(65538)
   , ranstatemod(3)
   , pass(0)
-  , restorepoints(0)
-  , noblocksplittinglast(0)
   , mode(0)
-  , tryall(0)
-  , slowsplit(0)
   , numthreads(1)
-  , cmwc(0)
   , statimportance(100)
   , try_paletteless_size(2048)
   , ga_population_size(19)
@@ -85,25 +80,20 @@ unsigned CustomPNGDeflate(unsigned char** out, size_t* outsize,
   ZopfliOptions options;
   ZopfliInitOptions(&options);
 
-  options.numiterations         = insize < 200000
-                                ? png_options->num_iterations
-                                : png_options->num_iterations_large;
-  options.blocksplittingmax     = png_options->blocksplittingmax;
-  options.lengthscoremax        = png_options->lengthscoremax;
-  options.verbose               = png_options->verbose;
-  mui                           = png_options->maxfailiterations;
-  options.findminimumrec        = png_options->findminimumrec;
-  options.ranstatewz            = png_options->ranstatew;
-  options.ranstatemod           = png_options->ranstatemod;
-  options.pass                  = png_options->pass;
-  options.restorepoints         = png_options->restorepoints;
-  options.noblocksplittinglast  = png_options->noblocksplittinglast;
-  options.mode                  = png_options->mode;
-  options.tryall                = png_options->tryall;
-  options.slowsplit             = png_options->slowsplit;
-  options.numthreads            = png_options->numthreads;
-  options.cmwc                  = png_options->cmwc;
-  options.statimportance        = png_options->statimportance;
+  options.numiterations     = insize < 200000
+                            ? png_options->num_iterations
+                            : png_options->num_iterations_large;
+  options.blocksplittingmax = png_options->blocksplittingmax;
+  options.lengthscoremax    = png_options->lengthscoremax;
+  options.verbose           = png_options->verbose;
+  mui                       = png_options->maxfailiterations;
+  options.findminimumrec    = png_options->findminimumrec;
+  options.ranstatewz        = png_options->ranstatew;
+  options.ranstatemod       = png_options->ranstatemod;
+  options.pass              = png_options->pass;
+  options.mode              = png_options->mode;
+  options.numthreads        = png_options->numthreads;
+  options.statimportance    = png_options->statimportance;
 
   ZopfliDeflate(&options, 2 /* Dynamic */, 1, in, insize, &bp, out, outsize, 0);
 
@@ -1007,19 +997,13 @@ extern "C" void CZopfliPNGSetDefaults(CZopfliPNGOptions* png_options) {
   png_options->blocksplittingmax        = opts.blocksplittingmax;
   png_options->lengthscoremax           = opts.lengthscoremax;
   png_options->verbose                  = opts.verbose;
-  png_options->lazymatching             = opts.lazymatching;
-  png_options->optimizehuffmanheader    = opts.optimizehuffmanheader;
   png_options->maxfailiterations        = opts.maxfailiterations;
   png_options->findminimumrec           = opts.findminimumrec;
   png_options->ranstatewz               = opts.ranstatewz;
   png_options->ranstatemod              = opts.ranstatemod;
   png_options->pass                     = opts.pass;
-  png_options->restorepoints            = opts.restorepoints;
-  png_options->noblocksplittinglast     = opts.noblocksplittinglast;
-  png_options->tryall                   = opts.tryall;
-  png_options->slowsplit                = opts.slowsplit;
+  png_options->mode                     = opts.mode;
   png_options->numthreads               = opts.numthreads;
-  png_options->cmwc                     = opts.cmwc;
   png_options->statimportance           = opts.statimportance;
   png_options->try_paletteless_size     = opts.try_paletteless_size;
   png_options->ga_population_size       = opts.ga_population_size;
@@ -1054,13 +1038,8 @@ extern "C" int CZopfliPNGOptimize(const unsigned char* origpng,
   opts.ranstatewz               = png_options->ranstatewz;
   opts.ranstatemod              = png_options->ranstatemod;
   opts.pass                     = png_options->pass;
-  opts.restorepoints            = png_options->restorepoints;
-  opts.noblocksplittinglast     = png_options->noblocksplittinglast;
   opts.mode                     = png_options->mode;
-  opts.tryall                   = png_options->tryall;
-  opts.slowsplit                = png_options->slowsplit;
   opts.numthreads               = png_options->numthreads;
-  opts.cmwc                     = png_options->cmwc;
   opts.statimportance           = png_options->statimportance;
   opts.try_paletteless_size     = png_options->try_paletteless_size;
   opts.ga_population_size       = png_options->ga_population_size;

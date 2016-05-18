@@ -98,41 +98,18 @@ typedef struct ZopfliOptions {
   int pass;
 
   /*
-  Zopfli restore points support by dumping important ZopfliDeflatePart
-  variables and restoring them on next run.
+  KrzYmod's "DIP SWITCH":
+  0x0001 - LAZY MATCHING,
+  0x0002 - OPTIMIZE HUFFMAN HEADERS,
+  0x0004 - REVERSE COUNTS (GCC 5.3 unstable qsort emulation),
+  0x0008 - BROTLI RLE ENCODING,
+  0x0010 - RUN 16 TRIES OF THE ABOVE,
+  0x0020 - Use Complementary-Multiply-With-Carry,
+  0x0040 - Disable splitting after compression,
+  0x0080 - Use expensive fixed block calculations in splitter,
+  0x0100 - Use Restore Points.
   */
-  int restorepoints;
-
-  /*
-  Disables block splitting last after compression, useful when
-  custom block split points without changes are desired.
-  */
-  int noblocksplittinglast;
-
-  /*
-  Special compression mode as a set of bits:
-  0000 - NONE,
-  0001 - LAZY MATCHING,
-  0010 - OPTIMIZE HUFFMAN HEADERS,
-  0100 - REVERSE COUNTS (GCC 5.3 unstable qsort emulation),
-  1000 - BROTLI RLE ENCODING
-  */
-  int mode;
-
-  /*
-  Tries 16 cominations of brotli, ohh, lazy and rc per block and
-  picks smallest block size. This doesn't impact block splitting
-  model. To make Zopfli calculate different block split points
-  You need to additionally pass brotli, ohh, lazy and/or rc switches.
-  */
-  int tryall;
-
-  /*
-  Run expensive fixed calculations in block splitter. Slows down
-  splitting A LOT, but will better find data that is good for fixed
-  blocks compression.
-  */
-  int slowsplit;
+  unsigned int mode;
 
   /*
   Iterate multiple dynamic blocks at once using pthreads, aka.
@@ -141,12 +118,6 @@ typedef struct ZopfliOptions {
   displaying old fashioned statistics.
   */
   unsigned numthreads;
-
-  /*
-  If to use better random number generator by G. Marsaglia:
-  "Complementary-Multiply-With-Carry".
-  */
-  int cmwc;
 
   /*
   Current stats to last stats importance in weighted statistic
