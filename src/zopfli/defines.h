@@ -10,6 +10,10 @@ required by Zopfli KrzYmod.
 
 #include <float.h>
 
+#define VERYEAR   16
+#define VERMONTH  5
+#define VERCOMMIT 22
+
 #if (_XOPEN_SOURCE<500)
  #define _XOPEN_SOURCE 500
 #endif

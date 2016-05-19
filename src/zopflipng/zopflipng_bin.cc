@@ -259,8 +259,10 @@ void PrintResultSize(const char* label, size_t oldsize, size_t newsize) {
 }
 
 int main(int argc, char *argv[]) {
-printf("ZopfliPNG, a Portable Network Graphics (PNG) image optimizer.\n"
-         "KrzYmod extends ZopfliPNG functionality - version 16.1\n\n");
+  printf("ZopfliPNG, a Portable Network Graphics (PNG) image optimizer.\n"
+         "KrzYmod extends ZopfliPNG functionality - version %d.%d.%d\n\n",
+          VERYEAR, VERMONTH, VERCOMMIT);
+
   if (argc < 2) {
     ShowHelp();
     return 0;

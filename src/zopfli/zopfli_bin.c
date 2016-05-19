@@ -907,7 +907,8 @@ static void ParseCustomBlockBoundaries(size_t** bs, const char* data) {
 static void VersionInfo(void) {
   fprintf(stderr,
   "Zopfli, a Compression Algorithm to produce Deflate streams.\n"
-  "KrzYmod extends Zopfli functionality - version 16.1\n\n");
+  "KrzYmod extends Zopfli functionality - version %d.%d.%d\n\n",
+  VERYEAR, VERMONTH, VERCOMMIT);
 }
 
 int main(int argc, char* argv[]) {

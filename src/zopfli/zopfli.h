@@ -109,7 +109,7 @@ typedef struct ZopfliOptions {
   0x0080 - Use expensive fixed block calculations in splitter,
   0x0100 - Use Restore Points.
   */
-  unsigned int mode;
+  unsigned long mode;
 
   /*
   Iterate multiple dynamic blocks at once using pthreads, aka.

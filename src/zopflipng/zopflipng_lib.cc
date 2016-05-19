@@ -34,7 +34,6 @@ See zopflipng_lib.h
 
 #include "lodepng/lodepng.h"
 #include "lodepng/lodepng_util.h"
-#include "../zopfli/defines.h"
 #include "../zopfli/inthandler.h"
 #include "../zopfli/deflate.h"
 #include "../zopfli/util.h"
@@ -88,7 +87,7 @@ unsigned CustomPNGDeflate(unsigned char** out, size_t* outsize,
   options.verbose           = png_options->verbose;
   mui                       = png_options->maxfailiterations;
   options.findminimumrec    = png_options->findminimumrec;
-  options.ranstatewz        = png_options->ranstatew;
+  options.ranstatewz        = png_options->ranstatewz;
   options.ranstatemod       = png_options->ranstatemod;
   options.pass              = png_options->pass;
   options.mode              = png_options->mode;
