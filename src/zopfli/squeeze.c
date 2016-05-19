@@ -511,7 +511,7 @@ iterations need to pass to give up in finding best parameters.
 void ZopfliLZ77Optimal(ZopfliBlockState *s,
                        const unsigned char* in, size_t instart, size_t inend,
                        ZopfliLZ77Store* store, ZopfliIterations* iterations,
-                       SymbolStats** foundbest) {
+                       SymbolStats** foundbest, unsigned int* startiteration) {
   /* Dist to get to here with smallest cost. */
   size_t blocksize = inend - instart;
   unsigned short* length_array =
@@ -520,7 +520,7 @@ void ZopfliLZ77Optimal(ZopfliBlockState *s,
   size_t pathsize = 0;
   ZopfliLZ77Store currentstore;
   SymbolStats stats, beststats, laststats;
-  unsigned int i = 0, j;
+  unsigned int i = *startiteration, j;
   unsigned int fails = 0, lastrandomstep = 0;
   zfloat cost;
   zfloat *costs = (zfloat*)malloc(sizeof(zfloat) * (blocksize + 1));
@@ -552,17 +552,25 @@ void ZopfliLZ77Optimal(ZopfliBlockState *s,
   /* Check if we have best stats passed for this block, if we do,
      skip initial run and reduce iterations to 1 to produce best
      result right away. */
+
+  j = s->options->numiterations;
+  if(j == 0) j = (unsigned int)-2;
+  if(j >= i) {
+    j -= i;
+  } else {
+    j = 1;
+  }
+  ++j;
+  if(j < 2) j = 2;
+
   if(foundbest!=NULL && *foundbest!=NULL) {
     CopyStats(*foundbest, &stats);
-    j = 2;
     if(s->options->numthreads == 0 && s->options->verbose>2)
       fprintf(stderr,"Already processed, reusing best . . .\n");
   } else {
     /* Initial run. */
     ZopfliLZ77Greedy(s, in, instart, inend, &currentstore, h);
     GetStatistics(&currentstore, &stats);
-    j = s->options->numiterations + 1;
-    if(j == 1) j = (unsigned int)-1;
   }
 
   /* Repeat statistics with each time the cost model from the previous stat
@@ -616,6 +624,8 @@ void ZopfliLZ77Optimal(ZopfliBlockState *s,
     ++i;
   }
 
+  *startiteration = i;
+
   if(s->options->verbose==3) {
     fprintf(stderr, "\n");
   }
@@ -629,6 +639,7 @@ void ZopfliLZ77Optimal(ZopfliBlockState *s,
     }
     CopyStats(&beststats, *foundbest);
   }
+
 
   free(path);
   free(costs);

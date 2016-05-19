@@ -943,6 +943,7 @@ int main(int argc, char* argv[]) {
     else if (StringsEqual(arg, "--nosplitlast")) options.mode |= 0x0040;
     else if (StringsEqual(arg, "--slowsplit")) options.mode |= 0x0080;
     else if (StringsEqual(arg, "--rp")) options.mode |= 0x0100;
+    else if (StringsEqual(arg, "--statsdb")) options.mode |= 0x0200;
     else if (StringsEqual(arg, "--dir")) binoptions.usescandir = 1;
     else if (StringsEqual(arg, "--aas")) binoptions.additionalautosplits = 1;
     else if (arg[0] == '-' && arg[1] == '-' && arg[2] == 's' && arg[3] == 'i'
@@ -1083,6 +1084,7 @@ int main(int argc, char* argv[]) {
           "  --pass#       recompress last split points max # times (d: 0)\n"
           "  --rp          use restore points\n");
       fprintf(stderr,
+          "  --statsdb     use file-based best stats / block database\n"
           "  --si#         stats to laststats in weight calculations (d: 100, max: 149)\n"
           "  --cmwc        use Complementary-Multiply-With-Carry rand. gen.\n"
           "  --rm#         random modulo for iteration stats (d: 3)\n"

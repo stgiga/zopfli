@@ -12,7 +12,9 @@ required by Zopfli KrzYmod.
 
 #define VERYEAR   16
 #define VERMONTH  5
-#define VERCOMMIT 22
+#define VERCOMMIT 24
+
+#define BESTSTATSDBVER 1
 
 #if (_XOPEN_SOURCE<500)
  #define _XOPEN_SOURCE 500

@@ -60,18 +60,18 @@ typedef struct ZopfliIterations {
 
 } ZopfliIterations;
 
-typedef struct ZopfliBestStatsDB {
+typedef struct ZopfliBestStats {
 
-  size_t amount;
+  char mode;
 
-  size_t* size;
+  size_t blocksize;
 
-  unsigned long* checksum;
+  unsigned long blockcrc;
 
-  int* done;
+  unsigned int startiteration;
 
   SymbolStats* beststats;
-} ZopfliBestStatsDB;
+} ZopfliBestStats;
 
 void InitStats(SymbolStats* stats);
 
@@ -87,7 +87,7 @@ dictionary.
 void ZopfliLZ77Optimal(ZopfliBlockState *s,
                        const unsigned char* in, size_t instart, size_t inend,
                        ZopfliLZ77Store* store, ZopfliIterations* iterations,
-                       SymbolStats** foundbest);
+                       SymbolStats** foundbest, unsigned int* startiteration);
 
 /*
 Does the same as ZopfliLZ77Optimal, but optimized for the fixed tree of the
