@@ -27,6 +27,10 @@ Author: jyrki.alakuijala@gmail.com (Jyrki Alakuijala)
 #include <pthread.h>
 #include <unistd.h>
 #include <dirent.h>
+#if SC_PLATFORM == SC_PLATFORM_LINUX
+#include <sys/stat.h>
+#include <errno.h>
+#endif
 
 #include "inthandler.h"
 #include "blocksplitter.h"
@@ -1340,6 +1344,7 @@ static void ErrorRestore(const char* rpfile, int rp_error) {
 
 static int StatsDBLoad(ZopfliBestStats* statsdb) {
   FILE *file;
+  size_t b = 0;
   int i;
   unsigned char check;
   char crc32bits[8];
@@ -1353,20 +1358,20 @@ static int StatsDBLoad(ZopfliBestStats* statsdb) {
   crc32bits[6],crc32bits[7],DBfile);
   file = fopen(LocBuf, "rb");
   if(!file) return 0;
-  fread(&check,sizeof(check),1,file);
+  b += fread(&check,sizeof(check),1,file);
   if(check != BESTSTATSDBVER) return 0;
-  fread(&check,sizeof(check),1,file);
+  b += fread(&check,sizeof(check),1,file);
   if(check != sizeof(zfloat)) return 0;
-  fread(&sizetsize, sizeof(sizetsize),1,file);
-  fread(&statsdb->startiteration, sizeof(statsdb->startiteration), 1, file);
+  b += fread(&sizetsize, sizeof(sizetsize),1,file);
+  b += fread(&statsdb->startiteration, sizeof(statsdb->startiteration), 1, file);
   for(i = 0; i < ZOPFLI_NUM_LL; ++i)
-    freadst(&statsdb->beststats->litlens[i], sizetsize, 1, file);
+    b += freadst(&statsdb->beststats->litlens[i], sizetsize, 1, file);
   for(i = 0; i < ZOPFLI_NUM_D; ++i)
-    freadst(&statsdb->beststats->dists[i], sizetsize, 1, file);
+    b += freadst(&statsdb->beststats->dists[i], sizetsize, 1, file);
   for(i = 0; i < ZOPFLI_NUM_LL; ++i)
-    fread(&statsdb->beststats->ll_symbols[i], sizeof(zfloat), 1, file);
+    b += fread(&statsdb->beststats->ll_symbols[i], sizeof(zfloat), 1, file);
   for(i = 0; i < ZOPFLI_NUM_D; ++i)
-    fread(&statsdb->beststats->d_symbols[i], sizeof(zfloat), 1, file);
+    b += fread(&statsdb->beststats->d_symbols[i], sizeof(zfloat), 1, file);
   fclose(file);
   return 1;
 }
@@ -1377,7 +1382,11 @@ static int DoDir(char* dir) {
   if(testdir) {
     closedir(testdir);
   } else if (ENOENT == errno) {
+#ifdef __WIN32__
     mkdir(dir);
+#else
+    mkdir(dir, 0777);
+#endif
   } else {
     return 0;
   }
@@ -1386,6 +1395,7 @@ static int DoDir(char* dir) {
 
 static int StatsDBSave(ZopfliBestStats* statsdb) {
   FILE *file;
+  size_t b = 0;
   int i;
   unsigned char check = BESTSTATSDBVER;
   char crc32bits[8];
@@ -1414,19 +1424,19 @@ static int StatsDBSave(ZopfliBestStats* statsdb) {
   for(i = 0; i < ZOPFLI_NUM_D; ++i)
     Sl(&verifysize,statsdb->beststats->dists[i]);
   Verifysize_t(verifysize, &sizetsize);
-  fwrite(&check, sizeof(check), 1, file);
+  b += fwrite(&check, sizeof(check), 1, file);
   check = sizeof(zfloat);
-  fwrite(&check, sizeof(check), 1, file);
-  fwrite(&sizetsize, sizeof(sizetsize), 1, file);
-  fwrite(&statsdb->startiteration, sizeof(statsdb->startiteration), 1, file);
+  b += fwrite(&check, sizeof(check), 1, file);
+  b += fwrite(&sizetsize, sizeof(sizetsize), 1, file);
+  b += fwrite(&statsdb->startiteration, sizeof(statsdb->startiteration), 1, file);
   for(i = 0; i < ZOPFLI_NUM_LL; ++i)
-    fwrite(&statsdb->beststats->litlens[i], sizetsize, 1, file);
+    b += fwrite(&statsdb->beststats->litlens[i], sizetsize, 1, file);
   for(i = 0; i < ZOPFLI_NUM_D; ++i)
-    fwrite(&statsdb->beststats->dists[i], sizetsize, 1, file);
+    b += fwrite(&statsdb->beststats->dists[i], sizetsize, 1, file);
   for(i = 0; i < ZOPFLI_NUM_LL; ++i)
-    fwrite(&statsdb->beststats->ll_symbols[i], sizeof(zfloat), 1, file);
+    b += fwrite(&statsdb->beststats->ll_symbols[i], sizeof(zfloat), 1, file);
   for(i = 0; i < ZOPFLI_NUM_D; ++i)
-    fwrite(&statsdb->beststats->d_symbols[i], sizeof(zfloat), 1, file);
+    b += fwrite(&statsdb->beststats->d_symbols[i], sizeof(zfloat), 1, file);
   fclose(file);
   return 1;
 }
