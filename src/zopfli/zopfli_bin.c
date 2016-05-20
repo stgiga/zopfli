@@ -843,7 +843,6 @@ int main(int argc, char* argv[]) {
           "      MISCELLANEOUS:\n"
           "  --t#          compress using # threads, 0 = compat. (d:1)\n"
           "  --idle        use idle process priority\n"
-          "  --lessmem     use less memory algorithm\n"
           "  --pass#       recompress last split points max # times (d: 0)\n");
       fprintf(stderr,
           "  --statsdb     use file-based best stats / block database\n"
