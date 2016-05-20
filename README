@@ -106,7 +106,8 @@ Description of new commands list in Zopfli KrzYmod:
 10. --all
 
    Run 16 cominations of --lazy, --ohh, --brotli and --rc per block and pick
-   smallest result.
+   smallest result. --statsdb is not (yet?) supported in this mode, using both
+   switches will result in an error message.
 
 11. --n#
 

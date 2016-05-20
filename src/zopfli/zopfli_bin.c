@@ -862,6 +862,10 @@ int main(int argc, char* argv[]) {
   if(options.verbose) VersionInfo();
 
   if(options.mode & 0x0100) {
+    if(options.mode & 0x0010) {
+      fprintf(stderr, "ERROR: --statsdb is currently not supported in --all mode.\n");
+      return EXIT_FAILURE;
+    }
     if(options.verbose) fprintf(stderr, "Info: Using Best Stats database (ZopfliDB directory)\n");
   }
 
