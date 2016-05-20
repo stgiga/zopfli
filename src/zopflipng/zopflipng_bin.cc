@@ -229,7 +229,7 @@ void ShowHelp() {
          "--ohh:           optymize huffman header\n"
          "--rc:            reverse counts ordering in bit length calculations\n"
          "--pass=[number]: recompress last split points max # times (d: 0)\n"
-         "--rp:            use restore points\n"
+         "--statsdb:       use file-based best stats / block database\n"
          "--si=[number]:   stats to laststats in weight calculations (d: 100, max: 149)\n"
          "--cmwc:          use Complementary-Multiply-With-Carry rand. gen.\n"
          "--rm=[number]:   random modulo for iteration stats (d: 3)\n"
@@ -350,7 +350,7 @@ int main(int argc, char *argv[]) {
         png_options.mode |= 0x0040;
       } else if (name == "--slowsplit") {
         png_options.mode |= 0x0080;
-      } else if (name == "--rp") {
+      } else if (name == "--statsdb") {
         png_options.mode |= 0x0100;
       } else if (name == "--iterations") {
         png_options.num_iterations = num;

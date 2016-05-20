@@ -107,8 +107,7 @@ typedef struct ZopfliOptions {
   0x0020 - Use Complementary-Multiply-With-Carry,
   0x0040 - Disable splitting after compression,
   0x0080 - Use expensive fixed block calculations in splitter,
-  0x0100 - Use Restore Points,
-  0x0200 - Use File-based best stats DB.
+  0x0100 - Use File-based best stats DB.
   */
   unsigned long mode;
 

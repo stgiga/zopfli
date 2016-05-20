@@ -8,7 +8,7 @@ Features:
 - Stores file modification time inside archive,
 - Multiple files compression with ZIP container,
 - Multiple recompressions support after splitting last,
-- Restore Points to resume compression (single-file mode only),
+- Best statistics directory/file based database to resume iterating,
 - Additional switches to finetune compression and block splitting,
 - Ability to use dumb block size splitting,
 - Ability to use predefined split points,
@@ -178,14 +178,26 @@ Description of new commands list in Zopfli KrzYmod:
    attempt. This mode doesn't work when --lessmem or --nosplitlast is used, or when the
    compressed input is only 1 block long.
 
-21. --cwmc
+21. --si#
+
+   Stats to laststats in weight calculations. Zopfli by default takes 100% of current
+   generated statistics with 50% of the ones from previous run before randomizing them.
+   With this command You specify the percentage amount of current generated statistics.
+   Maximum allowed number is 149, making current stats use 149% and last stats 1%.
+   This has an impact on iterating proggress.
+
+22. --cwmc
 
    Use Complementary-Multiply-With-Carry random number generator instead of the default
    Multiply-With-Carry. Both algorithms are made by G. Marsaglia.
    This provides different iteration progress.
    To read more: https://en.wikipedia.org/wiki/Multiply-with-carry
 
-22. --rw# and --rz#
+23. --rm#
+   Random number generator modulo. By default Zopfli uses 3. Using different numbers
+   (like: 5) can find best stats sooner or better on certain data.
+
+24. --rw# and --rz#
 
    Initial random W and Z for iterations. These parameters are 1 for W and 2 for Z
    by default and they are locked in original Zopfli. They are used to init
@@ -201,18 +213,26 @@ Description of new commands list in Zopfli KrzYmod:
    1 bit reduction when changing these parameters on --mui999 when previously
    the file was created doing as many as 99,999 unsucessful iteration.
 
-23. --rp
+25. --statsdb
 
-   Use Restore Points. This mode let's Zopfli save special Restore Point files named
-   Zopfli-[current input CRC32]-[C/R].lz77rp for resuming compression after Zopfli
-   was closed or CTRL+C was pressed. This mode doesn't work with multi-file compression
-   or when --lessmem is used. If input is > than ZOPFLI_MASTER_BLOCK_SIZE then restore
-   files of previous ZOPFLI_MASTER_BLOCK_SIZE chunks will not be automatically deleted.
-   Manual deletion will be required. ZOPFLI_MASTER_BLOCK_SIZE in KrzYmod Zopfli is set
-   to 100MB. Restore Points can take few times more than uncompressed data. Up to 2
-   Restore Point files are used for given input, one for compression, one for recompression.
+   Use Best Statistics / block directory/file based database. Files are stored
+   in ZopfliDB directory that has this structure:
+   - ZopfliDB main directory,
+   - first CRC32 byte hexadecima representation [00-FF] subdirectory,
+   - second CRC32 byte hexadecima representation [00-FF] subdirectory,
+   - third CRC32 byte hexadecima representation [00-FF] subdirectory,
+   - fourth CRC32 byte hexadecima representation [00-FF] subdirectory,
+   - filename of [MODE USED 0-F]-[BLOCK SIZE IN BYTES].dat
+   Files store some verification information to be portable between x86 and x64
+   versions, last iteration processed and best stats data. It's possible to resume
+   block iterations from the next iteration block was previously stopped at. It's also
+   possible to recreate most condensed deflate stream within seconds if previous runs
+   used more iterations that the number zopfli is run with later and block CRC32,
+   size and mode used matches with the one stored using file/directory structure.
+   This feature replaces restore points as files are smaller and it's possible to
+   speed up compression on various streams if above criteria is met.
 
-24. --t#
+26. --t#
 
    Use # threads for compression. Limited by number of blocks in stream as each
    block is sent to a separate thread for compression. Most useful if there are many
@@ -224,11 +244,11 @@ Description of new commands list in Zopfli KrzYmod:
    all out-of-order blocks in memory will be lost. Always uses one thread in
    --lessmem mode.
 
-25. --idle
+27. --idle
 
    Run Zopfli in lowest priority to not slow down other processes.
 
-26. --lessmem
+28. --lessmem
 
    By default Zopfli KrzYmod uses most of improved original Zopfli algorithm by
    keeping full input, output and LZ77 Store in memory.
@@ -236,7 +256,7 @@ Description of new commands list in Zopfli KrzYmod:
    usage for input, output and LZ77 Store at the cost of limited features.
    Splitting last, Recompression and Restore Points are not supported in this mode.
 
-27. --v#
+29. --v#
 
    This option is formerly known as just -v and it extends control over Zopfli
    verbosity. The default is 2 and it can be set from 0 (quiet) to 5 (most verbose):
