@@ -1234,7 +1234,6 @@ static int StatsDBSave(ZopfliBestStats* statsdb) {
     if(!DoDir(LocBuf)) return 0;
   }
   sprintf(LocBuf,"%s/%s",LocBuf,DBfile);
-  fprintf(stderr,"\n\nDEBUG: %s\n\n",LocBuf);
   file = fopen(LocBuf, "wb");
   if(!file) return 0;
   for(i = 0; i < ZOPFLI_NUM_LL; ++i)

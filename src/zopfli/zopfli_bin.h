@@ -53,15 +53,6 @@ typedef struct ZopfliBinOptions {
   size_t *custblocksplit;
 
   /*
-  If to use legacy compression mode when compressing data.
-  Will result in old behaviour of loading whole file into memory
-  and keeping output data in memory until compression finishes.
-  Master Blocks are then controlled by lib part.
-  */
-
-  unsigned short legacy;
-
-  /*
   Save block splits to file and exit zopfli
   */
   const char* dumpsplitsfile;

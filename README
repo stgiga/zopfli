@@ -12,8 +12,6 @@ Features:
 - Additional switches to finetune compression and block splitting,
 - Ability to use dumb block size splitting,
 - Ability to use predefined split points,
-- Special less memory compression algorithm with a limited
-  features to be enabled with --lessmem switch.
 
 Without passing its special commands the program should run as usual.
 
@@ -137,9 +135,7 @@ Description of new commands list in Zopfli KrzYmod:
 
 15. --cbd#
 
-   Save block start positons to a file. In --lessmem mode it will use splitting
-   first and exit. When --lessmem is NOT passed it will compress a file as usual
-   and dump best split points found.
+   Save block start positons to a file after compression.
 
 16. --aas
 
@@ -160,11 +156,11 @@ Description of new commands list in Zopfli KrzYmod:
 18. --mls#
 
    This command alters the GetLengthScore function. Changing this parameter
-   will alter certain Zopfli compression decissions and block splitting model
-   which can improve or hurt compression. The default is 1024 and there is
-   no logic whatsoever in changing this option other than try&error.
-   However during my tests on 16KB BMP file chaging this parameter reduced
-   compressed file further by 5 bytes (NOT bits).
+   alters block splitting decissions as well as initial compression run before
+   block iterating starts for which stats from this initial run are taken
+   into account resulting in different iteration progression. The default value
+   is 1024. When best stats are loaded from file (--statsdb) the initial run
+   in dynamic block iterating is skipped so it has no impact on that block.
 
 19. --nosplitlast
 
@@ -175,8 +171,8 @@ Description of new commands list in Zopfli KrzYmod:
 
    Multiple splitting last & recompression attempts to check if resulting deflate stream
    gets smaller. It will run # times or until no size was reduced in the last recompression
-   attempt. This mode doesn't work when --lessmem or --nosplitlast is used, or when the
-   compressed input is only 1 block long.
+   attempt. This mode doesn't work when --nosplitlast is used, or when the compressed input
+   is only 1 block long.
 
 21. --si#
 
@@ -241,22 +237,13 @@ Description of new commands list in Zopfli KrzYmod:
    out-of-order blocks returned by threads that are then processed and merged when they
    follow in-order block returned by given thread. Restore points are saved only after
    in-order blocks are joined together into main LZ77 store, if You abort the work,
-   all out-of-order blocks in memory will be lost. Always uses one thread in
-   --lessmem mode.
+   all out-of-order blocks in memory will be lost.
 
 27. --idle
 
    Run Zopfli in lowest priority to not slow down other processes.
 
-28. --lessmem
-
-   By default Zopfli KrzYmod uses most of improved original Zopfli algorithm by
-   keeping full input, output and LZ77 Store in memory.
-   This parameter tells Zopfli to use KrzYmod algorithm with reduced memory
-   usage for input, output and LZ77 Store at the cost of limited features.
-   Splitting last, Recompression and Restore Points are not supported in this mode.
-
-29. --v#
+28. --v#
 
    This option is formerly known as just -v and it extends control over Zopfli
    verbosity. The default is 2 and it can be set from 0 (quiet) to 5 (most verbose):

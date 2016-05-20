@@ -86,7 +86,6 @@ static void ZopfliInitBinOptions(ZopfliBinOptions* options) {
   options->numblocks = 0;
   options->custblocksplit = NULL;
   options->dumpsplitsfile = NULL;
-  options->legacy = 1;
   options->additionalautosplits = 0;
 }
 
@@ -325,29 +324,6 @@ static void RenameFile(const char* tempfilename, const char* outfilename) {
 }
 
 /*
-Wrapper for ZopfliBlockSplit in low input/output memory compression mode.
-*/
-static size_t SplitInput(const ZopfliOptions* options, const unsigned char* in,
-                         size_t insize, size_t offset, size_t **splitpoints,
-                         size_t *npoints) {
-
-  size_t *tempsplitpoints = NULL;
-  size_t tempnpoints = 0;
-  size_t i;
-
-  ZopfliBlockSplit(options,in,0,insize,options->blocksplittingmax,
-                   &tempsplitpoints,&tempnpoints);
-  for(i=0;i<tempnpoints;++i) {
-    tempsplitpoints[i]+=offset;
-    ZOPFLI_APPEND_DATA(tempsplitpoints[i],splitpoints,npoints);
-  }
-  free(tempsplitpoints);
-
-  return ++tempnpoints;
-
-}
-
-/*
 This procedure would most likely require optimisations since it contains a lot of
 (working!) crap, to omitt certain LIB limitations that, on the other hand, would require
 a lot of modifications. We don't want to make LIB go too far away from original, do we?
@@ -359,25 +335,21 @@ static int Compress(ZopfliOptions* options, const ZopfliBinOptions* binoptions,
   ZopfliAdditionalData moredata;
   unsigned char* in = NULL;
   unsigned char* out = NULL;
-  unsigned char* WindowData = NULL;
-  unsigned char* inAndWindow = NULL;
   unsigned char bp = 0;
   unsigned long checksum = 0L;
   size_t insize;
   size_t outsize = 0;
-  size_t WindowSize = 0;
-  size_t inAndWindowSize = 0;
   size_t fullsize;
   size_t compsize;
   size_t loffset = 0;
-  size_t processed = 0;
   size_t soffset = initsoffset;
   size_t pkoffset = 14;
   size_t *splitpoints = NULL;
-  size_t npoints = 0;
   size_t offset = 0;
   size_t i, j = 0;
   int blocksplitting = options->blocksplitting;
+  int final = 1;
+  ZopfliPredefinedSplits sp;
 
   LoadFile(infilename, &in, &insize, &loffset, &fullsize, 1, 1);
   free(in);
@@ -395,129 +367,6 @@ static int Compress(ZopfliOptions* options, const ZopfliBinOptions* binoptions,
   if(output_type == ZOPFLI_FORMAT_ZLIB) ++checksum;
 
   loffset = 0;
-
-  if(binoptions->legacy==0) {
-
-    if(options->verbose>0) {
-      j = options->verbose;
-      options->verbose = 1;
-    }
-
-    if(binoptions->custblocksplit != NULL) {
-      i=2;
-      while(i<=binoptions->custblocksplit[0]) {
-        if(binoptions->custblocksplit[i]<fullsize 
-           && binoptions->custblocksplit[i]>binoptions->custblocksplit[i-1]) {
-          if(binoptions->additionalautosplits==1) {
-            size_t oldloffset;
-            do {
-              size_t tempnumblocks;
-              size_t amount = binoptions->custblocksplit[i] - loffset;
-              oldloffset=loffset;
-              LoadFile(infilename, &in, &insize, &loffset, &fullsize, amount, 1);
-              tempnumblocks = SplitInput(options,in,insize,oldloffset,&splitpoints,&npoints);
-              free(in);
-              in = 0;
-              if(amount > ZOPFLI_MASTER_BLOCK_SIZE || (loffset<fullsize && tempnumblocks>1)) {
-                loffset=splitpoints[npoints-1];
-              }
-            } while(loffset<binoptions->custblocksplit[i] && loffset<fullsize);
-          }
-          ZOPFLI_APPEND_DATA(binoptions->custblocksplit[i],&splitpoints,&npoints);
-          if(i==binoptions->custblocksplit[0] && binoptions->additionalautosplits==1) {
-            size_t oldloffset;
-            do {
-              size_t tempnumblocks;
-              oldloffset=loffset;
-              LoadFile(infilename, &in, &insize, &loffset, &fullsize, 0, 1);
-              tempnumblocks = SplitInput(options,in,insize,oldloffset,&splitpoints,&npoints);
-              free(in);
-              in = 0;
-              if(loffset<fullsize && tempnumblocks>1) {
-                loffset=splitpoints[npoints-1];
-              }
-            } while(loffset<fullsize);
-          }
-        }
-        ++i;
-      }
-      free(binoptions->custblocksplit);
-    } else if(binoptions->numblocks>0) {
-      if(binoptions->numblocks>1) {
-        size_t l;
-        if(binoptions->numblocks>fullsize) {
-          i = 1;
-        } else {
-          i = ceilz((zfloat)fullsize / (zfloat)binoptions->numblocks);
-        }
-        l=i;
-        do {
-          ZOPFLI_APPEND_DATA(l,&splitpoints,&npoints);
-          l+=i;
-        } while(l<fullsize);
-      }
-    } else if(binoptions->blocksize>0 && binoptions->blocksize<fullsize) {
-      size_t l;
-      i = binoptions->blocksize;
-      l=i;
-      do {
-        ZOPFLI_APPEND_DATA(l,&splitpoints,&npoints);
-        l+=i;
-      } while(l<fullsize);
-    } else {
-      size_t oldloffset;
-      do {
-        size_t tempnumblocks;
-        oldloffset=loffset;
-        LoadFile(infilename, &in, &insize, &loffset, &fullsize, 0, 1);
-        tempnumblocks = SplitInput(options,in,insize,oldloffset,&splitpoints,&npoints);
-        free(in);
-        in = 0;
-        if(loffset<fullsize && tempnumblocks>1) {
-          loffset=splitpoints[npoints-1];
-        }
-      } while(loffset<fullsize);
-    }
-    if(j>0) options->verbose = j;
-
-    if(options->verbose>3 || binoptions->dumpsplitsfile != NULL) {
-      FILE* file = NULL;
-      char* tempfilename = NULL;
-      if(binoptions->dumpsplitsfile != NULL) {
-        tempfilename = AddStrings(binoptions->dumpsplitsfile,tempfileext);
-        file = fopen(tempfilename, "wb");
-        fprintf(file,"0");
-      }
-      fprintf(stderr, "Block split points: ");
-      if(npoints>0) {
-        for (j = 0; j < npoints; j++) {
-          fprintf(stderr, "%d ", (int)splitpoints[j]);
-        }
-        fprintf(stderr, "(hex:");
-        for (j = 0; j < npoints; j++) {
-          if(j==0) fprintf(stderr," "); else fprintf(stderr,",");
-          fprintf(stderr, "%x", (int)splitpoints[j]);
-          if(binoptions->dumpsplitsfile != NULL) fprintf(file, ",%x", (int)splitpoints[j]);
-        }
-        fprintf(stderr,")");
-      } else {
-        fprintf(stderr, "NONE");
-      }
-      fprintf(stderr, "\n");
-      if(binoptions->dumpsplitsfile != NULL) {
-        fclose(file);
-        RenameFile(tempfilename,binoptions->dumpsplitsfile);
-        fprintf(stderr,"Hex split points successfully saved to file: %s\n",binoptions->dumpsplitsfile);
-        free(tempfilename);
-        exit(EXIT_SUCCESS);
-      }
-    }
-    if(options->verbose>2) {
-      fprintf(stderr, "Total blocks: %lu                 \n",(unsigned long)(npoints+1));
-    }
-  }
-
-  loffset=0;
 
   moredata.timestamp = Timestamp(infilename,output_type);
 
@@ -566,154 +415,70 @@ static int Compress(ZopfliOptions* options, const ZopfliBinOptions* binoptions,
 
   offset=outsize;
 
-  if(binoptions->legacy==0) {
-    options->blocksplitting = 0;
-    for(i=0;i<=npoints;++i) {
-      size_t oldloffset;
-      int final = 0;
-      if(i==npoints) {
-        final = 1;
-        oldloffset=fullsize-loffset;
-      } else {
-        oldloffset = splitpoints[i]-loffset;
-      }
-      if(outsize>ZOPFLI_MAX_OUTPUT_MEMORY) {
-        unsigned char tempbyte = out[outsize-1];
-        if (!outfilename) {
-          ConsoleOutput(out,outsize-1);
-        } else {
-          SaveFile(outfilename, out, outsize,soffset);
-        }
-        soffset+=outsize-1;
-        free(out);
-        out = (unsigned char*)malloc(sizeof(unsigned char*));
-        out[0] = tempbyte;
-        outsize = 1;
-      }
-
-      LoadFile(infilename, &in, &insize, &loffset, &fullsize, oldloffset, 1);
-      if(output_type == ZOPFLI_FORMAT_GZIP || 
-         output_type == ZOPFLI_FORMAT_GZIP_NAME || output_type == ZOPFLI_FORMAT_ZIP) {
-        CRCu(in,insize,&checksum);
-      } else if(output_type == ZOPFLI_FORMAT_ZLIB) {
-        adler32u(in,insize,&checksum);
-      }
-      if(WindowSize>0) {
-        for(j=0;j<WindowSize;++j) {
-          ZOPFLI_APPEND_DATA(WindowData[j], &inAndWindow, &inAndWindowSize);
-        }
-        free(WindowData);
-        WindowData = 0;
-        for(j=0;j<insize;++j) {
-          ZOPFLI_APPEND_DATA(in[j], &inAndWindow, &inAndWindowSize);
-        }
-      } else {
-        inAndWindow = malloc(insize * sizeof(unsigned char*));
-        memcpy(inAndWindow,in,insize);
-        inAndWindowSize = insize;
-      }
-      free(in);
-      in = 0;
-
-      if(options->verbose==1) fprintf(stderr,"                                     \r");
-      if(options->verbose>0) fprintf(stderr, "Progress: %.1f%%",100.0 * (zpfloat)processed / (zpfloat)fullsize);
-      if(options->verbose>1) {
-        fprintf(stderr, "  ---  Block: %d / %d  ---  Data left: %luKB",
-               (int)(i + 1), (int)(npoints + 1),(unsigned long)((fullsize - processed)/1024));
-        if(options->verbose>2) {
-          fprintf(stderr,"\n");
-        } else {
-          fprintf(stderr,"  \r");
-        }
-      } else {
-        fprintf(stderr,"\r");
-      }
-      ZopfliDeflatePart(options,2,final,inAndWindow,WindowSize,inAndWindowSize,&bp,&out,&outsize, 0, 0);
-      processed+=(inAndWindowSize-WindowSize);
-      if(i<npoints) {
-        if(inAndWindowSize>ZOPFLI_WINDOW_SIZE) {
-          WindowSize = ZOPFLI_WINDOW_SIZE;
-          WindowData = malloc(ZOPFLI_WINDOW_SIZE * sizeof(unsigned char*));
-          memcpy(WindowData,inAndWindow+(inAndWindowSize-ZOPFLI_WINDOW_SIZE),ZOPFLI_WINDOW_SIZE);
-        } else {
-          WindowSize = 0;
-          for(j=0;j<inAndWindowSize;++j) {
-           ZOPFLI_APPEND_DATA(inAndWindow[j], &WindowData, &WindowSize);
-          }
-        }
-      }
-      free(inAndWindow);
-      inAndWindow = 0;
-      inAndWindowSize = 0;
+  sp.splitpoints = 0;
+  sp.npoints = 0;
+  sp.moresplitting = binoptions->additionalautosplits;
+  LoadFile(infilename, &in, &insize, &loffset, &fullsize, 0, 0);
+  if(binoptions->custblocksplit != NULL) {
+    i=2;
+    while(i<=binoptions->custblocksplit[0]) {
+      ZOPFLI_APPEND_DATA(binoptions->custblocksplit[i],&sp.splitpoints,&sp.npoints);
+      ++i;
     }
-  } else {
-    int final = 1;
-    ZopfliPredefinedSplits sp;
-    sp.splitpoints = 0;
-    sp.npoints = 0;
-    sp.moresplitting = binoptions->additionalautosplits;
-    LoadFile(infilename, &in, &insize, &loffset, &fullsize, 0, 0);
-    if(binoptions->custblocksplit != NULL) {
-      i=2;
-      while(i<=binoptions->custblocksplit[0]) {
-        ZOPFLI_APPEND_DATA(binoptions->custblocksplit[i],&sp.splitpoints,&sp.npoints);
-        ++i;
-      }
-      free(binoptions->custblocksplit);
-    } else if(binoptions->numblocks>0) {
-      if(binoptions->numblocks>1) {
-        size_t l;
-        if(binoptions->numblocks>fullsize) {
-          i = 1;
-        } else {
-          i = ceilz((zfloat)fullsize / (zfloat)binoptions->numblocks);
-        }
-        l=i;
-        do {
-          ZOPFLI_APPEND_DATA(l,&sp.splitpoints,&sp.npoints);
-          l+=i;
-        } while(l<fullsize);
-      }
-    } else if(binoptions->blocksize>0 && binoptions->blocksize<fullsize) {
+    free(binoptions->custblocksplit);
+  } else if(binoptions->numblocks>0) {
+    if(binoptions->numblocks>1) {
       size_t l;
-      i = binoptions->blocksize;
+      if(binoptions->numblocks>fullsize) {
+        i = 1;
+      } else {
+        i = ceilz((zfloat)fullsize / (zfloat)binoptions->numblocks);
+      }
       l=i;
       do {
         ZOPFLI_APPEND_DATA(l,&sp.splitpoints,&sp.npoints);
         l+=i;
       } while(l<fullsize);
     }
-    if(output_type == ZOPFLI_FORMAT_GZIP ||
-       output_type == ZOPFLI_FORMAT_GZIP_NAME || output_type == ZOPFLI_FORMAT_ZIP) {
-      CRCu(in,insize,&checksum);
-    } else if(output_type == ZOPFLI_FORMAT_ZLIB) {
-      adler32u(in,insize,&checksum);
-    }
-    ZopfliDeflate(options, 2, final, in, insize, &bp, &out, &outsize, &sp);
-    free(in);
-    if (!outfilename) {
-      ConsoleOutput(out,outsize-1);
-    } else {
-      SaveFile(outfilename, out, outsize,soffset);
-    }
-    if(binoptions->dumpsplitsfile != NULL) {
-      FILE* file = NULL;
-      char* tempfilename = NULL;
-      tempfilename = AddStrings(binoptions->dumpsplitsfile,tempfileext);
-      file = fopen(tempfilename, "wb");
-      fprintf(file,"0");
-      if(sp.npoints>0) {
-        for (j = 0; j < sp.npoints; j++) {
-          fprintf(file, ",%x", (int)sp.splitpoints[j]);
-        }
-      }
-      fclose(file);
-      RenameFile(tempfilename,binoptions->dumpsplitsfile);
-      fprintf(stderr,"Hex split points successfully saved to file: %s\n",binoptions->dumpsplitsfile);
-      free(tempfilename);
-    }
-    free(sp.splitpoints);
+  } else if(binoptions->blocksize>0 && binoptions->blocksize<fullsize) {
+    size_t l;
+    i = binoptions->blocksize;
+    l=i;
+    do {
+      ZOPFLI_APPEND_DATA(l,&sp.splitpoints,&sp.npoints);
+      l+=i;
+    } while(l<fullsize);
   }
+  if(output_type == ZOPFLI_FORMAT_GZIP ||
+     output_type == ZOPFLI_FORMAT_GZIP_NAME || output_type == ZOPFLI_FORMAT_ZIP) {
+    CRCu(in,insize,&checksum);
+  } else if(output_type == ZOPFLI_FORMAT_ZLIB) {
+    adler32u(in,insize,&checksum);
+  }
+  ZopfliDeflate(options, 2, final, in, insize, &bp, &out, &outsize, &sp);
+  free(in);
+  if (!outfilename) {
+    ConsoleOutput(out,outsize-1);
+  } else {
+    SaveFile(outfilename, out, outsize,soffset);
+  }
+  if(binoptions->dumpsplitsfile != NULL) {
+    FILE* file = NULL;
+    char* tempfilename = NULL;
+    tempfilename = AddStrings(binoptions->dumpsplitsfile,tempfileext);
+    file = fopen(tempfilename, "wb");
+    fprintf(file,"0");
+    if(sp.npoints>0) {
+      for (j = 0; j < sp.npoints; j++) {
+        fprintf(file, ",%x", (int)sp.splitpoints[j]);
+      }
+    }
+    fclose(file);
+    RenameFile(tempfilename,binoptions->dumpsplitsfile);
+    fprintf(stderr,"Hex split points successfully saved to file: %s\n",binoptions->dumpsplitsfile);
+    free(tempfilename);
+  }
+  free(sp.splitpoints);
 
   compsize = outsize+soffset-offset-initsoffset;
 
@@ -932,7 +697,6 @@ int main(int argc, char* argv[]) {
     else if (StringsEqual(arg, "--gzip")) output_type = ZOPFLI_FORMAT_GZIP;
     else if (StringsEqual(arg, "--gzipname")) output_type = ZOPFLI_FORMAT_GZIP_NAME;
     else if (StringsEqual(arg, "--zip")) output_type = ZOPFLI_FORMAT_ZIP;
-    else if (StringsEqual(arg, "--lessmem")) binoptions.legacy = 0;
     else if (StringsEqual(arg, "--idle")) IdlePriority();
     else if (StringsEqual(arg, "--lazy")) options.mode |= 0x0001;
     else if (StringsEqual(arg, "--ohh")) options.mode |= 0x0002;
@@ -1117,11 +881,6 @@ int main(int argc, char* argv[]) {
       } else {
         output_type = ZOPFLI_FORMAT_DEFLATE;
         outfilename = AddStrings(filename, ".deflate");
-      }
-      if(options.verbose && !binoptions.legacy) {
-        fprintf(stderr,"Info: Using less memory usage algorithm.\n"
-                       "      Splitting last, recompression and restore points\n"
-                       "      are not supported in this mode.\n\n");
       }
       if (options.verbose && outfilename) {
         fprintf(stderr, "Saving to: %s\n\n", outfilename);
