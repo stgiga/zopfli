@@ -1165,7 +1165,7 @@ static int StatsDBLoad(ZopfliBestStats* statsdb) {
   FILE *file;
   size_t b = 0, i = 0;
   unsigned char check;
-  char crc32bits[8];
+  char crc32bits[16];
   char DBfile[32];
   char LocBuf[56];
   unsigned char sizetsize = sizeof(size_t);
@@ -1218,7 +1218,7 @@ static int StatsDBSave(ZopfliBestStats* statsdb) {
   FILE *file;
   size_t b = 0, i = 0;
   unsigned char check = BESTSTATSDBVER;
-  char crc32bits[8];
+  char crc32bits[16];
   char DBfile[32];
   char LocBuf[56];
   unsigned char sizetsize = sizeof(size_t);
