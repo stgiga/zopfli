@@ -1,0 +1,33 @@
+ZopfliDB is best statistics / block file/directory based database of
+best statistics found per given block CRC32, size and mode used.
+They are kind of save states.
+
+They are stored after block gets successfully compressed, last iteration
+used is also stored so in case lower number of iterations is desired
+and best statistics file is found, zopfli will use only one iteration
+to produce block compressed stream using those statistics, otherwise
+zopfli will continue work from the next iteration.
+
+Directory structure is automatically created and already existing
+files are overwritten.
+
+Please note that random state is not saved so restoring compression
+may have different iterations progress than the one being run from
+the very beginning to an end.
+
+ZopfliDB usage is enabled by --statsdb switch in Zopfli KrzYmod.
+
+Example:
+1. use 999,999 iterations on a file with --statsdb switch,
+2. wait for compression to end,
+3. move deflate file somewhere,
+4. re-run zopfli with the same switch set as noted in 1.,
+5. compare produced deflate stream with the one You moved,
+6. Note how fast it took to recreate exactly the same, most condensed
+   deflate stream from previous run.
+7. Use more iterations than 999,999 to resume compression,
+8. Experiment with random generator or stats mixing switches to try
+   finding better statistics than the ones stored before.
+
+They should be portable between x86 and x64 versions. They are not portable
+between different floating point size versions (NORMAL vs NDEBUG vs LDEBUG).
