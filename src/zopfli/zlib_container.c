@@ -17,6 +17,8 @@ Author: lode.vandevenne@gmail.com (Lode Vandevenne)
 Author: jyrki.alakuijala@gmail.com (Jyrki Alakuijala)
 */
 
+#ifndef NLIB
+
 #include "defines.h"
 #include "zlib_container.h"
 #include "util.h"
@@ -50,3 +52,7 @@ void ZopfliZlibCompress(const ZopfliOptions* options,
   if (options->verbose>1) PrintSummary(insize,*outsize,0);
 
 }
+
+#else
+  typedef int dummy;
+#endif

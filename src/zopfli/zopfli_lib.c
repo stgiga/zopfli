@@ -18,6 +18,8 @@ Author: lode.vandevenne@gmail.com (Lode Vandevenne)
 Author: jyrki.alakuijala@gmail.com (Jyrki Alakuijala)
 */
 
+#ifndef NLIB
+
 #include "defines.h"
 #include "zopfli.h"
 #include "deflate.h"
@@ -78,3 +80,6 @@ DLL_PUBLIC void ZopfliCompress(ZopfliOptions* options, const ZopfliFormat output
     free(optionslib);
   }
 }
+#else
+  typedef int dummy;
+#endif

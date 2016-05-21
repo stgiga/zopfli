@@ -18,6 +18,8 @@ Author: lode.vandevenne@gmail.com (Lode Vandevenne)
 Author: jyrki.alakuijala@gmail.com (Jyrki Alakuijala)
 */
 
+#ifndef NLIB
+
 #include "defines.h"
 #include "util.h"
 #include "zip_container.h"
@@ -151,3 +153,7 @@ void ZopfliZipCompress(const ZopfliOptions* options,
   }
 
 }
+
+#else
+  typedef int dummy;
+#endif
