@@ -1744,6 +1744,7 @@ DLL_PUBLIC void ZopfliDeflatePart(const ZopfliOptions* options, int btype, int f
   for (i = 0; i <= npoints; i++) {
     size_t start = i == 0 ? 0 : splitpoints[i - 1];
     size_t end = i == npoints ? lz77.size : splitpoints[i];
+    ZopfliOptions o = *options;
     if(v>2) {
       fprintf(stderr,"BLOCK %04d: ",(int)(i+1));
       if(bestperblock!=NULL) {
@@ -1754,7 +1755,10 @@ DLL_PUBLIC void ZopfliDeflatePart(const ZopfliOptions* options, int btype, int f
                   (bestperblock[i] & 8) == 8?"ON":"OFF");
       }
     }
-    AddLZ77BlockAutoType(options, i == npoints && final,
+    if(bestperblock!=NULL) {
+      o.mode = bestperblock[i] + (o.mode & 0xFFF0);
+    }
+    AddLZ77BlockAutoType(&o, i == npoints && final,
                          &lz77, start, end, 0,
                          bp, out, outsize);
   }
