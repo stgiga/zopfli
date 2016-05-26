@@ -1312,10 +1312,11 @@ static void *threading(void *a) {
     ZopfliOptions o = *(b->options);
     ZopfliInitLZ77Store(b->in, &store);
     --tries;
-    if(tries>0) {
+    if(b->options->mode & 0x0010) {
       free(b->beststats);
       b->beststats = 0;
       o.mode = tries;
+      b->startiteration = 0;
     }
 
     ZopfliInitBlockState(&o, b->start, b->end, 1, &s);
