@@ -1315,7 +1315,7 @@ static void *threading(void *a) {
     if(b->options->mode & 0x0010) {
       free(b->beststats);
       b->beststats = 0;
-      o.mode = tries;
+      o.mode = tries + (o.mode & 0xFFF0);
       b->startiteration = 0;
     }
 
