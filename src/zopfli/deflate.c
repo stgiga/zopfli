@@ -1290,6 +1290,8 @@ typedef struct ZopfliThread {
 
   int bestperblock;
 
+  int allstatscontrol;
+
   unsigned int startiteration;
 
   ZopfliIterations iterations;
@@ -1305,7 +1307,7 @@ static void *threading(void *a) {
   ZopfliThread *b = (ZopfliThread *)a;
   ZopfliLZ77Store store;
   ZopfliInitLZ77Store(b->in, &b->store);
-  if(b->options->mode & 0x0010) tries=17;
+  if(b->options->mode & 0x0010) tries=16;
   do {
     zfloat tempcost;
     ZopfliBlockState s;
@@ -1317,6 +1319,12 @@ static void *threading(void *a) {
       b->beststats = 0;
       o.mode = tries + (o.mode & 0xFFF0);
       b->startiteration = 0;
+      if(b->options->mode & 0x0100) {
+        b->allstatscontrol = tries + 0x0100;
+        do {
+          usleep(100000);
+        } while(b->allstatscontrol & 0x0100);
+      }
     }
 
     ZopfliInitBlockState(&o, b->start, b->end, 1, &s);
@@ -1326,6 +1334,7 @@ static void *threading(void *a) {
     tempcost = ZopfliCalculateBlockSizeAutoType(&o, &store, 0, store.size, 2);
 
     ZopfliCleanBlockState(&s);
+
     if(b->cost==0 || tempcost<b->cost) {
       ZopfliCleanLZ77Store(&b->store);
       ZopfliInitLZ77Store(b->in, &b->store);
@@ -1335,7 +1344,14 @@ static void *threading(void *a) {
     }
     ZopfliCleanLZ77Store(&store);
 
-  } while(tries>1);
+    if(b->options->mode & 0x0100) {
+      b->allstatscontrol = tries + 0x0200;
+      do {
+        usleep(100000);
+      } while(b->allstatscontrol & 0x0200);
+    }
+
+  } while(tries>0);
 
   b->is_running = 2;
 
@@ -1371,6 +1387,7 @@ static void ZopfliUseThreads(const ZopfliOptions* options,
 
   for(i=0;i<numthreads;++i) {
    t[i].is_running = 0;
+   t[i].allstatscontrol = 0;
    statsdb[i].beststats = 0;
   }
 
@@ -1389,54 +1406,75 @@ static void ZopfliUseThreads(const ZopfliOptions* options,
     do {
       neednext=0;
       for(;threnum<numthreads;) {
-        if(t[threnum].is_running==1 && options->verbose>2) {
-          if(t[showthread].is_running==1) {
-            unsigned calci, thrprogress;
-            if(mui==0) {
-              calci = options->numiterations;
-            } else {
-              calci = (unsigned)(t[showthread].iterations.bestiteration+mui);
-              if(calci>options->numiterations) calci=options->numiterations;
+        if(t[threnum].is_running==1) {
+          if(t[threnum].allstatscontrol & 0x0100) {
+            statsdb[threnum].mode = t[threnum].allstatscontrol & 0xF;
+            statsdb[threnum].beststats = malloc(sizeof(SymbolStats));
+            InitStats(statsdb[threnum].beststats);
+            if(StatsDBLoad(&statsdb[threnum])) {
+              t[threnum].beststats = statsdb[threnum].beststats;
+              t[threnum].startiteration = statsdb[threnum].startiteration;
             }
-            thrprogress = (int)(((zfloat)t[showthread].iterations.iteration / (zfloat)calci) * 100);
-            usleep(333333);
-            fprintf(stderr,"%3d%% THR %d | BLK %d | BST %d: %d b | ITR %d: %d b      \r",
-                    thrprogress, showthread, ((int)t[showthread].iterations.block+1),
-                    t[showthread].iterations.bestiteration, t[showthread].iterations.bestcost,
-                    t[showthread].iterations.iteration, t[showthread].iterations.cost);
-          } else {
-            ++showthread;
-            if(showthread>=numthreads)
-              showthread=0;
-            showcntr=0;
-          }
-          if(showcntr>3) {
-            if(threadsrunning>1) {
+            t[threnum].allstatscontrol = 0;
+          } else if(t[threnum].allstatscontrol & 0x0200) {
+            statsdb[threnum].beststats = t[threnum].beststats;
+            statsdb[threnum].startiteration = t[threnum].startiteration;
+            StatsDBSave(&statsdb[threnum]);
+            FreeStats(statsdb[threnum].beststats);
+            free(statsdb[threnum].beststats);
+            t[threnum].beststats = NULL;
+            t[threnum].allstatscontrol = 0;
+          } else if(options->verbose>2) {
+            if(t[showthread].is_running==1) {
+              unsigned calci, thrprogress;
+              if(mui==0) {
+                calci = options->numiterations;
+              } else {
+                calci = (unsigned)(t[showthread].iterations.bestiteration+mui);
+                if(calci>options->numiterations) calci=options->numiterations;
+              }
+              thrprogress = (int)(((zfloat)t[showthread].iterations.iteration / (zfloat)calci) * 100);
+              usleep(333333);
+              fprintf(stderr,"%3d%% THR %d | BLK %d | BST %d: %d b | ITR %d: %d b      \r",
+                      thrprogress, showthread, ((int)t[showthread].iterations.block+1),
+                      t[showthread].iterations.bestiteration, t[showthread].iterations.bestcost,
+                      t[showthread].iterations.iteration, t[showthread].iterations.cost);
+            } else {
               ++showthread;
               if(showthread>=numthreads)
                 showthread=0;
+              showcntr=0;
             }
-            showcntr=1;
-          } else {
-            ++showcntr;
+            if(showcntr>3) {
+              if(threadsrunning>1) {
+                ++showthread;
+                if(showthread>=numthreads)
+                  showthread=0;
+              }
+              showcntr=1;
+            } else {
+              ++showcntr;
+            }
+            ++threnum;
+            if(threnum>=numthreads)
+              threnum=0;
           }
-          ++threnum;
-          if(threnum>=numthreads)
-            threnum=0;
         }
         if(t[threnum].is_running==0) {
           if(lastthread == 0) {
             t[threnum].beststats = NULL;
             t[threnum].startiteration = 0;
             if(options->mode & 0x0100) {
-              statsdb[threnum].mode = options->mode & 0xF;
               statsdb[threnum].blocksize = blocksize;
               statsdb[threnum].blockcrc = blockcrc;
-              statsdb[threnum].beststats = malloc(sizeof(SymbolStats));
-              InitStats(statsdb[threnum].beststats);
-              if(StatsDBLoad(&statsdb[threnum])) {
-                t[threnum].beststats = statsdb[threnum].beststats;
-                t[threnum].startiteration = statsdb[threnum].startiteration;
+              if(!(options->mode & 0x0010)) {
+                statsdb[threnum].mode = options->mode & 0xF;
+                statsdb[threnum].beststats = malloc(sizeof(SymbolStats));
+                InitStats(statsdb[threnum].beststats);
+                if(StatsDBLoad(&statsdb[threnum])) {
+                  t[threnum].beststats = statsdb[threnum].beststats;
+                  t[threnum].startiteration = statsdb[threnum].startiteration;
+                }
               }
             }            
             t[threnum].options = options;
@@ -1444,6 +1482,7 @@ static void ZopfliUseThreads(const ZopfliOptions* options,
             t[threnum].end = end;
             t[threnum].in = in;
             t[threnum].cost = 0;
+            t[threnum].allstatscontrol = 0;
             t[threnum].iterations.block = i;
             t[threnum].iterations.bestcost = 0;
             t[threnum].iterations.cost = 0;
@@ -1471,10 +1510,13 @@ static void ZopfliUseThreads(const ZopfliOptions* options,
             (*bestperblock)[t[threnum].iterations.block] = t[threnum].bestperblock;
           }
           if(options->mode & 0x0100 && t[threnum].beststats != NULL) {
-            statsdb[threnum].beststats = t[threnum].beststats;
-            statsdb[threnum].startiteration = t[threnum].startiteration;
-            StatsDBSave(&statsdb[threnum]);
+            if(!(options->mode & 0x0010)) {
+              statsdb[threnum].beststats = t[threnum].beststats;
+              statsdb[threnum].startiteration = t[threnum].startiteration;
+              StatsDBSave(&statsdb[threnum]);
+            }
             FreeStats(statsdb[threnum].beststats);
+            free(statsdb[threnum].beststats);
           }
           t[threnum].beststats = NULL;
           if(nextblock==t[threnum].iterations.block) {

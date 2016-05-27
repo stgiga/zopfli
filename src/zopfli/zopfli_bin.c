@@ -862,11 +862,12 @@ int main(int argc, char* argv[]) {
   if(options.verbose) VersionInfo();
 
   if(options.mode & 0x0100) {
-    if(options.mode & 0x0010) {
-      fprintf(stderr, "ERROR: --statsdb is currently not supported in --all mode.\n");
+    if(options.numthreads == 0 && options.mode & 0x0010) {
+      fprintf(stderr,"ERROR: --statsdb + --all + --t0 is not allowed!\n");
       return EXIT_FAILURE;
+    } else {
+      if(options.verbose) fprintf(stderr, "Info: Using Best Stats database (ZopfliDB directory)\n");
     }
-    if(options.verbose) fprintf(stderr, "Info: Using Best Stats database (ZopfliDB directory)\n");
   }
 
   for (i = 1; i < argc; i++) {

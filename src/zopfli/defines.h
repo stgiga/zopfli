@@ -12,7 +12,7 @@ required by Zopfli KrzYmod.
 
 #define VERYEAR   16
 #define VERMONTH  5
-#define VERCOMMIT 34
+#define VERCOMMIT 35
 
 #define BESTSTATSDBVER 1
 
