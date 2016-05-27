@@ -1344,7 +1344,7 @@ static void *threading(void *a) {
     }
     ZopfliCleanLZ77Store(&store);
 
-    if(b->options->mode & 0x0100) {
+    if((b->options->mode & 0x0110) == 0x0110) {
       b->allstatscontrol = tries + 0x0200;
       do {
         usleep(100000);
