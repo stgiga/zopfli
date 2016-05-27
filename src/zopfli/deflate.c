@@ -1438,7 +1438,7 @@ static void ZopfliUseThreads(const ZopfliOptions* options,
     size_t end = i == bkend ? inend : (*splitpoints_uncompressed)[i];
     size_t blocksize = 0;
     unsigned long blockcrc = 0;
-    if((options->mode & 0x0100) && options->numthreads>0) {
+    if((options->mode & 0x0100) && !(options->numthreads == 0 && (options->mode & 0x0010))) {
       blocksize = end - start;
       blockcrc = CRC(in + start, blocksize);
     }
