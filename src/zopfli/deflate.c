@@ -1304,10 +1304,19 @@ typedef struct ZopfliThread {
 static void *threading(void *a) {
 
   int tries = 1;
+  size_t blocksize = 0;
+  unsigned long blockcrc = 0;
   ZopfliThread *b = (ZopfliThread *)a;
   ZopfliLZ77Store store;
   ZopfliInitLZ77Store(b->in, &b->store);
-  if(b->options->mode & 0x0010) tries=16;
+
+  if(b->options->mode & 0x0010) {
+    tries=16;
+    if(b->options->numthreads == 0 && (b->options->mode & 0x0100)) {
+      blocksize = b->end - b->start;
+      blockcrc = CRC(b->in + b->start, blocksize);
+    }
+  }
   do {
     zfloat tempcost;
     ZopfliBlockState s;
@@ -1320,10 +1329,25 @@ static void *threading(void *a) {
       o.mode = tries + (o.mode & 0xFFF0);
       b->startiteration = 0;
       if(b->options->mode & 0x0100) {
-        b->allstatscontrol = tries + 0x0100;
-        do {
-          usleep(100000);
-        } while(b->allstatscontrol & 0x0100);
+        if(b->options->numthreads > 0) {
+          /* Racing condition prevention */
+          b->allstatscontrol = tries + 0x0100;
+          do {
+            usleep(100000);
+          } while(b->allstatscontrol & 0x0100);
+        } else {
+          /* No SLAVE threads, work done by MASTER thread */
+          ZopfliBestStats statsdb;
+          statsdb.blocksize = blocksize;
+          statsdb.blockcrc = blockcrc;
+          statsdb.mode = tries;
+          statsdb.beststats = malloc(sizeof(SymbolStats));
+          InitStats(statsdb.beststats);
+          if(StatsDBLoad(&statsdb)) {
+            b->beststats = statsdb.beststats;
+            b->startiteration = statsdb.startiteration;
+          }
+        }
       }
     }
 
@@ -1345,10 +1369,25 @@ static void *threading(void *a) {
     ZopfliCleanLZ77Store(&store);
 
     if((b->options->mode & 0x0110) == 0x0110) {
-      b->allstatscontrol = tries + 0x0200;
-      do {
-        usleep(100000);
-      } while(b->allstatscontrol & 0x0200);
+      if(b->options->numthreads > 0) {
+        /* Racing condition prevention */
+        b->allstatscontrol = tries + 0x0200;
+        do {
+          usleep(100000);
+        } while(b->allstatscontrol & 0x0200);
+      } else {
+        /* No SLAVE threads, work done by MASTER thread */
+        ZopfliBestStats statsdb;
+        statsdb.blocksize = blocksize;
+        statsdb.blockcrc = blockcrc;
+        statsdb.mode = tries;
+        statsdb.beststats = b->beststats;
+        statsdb.startiteration = b->startiteration;
+        StatsDBSave(&statsdb);
+        FreeStats(statsdb.beststats);
+        free(statsdb.beststats);
+        b->beststats = 0;
+      }
     }
 
   } while(tries>0);
@@ -1399,7 +1438,7 @@ static void ZopfliUseThreads(const ZopfliOptions* options,
     size_t end = i == bkend ? inend : (*splitpoints_uncompressed)[i];
     size_t blocksize = 0;
     unsigned long blockcrc = 0;
-    if(options->mode & 0x0100) {
+    if((options->mode & 0x0100) && options->numthreads>0) {
       blocksize = end - start;
       blockcrc = CRC(in + start, blocksize);
     }
@@ -1422,7 +1461,7 @@ static void ZopfliUseThreads(const ZopfliOptions* options,
             StatsDBSave(&statsdb[threnum]);
             FreeStats(statsdb[threnum].beststats);
             free(statsdb[threnum].beststats);
-            t[threnum].beststats = NULL;
+            t[threnum].beststats = 0;
             t[threnum].allstatscontrol = 0;
           } else if(options->verbose>2) {
             if(t[showthread].is_running==1) {
@@ -1462,7 +1501,7 @@ static void ZopfliUseThreads(const ZopfliOptions* options,
         }
         if(t[threnum].is_running==0) {
           if(lastthread == 0) {
-            t[threnum].beststats = NULL;
+            t[threnum].beststats = 0;
             t[threnum].startiteration = 0;
             if(options->mode & 0x0100) {
               statsdb[threnum].blocksize = blocksize;
@@ -1509,7 +1548,7 @@ static void ZopfliUseThreads(const ZopfliOptions* options,
           if(options->mode & 0x0010) {
             (*bestperblock)[t[threnum].iterations.block] = t[threnum].bestperblock;
           }
-          if(options->mode & 0x0100 && t[threnum].beststats != NULL) {
+          if(options->mode & 0x0100 && t[threnum].beststats != 0) {
             if(!(options->mode & 0x0010)) {
               statsdb[threnum].beststats = t[threnum].beststats;
               statsdb[threnum].startiteration = t[threnum].startiteration;
@@ -1518,7 +1557,7 @@ static void ZopfliUseThreads(const ZopfliOptions* options,
             FreeStats(statsdb[threnum].beststats);
             free(statsdb[threnum].beststats);
           }
-          t[threnum].beststats = NULL;
+          t[threnum].beststats = 0;
           if(nextblock==t[threnum].iterations.block) {
             *totalcost += t[threnum].cost;
             ZopfliAppendLZ77Store(&t[threnum].store, lz77);
