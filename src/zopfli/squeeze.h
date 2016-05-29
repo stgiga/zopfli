@@ -60,19 +60,6 @@ typedef struct ZopfliIterations {
 
 } ZopfliIterations;
 
-typedef struct ZopfliBestStats {
-
-  char mode;
-
-  size_t blocksize;
-
-  unsigned long blockcrc;
-
-  unsigned int startiteration;
-
-  SymbolStats* beststats;
-} ZopfliBestStats;
-
 void InitStats(SymbolStats* stats);
 
 void CopyStats(SymbolStats* source, SymbolStats* dest);

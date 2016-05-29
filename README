@@ -106,8 +106,7 @@ Description of new commands list in Zopfli KrzYmod:
 10. --all
 
    Run 16 cominations of --lazy, --ohh, --brotli and --rc per block and pick
-   smallest result. --statsdb is not (yet?) supported in this mode, using both
-   switches will result in an error message.
+   smallest result.
 
 11. --n#
 
@@ -236,9 +235,7 @@ Description of new commands list in Zopfli KrzYmod:
    blocks to compress. Will use more memory as each thread needs separate LZ77 block
    store + cache, and main thread needs additional LZ77 temporary stores for
    out-of-order blocks returned by threads that are then processed and merged when they
-   follow in-order block returned by given thread. Restore points are saved only after
-   in-order blocks are joined together into main LZ77 store, if You abort the work,
-   all out-of-order blocks in memory will be lost.
+   follow in-order block returned by given thread.
 
 27. --idle
 

@@ -1161,6 +1161,19 @@ static void Verifysize_t(size_t verifysize, unsigned char* sizetsize) {
   }
 }
 
+typedef struct ZopfliBestStats {
+
+  char mode;
+
+  size_t blocksize;
+
+  unsigned long blockcrc;
+
+  unsigned int startiteration;
+
+  SymbolStats* beststats;
+} ZopfliBestStats;
+
 static int StatsDBLoad(ZopfliBestStats* statsdb) {
   FILE *file;
   size_t b = 0, i = 0;
