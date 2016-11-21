@@ -904,7 +904,6 @@ int ZopfliPNGOptimize(const std::vector<unsigned char>& origpng,
                     }
                     printf("%s ", order_name[po].c_str());
                   }
-                  printf("Filter %s", strategy_name[i].c_str());
                 }
                 error = TryOptimize(image, w, h, inputstate, bit16,
                                     first_filter ? keep_colortype
@@ -925,7 +924,7 @@ int ZopfliPNGOptimize(const std::vector<unsigned char>& origpng,
                   first_filter = false;
                 }
                 if (!error) {
-                  if (verbose) printf(": %d bytes\n", (int) temp.size());
+                  if (verbose) printf("Filter %s: %d bytes\n", strategy_name[i].c_str(), (int) temp.size());
                   if ((strategy_enable & (1 << kStrategyPredefined)
                       && i <= pre_predefined)
                       || strategy_enable & (1 << kStrategyGeneticAlgorithm)) {

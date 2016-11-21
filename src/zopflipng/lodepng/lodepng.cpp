@@ -5562,6 +5562,7 @@ static unsigned filter(unsigned char* out, const unsigned char* in, unsigned w, 
       out[outindex] = 0; /*filter type byte*/
       filterScanline(&out[outindex + 1], &in[inindex], prevline, linebytes, bytewidth, 0);
       prevline = &in[inindex];
+      if(settings->verbose>2) fprintf(stderr, "ZERO> %.1f%%\r",100.0 * (zpfloat)y / (zpfloat)h);
     }
   }
   else if(strategy == LFS_MINSUM)
@@ -5586,7 +5587,6 @@ static unsigned filter(unsigned char* out, const unsigned char* in, unsigned w, 
         for(type = 0; type != 5; ++type)
         {
           filterScanline(attempt[type], &in[y * linebytes], prevline, linebytes, bytewidth, type);
-
           /*calculate the sum of the result*/
           sum[type] = 0;
           if(type == 0)
@@ -5618,6 +5618,7 @@ static unsigned filter(unsigned char* out, const unsigned char* in, unsigned w, 
         /*now fill the out values*/
         out[y * (linebytes + 1)] = bestType; /*the first byte of a scanline will be the filter type*/
         for(x = 0; x != linebytes; ++x) out[y * (linebytes + 1) + 1 + x] = attempt[bestType][x];
+        if(settings->verbose>2) fprintf(stderr, "MINSUM> %.1f%%\r",100.0 * (zpfloat)y / (zpfloat)h);
       }
     }
 
@@ -5665,6 +5666,7 @@ static unsigned filter(unsigned char* out, const unsigned char* in, unsigned w, 
       /*now fill the out values*/
       out[y * (linebytes + 1)] = bestType; /*the first byte of a scanline will be the filter type*/
       for(x = 0; x != linebytes; ++x) out[y * (linebytes + 1) + 1 + x] = attempt[bestType][x];
+      if(settings->verbose>2) fprintf(stderr, "DISTINCT_BYTES> %.1f%%\r",100.0 * (zpfloat)y / (zpfloat)h);
     }
 
     for(type = 0; type != 5; ++type) lodepng_free(attempt[type]);
@@ -5711,6 +5713,7 @@ static unsigned filter(unsigned char* out, const unsigned char* in, unsigned w, 
       /*now fill the out values*/
       out[y * (linebytes + 1)] = bestType; /*the first byte of a scanline will be the filter type*/
       for(x = 0; x != linebytes; ++x) out[y * (linebytes + 1) + 1 + x] = attempt[bestType][x];
+      if(settings->verbose>2) fprintf(stderr, "DISTINCT_BIGRAMS> %.1f%%\r",100.0 * (zpfloat)y / (zpfloat)h);
     }
 
     for(type = 0; type != 5; ++type) lodepng_free(attempt[type]);
@@ -5757,6 +5760,7 @@ static unsigned filter(unsigned char* out, const unsigned char* in, unsigned w, 
       /*now fill the out values*/
       out[y * (linebytes + 1)] = bestType; /*the first byte of a scanline will be the filter type*/
       for(x = 0; x != linebytes; ++x) out[y * (linebytes + 1) + 1 + x] = attempt[bestType][x];
+      if(settings->verbose>2) fprintf(stderr, "ENTROPY> %.1f%%\r",100.0 * (zpfloat)y / (zpfloat)h);
     }
 
     for(type = 0; type != 5; ++type) lodepng_free(attempt[type]);
@@ -5771,6 +5775,7 @@ static unsigned filter(unsigned char* out, const unsigned char* in, unsigned w, 
       out[outindex] = type; /*filter type byte*/
       filterScanline(&out[outindex + 1], &in[inindex], prevline, linebytes, bytewidth, type);
       prevline = &in[inindex];
+      if(settings->verbose>2) fprintf(stderr, "PREDEFINED> %.1f%%\r",100.0 * (zpfloat)y / (zpfloat)h);
     }
   }
   else if(strategy == LFS_BRUTE_FORCE)
@@ -5814,6 +5819,7 @@ static unsigned filter(unsigned char* out, const unsigned char* in, unsigned w, 
       prevline = &in[y * linebytes];
       out[y * (linebytes + 1)] = bestType; /*the first byte of a scanline will be the filter type*/
       for(x = 0; x != linebytes; ++x) out[y * (linebytes + 1) + 1 + x] = attempt[bestType][x];
+      if(settings->verbose>2) fprintf(stderr, "BRUTE_FORCE> %.1f%%\r",100.0 * (zpfloat)y / (zpfloat)h);
     }
     for(type = 0; type != 5; ++type) lodepng_free(attempt[type]);
   }
@@ -5863,6 +5869,7 @@ static unsigned filter(unsigned char* out, const unsigned char* in, unsigned w, 
       {
         for(x = 0; x != linebytes; ++x) out[y * (linebytes + 1) + 1 + x] = attempt[bestType][x];
       }
+      if(settings->verbose>2) fprintf(stderr, "INCREMENTAL_BRUTE_FORCE> %.1f%%\r",100.0 * (zpfloat)y / (zpfloat)h);
     }
     for(type = 0; type != 5; ++type) lodepng_free(attempt[type]);
   }
@@ -5886,7 +5893,7 @@ static unsigned filter(unsigned char* out, const unsigned char* in, unsigned w, 
     unsigned e_since_best = 0;
     unsigned tournament_size = 2;
     if(settings->verbose>2)
-      fprintf(stderr,": <{\n");
+      fprintf(stderr,"GENETIC_ALGORITHM> {\n");
     /* for very small images, try every combination instead of genetic algorithm */
     if(h * flog2(5) < flog2(population_size * settings->ga.number_of_stagnations))
     {
@@ -5954,9 +5961,9 @@ static unsigned filter(unsigned char* out, const unsigned char* in, unsigned w, 
           best_size = size[ranking[0]];
           e_since_best = 0;
           if(settings->verbose>2)
-            printf("Generation %d: %d bytes      \r", e, best_size);
+            fprintf(stderr,"GENETIC_ALGORITHM> Generation %d: %d bytes      \r", e, best_size);
           if(settings->verbose>3)
-            printf("\n");
+            fprintf(stderr,"\n");
         }
         else ++e_since_best;
         /*generate offspring*/
@@ -6017,7 +6024,7 @@ static unsigned filter(unsigned char* out, const unsigned char* in, unsigned w, 
           lodepng_free(dummy);
           total_size += size[ranking[last - c]];
           if(settings->verbose>4)
-            printf("Generation %d: %d bytes      \r", e, (int)size[ranking[last - c]]);
+            fprintf(stderr,"GENETIC_ALGORITHM> Generation %d: %d bytes      \r", e, (int)size[ranking[last - c]]);
         }
       }
     }
@@ -6034,7 +6041,7 @@ static unsigned filter(unsigned char* out, const unsigned char* in, unsigned w, 
     lodepng_free(size);
     lodepng_free(ranking);
     if(settings->verbose>2)
-      fprintf(stderr,"}> Genetic algorithm best size");
+      fprintf(stderr,"GENETIC_ALGORITHM> }\n");
   }
   else return 88; /* unknown filter strategy */
 

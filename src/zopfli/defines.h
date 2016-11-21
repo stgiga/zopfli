@@ -11,8 +11,8 @@ required by Zopfli KrzYmod.
 #include <float.h>
 
 #define VERYEAR   16
-#define VERMONTH  5
-#define VERCOMMIT 39
+#define VERMONTH  11
+#define VERCOMMIT 1
 
 #define BESTSTATSDBVER 1
 
