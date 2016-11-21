@@ -888,23 +888,7 @@ int ZopfliPNGOptimize(const std::vector<unsigned char>& origpng,
                 // PNG filter strategy gives the smallest output. This allows to
                 // then do the slow and good compression only on that filter
                 // type.
-                if (verbose) {
-                  if (png_options.lossy_transparent & cleaner
-                      && has_transparent) {
-                    printf("Cleaner %s ", cleaner_name[realj].c_str());
-                  }
-                  if (count.size() <= 256) {
-                    printf("Palette ");
-                    if (po != kOrderNone) {
-                      printf("%s %s ", priority_name[pp].c_str(),
-                             direction_name[pd].c_str());
-                      if (has_transparent) {
-                        printf("%s ", transparency_name[pt].c_str());
-                      }
-                    }
-                    printf("%s ", order_name[po].c_str());
-                  }
-                }
+
                 error = TryOptimize(image, w, h, inputstate, bit16,
                                     first_filter ? keep_colortype
                                     : state.info_png.color.colortype
@@ -924,7 +908,24 @@ int ZopfliPNGOptimize(const std::vector<unsigned char>& origpng,
                   first_filter = false;
                 }
                 if (!error) {
-                  if (verbose) printf("Filter %s: %d bytes\n", strategy_name[i].c_str(), (int) temp.size());
+                  if (verbose) {
+                    if (png_options.lossy_transparent & cleaner
+                        && has_transparent) {
+                      printf("Cleaner %s ", cleaner_name[realj].c_str());
+                    }
+                    if (count.size() <= 256) {
+                      printf("Palette ");
+                      if (po != kOrderNone) {
+                        printf("%s %s ", priority_name[pp].c_str(),
+                               direction_name[pd].c_str());
+                        if (has_transparent) {
+                          printf("%s ", transparency_name[pt].c_str());
+                        }
+                      }
+                      printf("%s ", order_name[po].c_str());
+                    }
+                    printf("Filter %s: %d bytes\n", strategy_name[i].c_str(), (int) temp.size());
+                  }
                   if ((strategy_enable & (1 << kStrategyPredefined)
                       && i <= pre_predefined)
                       || strategy_enable & (1 << kStrategyGeneticAlgorithm)) {
