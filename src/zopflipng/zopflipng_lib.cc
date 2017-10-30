@@ -1,6 +1,6 @@
 /*
 Copyright 2016 Google Inc. All Rights Reserved.
-Copyright 2016 Frédéric Kayser. All Rights Reserved.
+Copyright 2016 FrÃ©dÃ©ric Kayser. All Rights Reserved.
 Copyright 2016 Aaron Kaluszka. All Rights Reserved.
 Copyright 2016 Mr_KrzYch00. All Rights Reserved.
 
@@ -58,6 +58,7 @@ ZopfliPNGOptions::ZopfliPNGOptions()
   , pass(0)
   , mode(0)
   , numthreads(1)
+  , rui(0)
   , statimportance(100)
   , try_paletteless_size(2048)
   , ga_population_size(19)
@@ -92,6 +93,7 @@ unsigned CustomPNGDeflate(unsigned char** out, size_t* outsize,
   options.pass              = png_options->pass;
   options.mode              = png_options->mode;
   options.numthreads        = png_options->numthreads;
+  options.rui               = png_options->rui;
   options.statimportance    = png_options->statimportance;
 
   ZopfliDeflate(&options, 2 /* Dynamic */, 1, in, insize, &bp, out, outsize, 0);
@@ -1003,6 +1005,7 @@ extern "C" void CZopfliPNGSetDefaults(CZopfliPNGOptions* png_options) {
   png_options->pass                     = opts.pass;
   png_options->mode                     = opts.mode;
   png_options->numthreads               = opts.numthreads;
+  png_options->rui                      = opts.rui;
   png_options->statimportance           = opts.statimportance;
   png_options->try_paletteless_size     = opts.try_paletteless_size;
   png_options->ga_population_size       = opts.ga_population_size;
