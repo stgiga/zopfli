@@ -1,6 +1,6 @@
 /*
 Copyright 2016 Google Inc. All Rights Reserved.
-Copyright 2016 Frédéric Kayser. All Rights Reserved.
+Copyright 2016 FrÃ©dÃ©ric Kayser. All Rights Reserved.
 Copyright 2016 Aaron Kaluszka. All Rights Reserved.
 Copyright 2016 Mr_KrzYch00. All Rights Reserved.
 
@@ -146,6 +146,8 @@ typedef struct CZopfliPNGOptions {
 
   unsigned numthreads;
 
+  int rui;
+    
   int statimportance;
 
   int try_paletteless_size;
@@ -292,6 +294,14 @@ struct ZopfliPNGOptions {
   */
   unsigned numthreads;
 
+  /*
+  Start running weighted statistics only after this many unsuccessful
+  random tries in size reduction when costs are equal with last costs.
+  Usually makes Zopfli faster and gives different results.
+  */
+    
+  int rui;
+    
   /*
   Current stats to last stats importance in weighted statistic
   calculations. Default is 100, meaning 1 : 0.5.
