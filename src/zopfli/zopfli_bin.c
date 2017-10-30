@@ -709,6 +709,10 @@ int main(int argc, char* argv[]) {
     else if (StringsEqual(arg, "--statsdb")) options.mode |= 0x0100;
     else if (StringsEqual(arg, "--dir")) binoptions.usescandir = 1;
     else if (StringsEqual(arg, "--aas")) binoptions.additionalautosplits = 1;
+    else if (arg[0] == '-' && arg[1] == '-' && arg[2] == 'r'
+          && arg[3] == 'u' && arg[4] == 'i'
+          && arg[5] >= '0' && arg[5] <= '9') {
+      options.rui = atoi(arg + 5);
     else if (arg[0] == '-' && arg[1] == '-' && arg[2] == 's' && arg[3] == 'i'
              && arg[4] >= '0' && arg[4] <= '9') {
       options.statimportance = atoi(arg + 4);
@@ -846,6 +850,7 @@ int main(int argc, char* argv[]) {
           "  --pass#       recompress last split points max # times (d: 0)\n");
       fprintf(stderr,
           "  --statsdb     use file-based best stats / block database\n"
+          "  --rui         run weighted stats after this many unsuccessful randoms (d:0)\n"
           "  --si#         stats to laststats in weight calculations (d: 100, max: 149)\n"
           "  --cmwc        use Complementary-Multiply-With-Carry rand. gen.\n"
           "  --rm#         random modulo for iteration stats (d: 3)\n"
