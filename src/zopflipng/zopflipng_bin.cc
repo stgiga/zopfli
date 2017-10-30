@@ -1,6 +1,6 @@
 /*
 Copyright 2016 Google Inc. All Rights Reserved.
-Copyright 2016 Frédéric Kayser. All Rights Reserved.
+Copyright 2016 FrÃ©dÃ©ric Kayser. All Rights Reserved.
 Copyright 2016 Aaron Kaluszka. All Rights Reserved.
 Copyright 2016 Mr_KrzYch00. All Rights Reserved.
 
@@ -230,6 +230,7 @@ void ShowHelp() {
          "--rc:            reverse counts ordering in bit length calculations\n"
          "--pass=[number]: recompress last split points max # times (d: 0)\n"
          "--statsdb:       use file-based best stats / block database\n"
+         "--rui=[number]   run weighted stats only after this many unsuccessful randoms (d:0)\n"
          "--si=[number]:   stats to laststats in weight calculations (d: 100, max: 149)\n"
          "--cmwc:          use Complementary-Multiply-With-Carry rand. gen.\n"
          "--rm=[number]:   random modulo for iteration stats (d: 3)\n"
@@ -373,6 +374,9 @@ int main(int argc, char *argv[]) {
       } else if (name == "--v") {
         if (num < 0) num = 1;
         png_options.verbose = num;
+      } else if (name == "--rui") {
+        if (num < 0) num = 1;
+        png_options.rui = num;
       } else if (name == "--si") {
         if (num < 0) num = 1;
         else if(num>149) num = 149;
